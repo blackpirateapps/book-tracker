@@ -1,0 +1,16 @@
+{
+  "name": "vercel-turso-book-tracker",
+  "version": "1.0.0",
+  "description": "A book tracker application with a Vercel and Turso backend.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@libsql/client": "latest"
+  }
+}
+
