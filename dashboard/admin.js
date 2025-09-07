@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
     const API_ENDPOINT = '/api/books';
+    const MIGRATE_API_ENDPOINT = '/api/migrate-images';
     const PWD_COOKIE = 'book-tracker-admin-pwd';
     
     // --- STATE MANAGEMENT ---
@@ -19,9 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModal = (modal) => { modal.classList.add('opacity-0'); modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300);};
     const groupBooksIntoLibrary = (books) => { const newLibrary = { watchlist: [], currentlyReading: [], read: [] }; books.forEach(book => { try { book.authors = JSON.parse(book.authors); } catch (e) { book.authors = []; } try { book.imageLinks = JSON.parse(book.imageLinks); } catch (e) { book.imageLinks = {}; } try { book.industryIdentifiers = JSON.parse(book.industryIdentifiers); } catch (e) { book.industryIdentifiers = []; } try { book.highlights = JSON.parse(book.highlights); } catch (e) { book.highlights = []; } if (newLibrary[book.shelf]) { newLibrary[book.shelf].push(book); }}); return newLibrary;};
     
-    /**
-     * Fetches the entire library directly from the server. This is now the primary way to get data.
-     */
     const fetchAndSetLibrary = async () => {
         try {
             const response = await fetch(API_ENDPOINT);
@@ -36,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const performAuthenticatedAction = async (payload) => {
+    const performAuthenticatedAction = async (payload, endpoint = API_ENDPOINT) => {
         let password = getCookie(PWD_COOKIE);
         const passwordModal = document.getElementById('password-modal');
         const passwordInput = document.getElementById('password-input');
@@ -53,10 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (passwordModal) closeModal(passwordModal);
         
         try {
-            const response = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, password })});
+            const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, password })});
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'An unknown error occurred.');
-            if (payload.action !== 'export') { showToast(result.message || 'Action successful!', 'success'); }
+            if (payload.action !== 'export' && endpoint === API_ENDPOINT) { 
+                showToast(result.message || 'Action successful!', 'success'); 
+            }
             return {success: true, data: result};
         } catch (error) {
             console.error("Authenticated action failed:", error);
@@ -77,15 +77,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (passwordModal) {
             afterPasswordCallback = callback;
             openModal(passwordModal);
-        } else { showToast("Could not open password prompt.", "error"); }
+        } else {
+            showToast("Could not open password prompt.", "error");
+        }
     };
 
     const manageViewOnlyBanner = () => {
         const banners = document.querySelectorAll('#view-only-banner');
         banners.forEach(banner => {
             if (!banner) return;
-            if (getCookie(PWD_COOKIE)) { banner.classList.add('hidden'); } 
-            else { banner.classList.remove('hidden'); }
+            if (getCookie(PWD_COOKIE)) {
+                banner.classList.add('hidden');
+            } else {
+                banner.classList.remove('hidden');
+            }
         });
     };
     
@@ -264,11 +269,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const goodreadsLink = `https://www.goodreads.com/search?q=${encodeURIComponent(book.title + ' ' + (book.authors ? book.authors[0] : ''))}`;
             
             detailsContainer.innerHTML = `
-                <a href="/dashboard/" class="text-blue-500 mb-8 inline-block">&larr; Back to Dashboard</a>
-                <div class="text-center mb-8">
-                    <img src="${coverUrl}" alt="Cover" class="w-32 h-48 object-cover rounded-lg shadow-lg mx-auto mb-4">
-                    <h1 class="text-2xl font-bold tracking-tight text-gray-900">${book.title}</h1>
-                    <p class="text-md text-gray-600 mt-1">${authors}</p>
+                <div class="pb-4 mb-6">
+                     <a href="/dashboard/library.html" class="text-blue-600 text-sm font-semibold mb-2 inline-block">&larr; Back to My Library</a>
+                     <h1 class="text-3xl font-bold tracking-tight text-gray-900">${book.title}</h1>
+                     <p class="text-gray-500 mt-1">${authors}</p>
                 </div>
                 <div class="space-y-8">
                     <section id="reading-log-container" data-book-id="${book.id}" data-shelf="${book.shelf}"></section>
@@ -438,6 +442,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderDetailsPage(book);
             }
         })();
+    }
+
+    // --- MIGRATION PAGE LOGIC ---
+    if (document.getElementById('migration-page')) {
+        const startBtn = document.getElementById('start-migration-btn');
+        const statusEl = document.getElementById('migration-status');
+        const logEl = document.getElementById('migration-log');
+
+        const runMigrationBatch = async () => {
+            startBtn.disabled = true;
+            startBtn.textContent = 'Migrating...';
+            logEl.classList.remove('hidden');
+
+            const { success, data } = await performAuthenticatedAction({}, MIGRATE_API_ENDPOINT);
+
+            if (success) {
+                if (data.logs) data.logs.forEach(log => logEl.innerHTML += `${log}\n`);
+                logEl.scrollTop = logEl.scrollHeight; // Scroll to bottom
+
+                if (data.remainingCount > 0) {
+                    statusEl.textContent = `Batch complete. ${data.remainingCount} images remaining. Starting next batch...`;
+                    setTimeout(runMigrationBatch, 1000); // Wait 1 second before next batch
+                } else {
+                    statusEl.textContent = 'Migration Complete! All images have been processed.';
+                    startBtn.textContent = 'Migration Complete';
+                    startBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    startBtn.classList.add('bg-green-600');
+                }
+            } else {
+                statusEl.textContent = 'An error occurred. Check the console for details.';
+                startBtn.disabled = false;
+                startBtn.textContent = 'Retry Migration';
+            }
+        };
+
+        startBtn.addEventListener('click', () => {
+            requestPassword(() => {
+                logEl.innerHTML = 'Starting migration...\n';
+                statusEl.textContent = 'Beginning migration process...';
+                runMigrationBatch();
+            });
+        });
     }
 
     // --- SHARED INITIALIZATION & EVENT LISTENERS ---
