@@ -14,8 +14,6 @@
         }
         body { background-color: #f8f8f8; }
         .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
-        .modal-content { transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
-        .modal-backdrop { transition: opacity 0.2s ease-out; }
     </style>
 </head>
 <body>
@@ -35,7 +33,7 @@
                 <a href="/" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">View Public Site</a>
                 <a href="https://blackpiratex.com" target="_blank" rel="noopener noreferrer" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Frontpage</a>
                 <div class="border-t my-1"></div>
-                <button id="library-btn" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">My Library</button>
+                <a href="/dashboard/library.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">My Library</a>
                 <button id="force-refresh-btn" class="w-full text-left px-4 py-2 text-blue-600 font-semibold hover:bg-gray-100">Force Refresh</button>
             </div>
         </header>
@@ -74,46 +72,8 @@
             </section>
         </main>
     </div>
-
-    <!-- My Library Modal -->
-    <div id="library-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden opacity-0 z-30 p-4">
-        <div class="modal-content bg-gray-50 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col scale-95 opacity-0">
-            <div class="flex justify-between items-center p-4 border-b">
-                <h3 class="text-xl font-semibold">My Library</h3>
-                <button class="close-modal-btn p-2 rounded-full hover:bg-gray-200">&times;</button>
-            </div>
-            <div class="p-4 flex-grow overflow-y-auto space-y-8">
-                 <div class="space-y-2">
-                    <h4 class="font-semibold text-gray-800 px-2">Data Management</h4>
-                    <div class="flex flex-wrap gap-2">
-                        <button id="import-highlights-btn" class="flex-1 bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 text-sm">Import Highlights</button>
-                        <button id="export-data-btn" class="flex-1 bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 text-sm">Export JSON</button>
-                        <button id="import-data-btn" class="flex-1 bg-white border border-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 text-sm">Import JSON</button>
-                    </div>
-                </div>
-                <section>
-                    <h4 class="font-semibold text-gray-800 mb-2 px-2">Watchlist</h4>
-                    <div id="shelf-watchlist" class="bg-white rounded-xl border border-gray-200/75">
-                        <p id="shelf-watchlist-message" class="p-8 text-center text-gray-500">Loading...</p>
-                    </div>
-                </section>
-                 <section>
-                    <h4 class="font-semibold text-gray-800 mb-2 px-2">Currently Reading</h4>
-                    <div id="shelf-currentlyReading" class="bg-white rounded-xl border border-gray-200/75">
-                         <p id="shelf-currentlyReading-message" class="p-8 text-center text-gray-500">Loading...</p>
-                    </div>
-                </section>
-                <section>
-                    <h4 class="font-semibold text-gray-800 mb-2 px-2">Read</h4>
-                    <div id="shelf-read" class="bg-white rounded-xl border border-gray-200/75">
-                        <p id="shelf-read-message" class="p-8 text-center text-gray-500">Loading...</p>
-                    </div>
-                </section>
-            </div>
-        </div>
-    </div>
     
-    <!-- Other Modals: Password, Highlight Import -->
+    <!-- Password Modal (needed for search actions) -->
     <div id="password-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden opacity-0 z-50 p-4">
         <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-sm scale-95 opacity-0 p-6 text-center">
             <h3 class="text-xl font-semibold mb-2">Enter Admin Password</h3>
@@ -126,21 +86,7 @@
             </div>
         </div>
     </div>
-
-    <div id="highlight-import-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden opacity-0 z-40 p-4">
-        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-sm scale-95 opacity-0 p-6">
-             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-semibold">Import Highlights</h3>
-                <button class="close-highlight-modal-btn p-2 rounded-full hover:bg-gray-200">&times;</button>
-            </div>
-            <p class="text-sm text-gray-500 mb-2">Assign highlights from <strong id="highlight-book-title" class="text-gray-700"></strong> to a book in your library.</p>
-            <select id="highlight-book-select" class="w-full px-3 py-2 border rounded-lg mb-4"></select>
-            <button id="confirm-import-btn" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Assign Highlights</button>
-        </div>
-    </div>
     
-    <input type="file" id="highlights-file-input" class="hidden" accept=".html,.md">
-    <input type="file" id="import-file-input" class="hidden" accept=".json">
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity duration-300 z-50"><p id="toast-message"></p></div>
     <script src="/dashboard/script.js" defer></script>
 </body>

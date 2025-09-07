@@ -12,8 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- SHARED DOM ELEMENTS & HELPERS ---
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toast-message');
-    let renderAllShelves = () => {};
-
+    
     const setCookie = (name, value, days) => { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax; Secure"; };
     const getCookie = (name) => { const nameEQ = name + "="; const ca = document.cookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) === ' ') c = c.substring(1, c.length); if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length); } return null; };
     const showToast = (message, type = 'success') => { if(!toast || !toastMessage) return; toastMessage.textContent = message; toast.className = `fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${type === 'success' ? 'bg-slate-900' : 'bg-red-600'}`; toast.classList.remove('opacity-0'); setTimeout(() => toast.classList.add('opacity-0'), 3000);};
@@ -82,9 +81,35 @@ document.addEventListener('DOMContentLoaded', () => {
         openModal(passwordModal);
     };
     
-    const parseMDHighlights = (mdContent) => { const highlights = []; let title = 'Unknown Title'; const frontmatterMatch = mdContent.match(/---\s*title:\s*"(.*?)"\s*---/); if (frontmatterMatch && frontmatterMatch[1]) title = frontmatterMatch[1]; const lines = mdContent.split('\n'); for (const line of lines) { if (line.trim().startsWith('- ')) { const highlightText = line.trim().substring(2).replace(/\s*\(location.*?\)\s*$/, '').trim(); if (highlightText) highlights.push(highlightText); } } return { title, highlights }; };
-    const parseHTMLHighlights = (htmlContent) => { const doc = new DOMParser().parseFromString(htmlContent, 'text/html'); const title = doc.querySelector('.bookTitle')?.textContent.trim() || 'Unknown Title'; const highlights = Array.from(doc.querySelectorAll('.noteText')).map(el => el.textContent.trim()); return { title, highlights }; };
-
+    const createBookListItemHTML = (book, shelf) => {
+        const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
+        const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
+        return `
+            <div class="book-list-item flex items-center p-4 space-x-4 relative">
+                <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
+                <div class="flex-grow">
+                    <p class="font-semibold text-gray-800">${book.title}</p>
+                    <p class="text-sm text-gray-500">${authors}</p>
+                </div>
+                <div class="flex-shrink-0">
+                     <button class="options-btn-toggle p-2 rounded-full hover:bg-gray-200">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+                     </button>
+                     <div class="absolute right-4 top-14 mt-2 w-48 bg-white rounded-xl shadow-lg border text-sm z-10 hidden">
+                        <a href="/dashboard/details.html?id=${book.id}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">View Details</a>
+                        <div class="border-t my-1"></div>
+                        <p class="px-4 pt-2 pb-1 text-xs text-gray-400 font-semibold">Move to</p>
+                        ${shelf !== 'currentlyReading' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="currentlyReading">Currently Reading</button>` : ''}
+                        ${shelf !== 'watchlist' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="watchlist">Watchlist</button>` : ''}
+                        ${shelf !== 'read' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="read">Read</button>` : ''}
+                        <div class="border-t my-1"></div>
+                        <button data-book-id="${book.id}" class="remove-btn w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">Remove Book</button>
+                    </div>
+                </div>
+            </div>`;
+    };
+    
+    // --- MAIN DASHBOARD PAGE LOGIC ---
     if (document.getElementById('main-dashboard')) {
         const searchForm = document.getElementById('search-form');
         const searchInput = document.getElementById('search-input');
@@ -92,43 +117,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const searchResultsContainer = document.getElementById('search-results');
         const searchMessage = document.getElementById('search-message');
         const clearSearchBtn = document.getElementById('clear-search-btn');
-        const libraryBtn = document.getElementById('library-btn');
-        const libraryModal = document.getElementById('library-modal');
-        const shelfContainers = { watchlist: document.getElementById('shelf-watchlist'), currentlyReading: document.getElementById('shelf-currentlyReading'), read: document.getElementById('shelf-read') };
-        const shelfMessages = { watchlist: document.getElementById('shelf-watchlist-message'), currentlyReading: document.getElementById('shelf-currentlyReading-message'), read: document.getElementById('shelf-read-message') };
         const homepageContainers = { currentlyReading: document.getElementById('homepage-currentlyReading'), recentReads: document.getElementById('homepage-recentReads') };
         const homepageMessages = { currentlyReading: document.getElementById('homepage-currentlyReading-message'), recentReads: document.getElementById('homepage-recentReads-message') };
         const menuButton = document.getElementById('menu-button');
         const menu = document.getElementById('menu');
+        const forceRefreshBtn = document.getElementById('force-refresh-btn');
         
-        renderAllShelves = () => { Object.keys(shelfContainers).forEach(renderShelf); renderHomepageSummaries(); };
-
-        const createBookListItemHTML = (book, shelf) => {
-            const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
-            const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
-            return `
-                <div class="book-list-item flex items-center p-4 space-x-4 relative">
-                    <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
-                    <div class="flex-grow">
-                        <p class="font-semibold text-gray-800">${book.title}</p>
-                        <p class="text-sm text-gray-500">${authors}</p>
-                    </div>
-                    <div class="flex-shrink-0">
-                         <button class="options-btn-toggle p-2 rounded-full hover:bg-gray-200">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
-                         </button>
-                         <div class="absolute right-4 top-14 mt-2 w-48 bg-white rounded-xl shadow-lg border text-sm z-10 hidden">
-                            <a href="/dashboard/details.html?id=${book.id}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">View Details</a>
-                            <div class="border-t my-1"></div>
-                            <p class="px-4 pt-2 pb-1 text-xs text-gray-400 font-semibold">Move to</p>
-                            ${shelf !== 'currentlyReading' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="currentlyReading">Currently Reading</button>` : ''}
-                            ${shelf !== 'watchlist' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="watchlist">Watchlist</button>` : ''}
-                            ${shelf !== 'read' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="read">Read</button>` : ''}
-                            <div class="border-t my-1"></div>
-                            <button data-book-id="${book.id}" class="remove-btn w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">Remove Book</button>
-                        </div>
-                    </div>
-                </div>`;
+        const renderHomepageSummaries = () => { 
+            const crBooks = library.currentlyReading; homepageContainers.currentlyReading.innerHTML = ''; 
+            homepageMessages.currentlyReading.classList.toggle('hidden', crBooks.length > 0); 
+            if (crBooks.length > 0) crBooks.forEach(book => homepageContainers.currentlyReading.innerHTML += createBookListItemHTML(book, 'currentlyReading')); 
+            else homepageMessages.currentlyReading.textContent = "You're not reading anything."; 
+            
+            const rrBooks = [...library.read].sort((a,b) => new Date(b.finishedOn) - new Date(a.finishedOn)).slice(0, 4); 
+            homepageContainers.recentReads.innerHTML = ''; 
+            homepageMessages.recentReads.classList.toggle('hidden', rrBooks.length > 0); 
+            if(rrBooks.length > 0) rrBooks.forEach(book => homepageContainers.recentReads.innerHTML += createBookListItemHTML(book, 'read')); 
+            else homepageMessages.recentReads.textContent = "You haven't finished any books yet.";
         };
 
         const createSearchResultItemHTML = (book) => {
@@ -148,9 +153,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
         };
 
-        const renderShelf = (shelfName, container, messageEl) => { const books = library[shelfName]; container.innerHTML = ''; messageEl.classList.toggle('hidden', books.length > 0); if (books.length > 0) books.forEach(book => container.innerHTML += createBookListItemHTML(book, shelfName)); else messageEl.textContent = `This shelf is empty.`};
-        const renderHomepageSummaries = () => { const crBooks = library.currentlyReading; homepageContainers.currentlyReading.innerHTML = ''; homepageMessages.currentlyReading.classList.toggle('hidden', crBooks.length > 0); if (crBooks.length > 0) crBooks.forEach(book => homepageContainers.currentlyReading.innerHTML += createBookListItemHTML(book, 'currentlyReading')); else homepageMessages.currentlyReading.textContent = "You're not reading anything."; const rrBooks = [...library.read].sort((a,b) => new Date(b.finishedOn) - new Date(a.finishedOn)).slice(0, 4); homepageContainers.recentReads.innerHTML = ''; homepageMessages.recentReads.classList.toggle('hidden', rrBooks.length > 0); if(rrBooks.length > 0) rrBooks.forEach(book => homepageContainers.recentReads.innerHTML += createBookListItemHTML(book, 'read')); else homepageMessages.recentReads.textContent = "You haven't finished any books yet.";};
-        const renderSearchResults = (books) => { searchResultsContainer.innerHTML = ''; const hasBooks = books && books.length > 0; searchMessage.classList.toggle('hidden', hasBooks); if (!hasBooks) searchMessage.textContent = 'No books found.'; else books.forEach(apiBook => searchResultsContainer.innerHTML += createSearchResultItemHTML(apiBook));};
+        const renderSearchResults = (books) => { 
+            searchResultsContainer.innerHTML = ''; 
+            const hasBooks = books && books.length > 0; 
+            searchMessage.classList.toggle('hidden', hasBooks); 
+            if (!hasBooks) searchMessage.textContent = 'No books found.'; 
+            else books.forEach(apiBook => searchResultsContainer.innerHTML += createSearchResultItemHTML(apiBook));
+        };
 
         const handleSearch = async (e) => {
             e.preventDefault(); const searchTerm = searchInput.value.trim(); if (!searchTerm) return;
@@ -162,41 +171,60 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderSearchResults(formattedBooks);
             } catch (error) { console.error('Fetch error:', error); searchMessage.textContent = 'Failed to fetch books.'; }
         };
-        
-        const handleBookAction = (callback) => requestPassword(async () => { const {success} = await callback(); if (success) { await getLibrary(true); renderAllShelves();} });
-        const handleAddBook = (bookData, targetShelf) => { const bookWithShelf = { ...bookData, shelf: targetShelf }; if (targetShelf === 'currentlyReading') bookWithShelf.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read') bookWithShelf.finishedOn = new Date().toISOString().split('T')[0]; handleBookAction(() => performAuthenticatedAction({ action: 'add', data: bookWithShelf })); };
-        const handleRemoveBook = (bookId) => handleBookAction(() => performAuthenticatedAction({ action: 'delete', data: { id: bookId } }));
-        const handleMoveBook = (bookId, currentShelf, targetShelf) => { const bookToMove = { ...library[currentShelf].find(b => b.id === bookId) }; if (!bookToMove) return; bookToMove.shelf = targetShelf; if (targetShelf === 'currentlyReading' && !bookToMove.startedOn) bookToMove.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read' && !bookToMove.finishedOn) { bookToMove.finishedOn = new Date().toISOString().split('T')[0]; if (!bookToMove.startedOn) bookToMove.startedOn = bookToMove.finishedOn; } handleBookAction(() => performAuthenticatedAction({ action: 'update', data: bookToMove }));};
-        
+
         searchForm.addEventListener('submit', handleSearch);
-        libraryBtn.addEventListener('click', () => { openModal(libraryModal); menu.classList.add('hidden'); });
         clearSearchBtn.addEventListener('click', () => { searchSection.classList.add('hidden'); searchInput.value = ''; });
-        
-        document.body.addEventListener('click', (e) => {
-            const target = e.target; const closest = (selector) => target.closest(selector);
-            
-            const addBtn = closest('.add-btn');
-            if (addBtn) handleAddBook(JSON.parse(addBtn.dataset.bookInfo), addBtn.dataset.targetShelf);
-
-            const removeBtn = closest('.remove-btn');
-            if (removeBtn) handleRemoveBook(removeBtn.dataset.bookId);
-            
-            if (target.dataset.targetShelf) handleMoveBook(target.dataset.bookId, target.dataset.currentShelf, target.dataset.targetShelf);
-            
-            const optionsToggle = closest('.options-btn-toggle');
-            document.querySelectorAll('.options-btn-toggle').forEach(btn => {
-                const dropdown = btn.nextElementSibling;
-                if(btn !== optionsToggle) dropdown.classList.add('hidden');
-            });
-            if(optionsToggle) optionsToggle.nextElementSibling.classList.toggle('hidden');
-        });
-        
         menuButton.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
-        document.body.addEventListener('click', () => menu.classList.add('hidden'));
-
-        getLibrary().then(lib => { if (lib) { renderShelf('watchlist', shelfContainers.watchlist, shelfMessages.watchlist); renderShelf('currentlyReading', shelfContainers.currentlyReading, shelfMessages.currentlyReading); renderShelf('read', shelfContainers.read, shelfMessages.read); renderHomepageSummaries(); }});
+        forceRefreshBtn.addEventListener('click', () => { showToast('Refreshing from database...'); getLibrary(true).then(lib => { if(lib) { renderHomepageSummaries(); showToast('Library updated!'); } else { showToast('Failed to update library.', 'error'); }}); menu.classList.add('hidden'); });
+        
+        getLibrary().then(lib => { if (lib) renderHomepageSummaries(); });
     }
 
+    // --- LIBRARY PAGE LOGIC ---
+    if (document.getElementById('library-page-content')) {
+        const shelfContainers = { watchlist: document.getElementById('shelf-watchlist'), currentlyReading: document.getElementById('shelf-currentlyReading'), read: document.getElementById('shelf-read') };
+        const shelfMessages = { watchlist: document.getElementById('shelf-watchlist-message'), currentlyReading: document.getElementById('shelf-currentlyReading-message'), read: document.getElementById('shelf-read-message') };
+
+        const renderShelf = (shelfName) => { 
+            const container = shelfContainers[shelfName];
+            const messageEl = shelfMessages[shelfName];
+            const books = library[shelfName]; 
+            container.innerHTML = ''; 
+            messageEl.classList.toggle('hidden', books.length > 0); 
+            if (books.length > 0) {
+                const sortedBooks = shelfName === 'read' ? [...books].sort((a,b) => new Date(b.finishedOn) - new Date(a.finishedOn)) : books;
+                sortedBooks.forEach(book => container.innerHTML += createBookListItemHTML(book, shelfName));
+            } else {
+                messageEl.textContent = `This shelf is empty.`;
+            }
+        };
+
+        const renderAllLibraryShelves = () => Object.keys(shelfContainers).forEach(renderShelf);
+        
+        // Data management buttons and logic
+        const importHighlightsBtn = document.getElementById('import-highlights-btn');
+        const highlightsFileInput = document.getElementById('highlights-file-input');
+        const highlightImportModal = document.getElementById('highlight-import-modal');
+        const highlightBookTitle = document.getElementById('highlight-book-title');
+        const highlightBookSelect = document.getElementById('highlight-book-select');
+        const confirmImportBtn = document.getElementById('confirm-import-btn');
+        const exportDataBtn = document.getElementById('export-data-btn');
+        const importDataBtn = document.getElementById('import-data-btn');
+        const importFileInput = document.getElementById('import-file-input');
+        const parseMDHighlights = (mdContent) => { const highlights = []; let title = 'Unknown Title'; const frontmatterMatch = mdContent.match(/---\s*title:\s*"(.*?)"\s*---/); if (frontmatterMatch && frontmatterMatch[1]) title = frontmatterMatch[1]; const lines = mdContent.split('\n'); for (const line of lines) { if (line.trim().startsWith('- ')) { const highlightText = line.trim().substring(2).replace(/\s*\(location.*?\)\s*$/, '').trim(); if (highlightText) highlights.push(highlightText); } } return { title, highlights }; };
+        const parseHTMLHighlights = (htmlContent) => { const doc = new DOMParser().parseFromString(htmlContent, 'text/html'); const title = doc.querySelector('.bookTitle')?.textContent.trim() || 'Unknown Title'; const highlights = Array.from(doc.querySelectorAll('.noteText')).map(el => el.textContent.trim()); return { title, highlights }; };
+
+        importHighlightsBtn.addEventListener('click', () => highlightsFileInput.click());
+        highlightsFileInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { let parsed; if (file.name.endsWith('.md')) parsed = parseMDHighlights(event.target.result); else if (file.name.endsWith('.html')) parsed = parseHTMLHighlights(event.target.result); else { showToast('Unsupported file type. Please use .html or .md', 'error'); return; } if (parsed.highlights.length === 0) { showToast('No highlights found in the file.', 'error'); return; } tempHighlights = parsed.highlights; highlightBookTitle.textContent = parsed.title || 'Unknown Title'; highlightBookSelect.innerHTML = '<option value="">Select a book...</option>'; Object.values(library).flat().forEach(book => { const option = document.createElement('option'); option.value = `${book.shelf}:${book.id}`; option.textContent = book.title; highlightBookSelect.appendChild(option); }); openModal(highlightImportModal); }; reader.readAsText(file); e.target.value = null; });
+        confirmImportBtn.addEventListener('click', () => { const selected = highlightBookSelect.value; if (!selected) return showToast('Please select a book.', 'error'); const [shelf, bookId] = selected.split(':'); const book = library[shelf]?.find(b => b.id === bookId); if (!book) return showToast('Could not find selected book.', 'error'); book.highlights = [...(book.highlights || []), ...tempHighlights]; requestPassword(async () => { const {success} = await performAuthenticatedAction({ action: 'update', data: book }); if (success) { tempHighlights = []; closeModal(highlightImportModal); await getLibrary(true); renderAllLibraryShelves(); }}); });
+        exportDataBtn.addEventListener('click', () => { requestPassword(async () => { const {success, data} = await performAuthenticatedAction({ action: 'export' }); if (success) { const booksToExport = groupBooksIntoLibrary(data); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(booksToExport, null, 2)], { type: 'application/json' })); link.download = `book-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Data exported successfully!'); }}); });
+        importDataBtn.addEventListener('click', () => importFileInput.click());
+        importFileInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const importedLibrary = JSON.parse(event.target.result); if (!('watchlist' in importedLibrary && 'currentlyReading' in importedLibrary && 'read' in importedLibrary)) throw new Error('Invalid backup file format.'); const allBooks = Object.values(importedLibrary).flat(); if(allBooks.length === 0) return showToast('Backup file is empty.', 'error'); requestPassword(async () => { showToast(`Importing ${allBooks.length} books...`, 'success'); for (const book of allBooks) { await performAuthenticatedAction({ action: 'add', data: book }); } showToast('Import complete!', 'success'); await getLibrary(true); renderAllLibraryShelves(); }); } catch (error) { showToast('Failed to import data. Invalid file.', 'error'); }}; reader.readAsText(file); e.target.value = null; });
+        
+        getLibrary().then(lib => { if (lib) renderAllLibraryShelves(); });
+    }
+
+    // --- DETAILS PAGE LOGIC ---
     if (document.getElementById('details-page-content')) {
         const detailsContainer = document.getElementById('details-page-content');
         
@@ -232,82 +260,42 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordModal.querySelector('#password-submit-btn').addEventListener('click', () => { if (afterPasswordCallback) afterPasswordCallback(); });
         passwordModal.querySelector('#password-cancel-btn').addEventListener('click', () => closeModal(passwordModal));
     }
-    document.body.addEventListener('click', (e) => { const target = e.target; const closest = (selector) => target.closest(selector); const modalToClose = closest('.modal-backdrop'); if (target.classList.contains('close-modal-btn') && modalToClose) closeModal(modalToClose); if (target.classList.contains('close-highlight-modal-btn')) closeModal(document.getElementById('highlight-import-modal')); if (target.matches('.modal-backdrop:not(#password-modal)')) closeModal(target); });
+    
+    document.body.addEventListener('click', (e) => {
+        const target = e.target; 
+        const closest = (selector) => target.closest(selector); 
+        
+        // Handle closing modals
+        const modalToClose = closest('.modal-backdrop'); 
+        if (target.classList.contains('close-highlight-modal-btn')) closeModal(document.getElementById('highlight-import-modal')); 
+        if (target.matches('.modal-backdrop:not(#password-modal)')) closeModal(target);
 
-    const importHighlightsBtn = document.getElementById('import-highlights-btn');
-    const highlightsFileInput = document.getElementById('highlights-file-input');
-    const highlightImportModal = document.getElementById('highlight-import-modal');
-    const highlightBookTitle = document.getElementById('highlight-book-title');
-    const highlightBookSelect = document.getElementById('highlight-book-select');
-    const confirmImportBtn = document.getElementById('confirm-import-btn');
+        // Handle book actions that might exist on any page
+        const handleBookAction = (callback) => requestPassword(async () => { const {success} = await callback(); if (success) { window.location.reload(); } });
+        const handleAddBook = (bookData, targetShelf) => { const bookWithShelf = { ...bookData, shelf: targetShelf }; if (targetShelf === 'currentlyReading') bookWithShelf.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read') bookWithShelf.finishedOn = new Date().toISOString().split('T')[0]; handleBookAction(() => performAuthenticatedAction({ action: 'add', data: bookWithShelf })); };
+        const handleRemoveBook = (bookId) => handleBookAction(() => performAuthenticatedAction({ action: 'delete', data: { id: bookId } }));
+        const handleMoveBook = (bookId, currentShelf, targetShelf) => { const bookToMove = { ...library[currentShelf].find(b => b.id === bookId) }; if (!bookToMove) return; bookToMove.shelf = targetShelf; if (targetShelf === 'currentlyReading' && !bookToMove.startedOn) bookToMove.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read' && !bookToMove.finishedOn) { bookToMove.finishedOn = new Date().toISOString().split('T')[0]; if (!bookToMove.startedOn) bookToMove.startedOn = bookToMove.finishedOn; } handleBookAction(() => performAuthenticatedAction({ action: 'update', data: bookToMove }));};
 
-    if (importHighlightsBtn) importHighlightsBtn.addEventListener('click', () => highlightsFileInput.click());
-    if (highlightsFileInput) highlightsFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            let parsed;
-            if (file.name.endsWith('.md')) parsed = parseMDHighlights(event.target.result);
-            else if (file.name.endsWith('.html')) parsed = parseHTMLHighlights(event.target.result);
-            else { showToast('Unsupported file type. Please use .html or .md', 'error'); return; }
-            if (parsed.highlights.length === 0) { showToast('No highlights found in the file.', 'error'); return; }
-            tempHighlights = parsed.highlights;
-            highlightBookTitle.textContent = parsed.title || 'Unknown Title';
-            highlightBookSelect.innerHTML = '<option value="">Select a book...</option>';
-            Object.values(library).flat().forEach(book => { const option = document.createElement('option'); option.value = `${book.shelf}:${book.id}`; option.textContent = book.title; highlightBookSelect.appendChild(option); });
-            openModal(highlightImportModal);
-        };
-        reader.readAsText(file); e.target.value = null;
-    });
+        const addBtn = closest('.add-btn');
+        if (addBtn) handleAddBook(JSON.parse(addBtn.dataset.bookInfo), addBtn.dataset.targetShelf);
 
-    if (confirmImportBtn) confirmImportBtn.addEventListener('click', () => {
-        const selected = highlightBookSelect.value; if (!selected) return showToast('Please select a book.', 'error');
-        const [shelf, bookId] = selected.split(':'); const book = library[shelf]?.find(b => b.id === bookId);
-        if (!book) return showToast('Could not find selected book.', 'error');
-        book.highlights = [...(book.highlights || []), ...tempHighlights];
-        requestPassword(async () => {
-            const {success} = await performAuthenticatedAction({ action: 'update', data: book });
-            if (success) { tempHighlights = []; closeModal(highlightImportModal); }
+        const removeBtn = closest('.remove-btn');
+        if (removeBtn) handleRemoveBook(removeBtn.dataset.bookId);
+        
+        if (target.dataset.targetShelf) handleMoveBook(target.dataset.bookId, target.dataset.currentShelf, target.dataset.targetShelf);
+        
+        const optionsToggle = closest('.options-btn-toggle');
+        document.querySelectorAll('.options-btn-toggle').forEach(btn => {
+            const dropdown = btn.nextElementSibling;
+            if(btn !== optionsToggle) dropdown.classList.add('hidden');
         });
-    });
+        if(optionsToggle) optionsToggle.nextElementSibling.classList.toggle('hidden');
 
-    const forceRefreshBtn = document.getElementById('force-refresh-btn');
-    if (forceRefreshBtn) forceRefreshBtn.addEventListener('click', () => { showToast('Refreshing from database...'); getLibrary(true).then(lib => { if(lib) { renderAllShelves(); showToast('Library updated!'); } else { showToast('Failed to update library.', 'error'); }}); const menu = document.getElementById('menu'); if(menu) menu.classList.add('hidden'); });
-
-    const exportDataBtn = document.getElementById('export-data-btn');
-    const importDataBtn = document.getElementById('import-data-btn');
-    const importFileInput = document.getElementById('import-file-input');
-
-    if (exportDataBtn) exportDataBtn.addEventListener('click', () => {
-        requestPassword(async () => {
-            const {success, data} = await performAuthenticatedAction({ action: 'export' });
-            if (success) {
-                const booksToExport = groupBooksIntoLibrary(data);
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(new Blob([JSON.stringify(booksToExport, null, 2)], { type: 'application/json' }));
-                link.download = `book-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
-                link.click(); URL.revokeObjectURL(link.href); showToast('Data exported successfully!');
-            }
-        });
-    });
-
-    if (importDataBtn) importDataBtn.addEventListener('click', () => importFileInput.click());
-    if (importFileInput) importFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const importedLibrary = JSON.parse(event.target.result);
-                if (!('watchlist' in importedLibrary && 'currentlyReading' in importedLibrary && 'read' in importedLibrary)) throw new Error('Invalid backup file format.');
-                const allBooks = Object.values(importedLibrary).flat(); if(allBooks.length === 0) return showToast('Backup file is empty.', 'error');
-                requestPassword(async () => {
-                    showToast(`Importing ${allBooks.length} books...`, 'success');
-                    for (const book of allBooks) { await performAuthenticatedatedAction({ action: 'add', data: book }); }
-                    showToast('Import complete!', 'success'); await getLibrary(true); renderAllShelves();
-                });
-            } catch (error) { showToast('Failed to import data. Invalid file.', 'error'); }
-        };
-        reader.readAsText(file); e.target.value = null;
+        const menuButton = document.getElementById('menu-button');
+        const menu = document.getElementById('menu');
+        if (menuButton && menu && !menuButton.contains(target) && !menu.contains(target)) {
+            menu.classList.add('hidden');
+        }
     });
 });
 
