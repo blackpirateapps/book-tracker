@@ -3,74 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Book Tracker</title>
+    <title>Reading Library</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .book-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .book-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); }
-        .modal-backdrop, .modal-content { transition: all 0.3s ease-in-out; }
+        :root { font-family: 'Inter', sans-serif; }
+        @supports (font-variation-settings: normal) {
+            :root { font-family: 'Inter var', sans-serif; }
+        }
+        body { background-color: #f8f8f8; }
+        .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800">
+<body>
+    <div id="public-library" class="max-w-2xl mx-auto py-8 px-4">
+        <header class="pb-4 mb-6">
+            <h1 class="text-3xl font-bold tracking-tight text-gray-900">Reading Library</h1>
+        </header>
 
-    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
-        <!-- Main Dashboard View -->
-        <main id="main-dashboard">
-            <header class="text-center mb-8">
-                <h1 class="text-4xl md:text-5xl font-bold text-slate-900">Cloud Book Tracker</h1>
-                <p class="text-slate-600 mt-2">Your personal reading dashboard.</p>
-            </header>
-
-            <div class="p-6 bg-white rounded-xl shadow-md mb-6">
-                <form id="search-form" class="flex flex-col sm:flex-row gap-3 items-center">
-                    <div class="relative flex-grow w-full">
-                         <svg class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                        <input type="text" id="search-input" class="w-full px-4 py-3 pl-11 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Search for books by title or author..." required>
-                    </div>
-                    <button type="submit" class="bg-indigo-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-indigo-700 shadow-sm w-full sm:w-auto">Search</button>
-                    <button id="library-btn" class="bg-slate-700 text-white font-semibold px-6 py-3 rounded-lg hover:bg-slate-800 shadow-sm w-full sm:w-auto">My Library</button>
-                </form>
-            </div>
-            
-            <!-- Search Results Section -->
-            <section id="search-section" class="hidden mb-12">
-                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-3xl font-bold">Search Results</h2>
-                    <button id="clear-search-btn" class="text-slate-500 hover:text-slate-800 font-semibold">Clear</button>
+        <main class="space-y-10">
+            <section id="currently-reading-section">
+                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Currently Reading</h2>
+                <div id="public-currentlyReading" class="bg-white rounded-xl border border-gray-200/75">
+                    <p class="p-8 text-center text-gray-500">Loading...</p>
                 </div>
-                <div id="search-results" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
-                <p id="search-message" class="text-slate-500 text-center py-8">Type something to find books.</p>
             </section>
-
-            <!-- Library Dashboard -->
-            <div id="library-dashboard" class="space-y-12">
-                <div>
-                    <h2 class="text-3xl font-bold mb-4 border-b pb-2">Currently Reading</h2>
-                    <div id="homepage-currentlyReading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
-                    <p id="homepage-currentlyReading-message" class="text-slate-500 mt-4 text-center">Loading books...</p>
+            
+            <section id="read-section">
+                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Read</h2>
+                <div id="public-read" class="bg-white rounded-xl border border-gray-200/75">
+                     <p class="p-8 text-center text-gray-500">Loading...</p>
                 </div>
-                <div>
-                    <h2 class="text-3xl font-bold mb-4 border-b pb-2">Recent Reads</h2>
-                    <div id="homepage-recentReads" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
-                    <p id="homepage-recentReads-message" class="text-slate-500 mt-4 text-center">Loading books...</p>
-                </div>
-            </div>
+            </section>
         </main>
     </div>
-
-    <!-- Modals (Password, Library, Highlights) -->
-    <div id="modal-container">
-        <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-60 modal-backdrop flex items-center justify-center p-4 hidden z-50"><div class="bg-white rounded-xl shadow-2xl w-full max-w-sm transform scale-95 modal-content p-6"><h2 class="text-xl font-bold mb-4">Admin Access Required</h2><p class="text-slate-600 mb-4">Please enter the admin password to continue.</p><input type="password" id="password-input" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="••••••••••"><div class="flex items-center mt-4"><input type="checkbox" id="remember-me" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"><label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me</label></div><div class="flex justify-end gap-4 mt-4"><button id="password-cancel-btn" class="bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300">Cancel</button><button id="password-submit-btn" class="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700">Submit</button></div></div></div>
-        <div id="library-modal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center p-4 hidden z-40"><div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col transform scale-95 modal-content"><div class="p-4 border-b flex justify-between items-center"><h2 class="text-2xl font-bold">My Library</h2><button class="close-modal-btn text-3xl text-slate-500 hover:text-slate-800">&times;</button></div><div class="p-6 overflow-y-auto space-y-12"><details class="bg-slate-50 p-4 rounded-lg" open><summary class="text-xl font-semibold cursor-pointer select-none">Data Management</summary><div class="flex flex-wrap gap-4 mt-4"><button id="force-refresh-btn" class="flex-1 bg-teal-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-teal-700 transition shadow-sm">Force Refresh</button><button id="import-highlights-btn" class="flex-1 bg-amber-500 text-white font-semibold px-4 py-3 rounded-lg hover:bg-amber-600 transition shadow-sm">Import Highlights</button><button id="export-data-btn" class="flex-1 bg-slate-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-slate-700 transition shadow-sm">Export Backup</button><button id="import-data-btn" class="flex-1 bg-slate-600 text-white font-semibold px-4 py-3 rounded-lg hover:bg-slate-700 transition shadow-sm">Import Backup</button></div></details><div><h3 class="text-2xl font-semibold mb-4 border-b pb-2">Watchlist</h3><div id="shelf-watchlist" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div><p id="shelf-watchlist-message" class="text-slate-500 mt-4 text-center hidden"></p></div><div><h3 class="text-2xl font-semibold mb-4 border-b pb-2">Currently Reading</h3><div id="shelf-currentlyReading" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div><p id="shelf-currentlyReading-message" class="text-slate-500 mt-4 text-center hidden"></p></div><div><h3 class="text-2xl font-semibold mb-4 border-b pb-2">Read</h3><div id="shelf-read" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4"></div><p id="shelf-read-message" class="text-slate-500 mt-4 text-center hidden"></p></div></div></div></div>
-        <div id="highlight-import-modal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop flex items-center justify-center p-4 hidden z-40"><div id="highlight-modal-content" class="bg-white rounded-xl shadow-2xl w-full max-w-lg transform scale-95 modal-content"><div class="p-6"><div class="flex justify-between items-start"><h2 class="text-2xl font-bold mb-4">Assign Highlights</h2><button class="close-highlight-modal-btn text-2xl text-slate-500 hover:text-slate-800">&times;</button></div><p class="mb-2">We found highlights for: <strong id="highlight-book-title"></strong></p><p class="mb-4 text-slate-600">Select book to add highlights to.</p><select id="highlight-book-select" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition mb-4"></select><div class="flex justify-end gap-4"><button class="close-highlight-modal-btn bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 transition">Cancel</button><button id="confirm-import-btn" class="bg-amber-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-amber-600 transition">Import</button></div></div></div></div>
-    </div>
-    
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity z-50"><p id="toast-message"></p></div>
-    <input type="file" id="highlights-file-input" class="hidden" accept=".html,.md"><input type="file" id="import-file-input" class="hidden" accept=".json">
-
-    <script src="script.js" defer></script>
+    <script src="public-script.js" defer></script>
 </body>
 </html>
-

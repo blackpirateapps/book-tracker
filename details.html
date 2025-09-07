@@ -5,22 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Details</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <style>
-        body { font-family: 'Inter', sans-serif; }
+        :root { font-family: 'Inter', sans-serif; }
+        @supports (font-variation-settings: normal) {
+            :root { font-family: 'Inter var', sans-serif; }
+        }
+        body { background-color: #f8f8f8; }
+        .highlight-item {
+            padding-left: 1.25rem;
+            position: relative;
+        }
+        .highlight-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.1rem;
+            bottom: 0.1rem;
+            width: 3px;
+            background-color: #f59e0b; /* Amber 500 */
+            border-radius: 3px;
+        }
     </style>
 </head>
-<body class="bg-slate-100 text-slate-800">
-
-    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
-        <!-- Details content will be rendered here by script.js -->
-        <section id="details-page-content">
-            <p class="text-center text-slate-500">Loading book details...</p>
-        </section>
-    </div>
-
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity z-50"><p id="toast-message"></p></div>
-    
+<body>
+    <main id="public-details-content" class="max-w-2xl mx-auto py-8 px-4">
+        <p class="text-center text-gray-500">Loading book details...</p>
+    </main>
     <script src="script.js" defer></script>
 </body>
 </html>
+
