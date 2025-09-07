@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const PUBLIC_API_ENDPOINT = '/api/public';
-    const DETAILS_API_ENDPOINT = '/api/book';
+    const DETAILS_API_ENDPOINT = '/api/highlights';
     const PUBLIC_CACHE_KEY = 'public-book-library-cache';
 
     const getPublicLibrary = async (forceRefresh = false) => {
@@ -98,21 +98,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/128x192/e2e8f0/475569?text=N/A`;
             const authors = book.authors.join(', ') || 'Unknown Author';
             let highlightsHTML = book.highlights?.length > 0 ? `<div class="space-y-4">${book.highlights.map(h => `<p class="highlight-item text-gray-700">${h}</p>`).join('')}</div>` : '<p class="text-gray-500">No highlights for this book.</p>';
+            
             detailsContainer.innerHTML = `<a href="/" class="text-blue-500 mb-8 inline-block">&larr; Back to Library</a><div class="text-center mb-8"><img src="${coverUrl}" alt="Cover of ${book.title}" class="w-32 h-48 object-cover rounded-lg shadow-lg mx-auto mb-4"><h1 class="text-2xl font-bold tracking-tight text-gray-900">${book.title}</h1><p class="text-md text-gray-600 mt-1">${authors}</p></div><div class="bg-white rounded-xl border border-gray-200/75 p-6"><h2 class="text-lg font-semibold text-gray-900 mb-4">Highlights</h2>${highlightsHTML}</div>`;
         };
 
-        const fetchBookDetails = async () => {
+        const loadBookDetails = async () => {
             const bookId = new URLSearchParams(window.location.search).get('id');
-            if (!bookId) { renderDetails(null); return; }
+            if (!bookId) {
+                renderDetails(null);
+                return;
+            }
             try {
                 const response = await fetch(`${DETAILS_API_ENDPOINT}?id=${bookId}`);
                 if (!response.ok) throw new Error('Book not found.');
-                renderDetails(await response.json());
+                const book = await response.json();
+                renderDetails(book);
             } catch (error) {
                 console.error(error);
                 detailsContainer.innerHTML = `<a href="/" class="text-blue-500 mb-8 inline-block">&larr; Back to Library</a><p class="text-center text-red-500">Could not load book details.</p>`;
             }
         };
-        fetchBookDetails();
+
+        loadBookDetails();
     }
 });
