@@ -3,63 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book Details</title>
+    <title>Book Details - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://rsms.me/">
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <style>
         :root { font-family: 'Inter', sans-serif; }
-        @supports (font-variation-settings: normal) {
-            :root { font-family: 'Inter var', sans-serif; }
-        }
-        body { background-color: #f8f8f8; padding-top: 5rem; /* Space for the banner */ }
-        .highlight-item {
-            padding-left: 1.25rem;
-            position: relative;
-        }
-        .highlight-item::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0.1rem;
-            bottom: 0.1rem;
-            width: 3px;
-            background-color: #f59e0b; /* Amber 500 */
-            border-radius: 3px;
-        }
+        @supports (font-variation-settings: normal) { :root { font-family: 'Inter var', sans-serif; } }
+        body { background-color: #f8f8f8; }
+        .highlight-item:not(:last-child) { border-bottom: 1px solid #f0f0f0; padding-bottom: 1rem; margin-bottom: 1rem; }
+        .modal-content { transition: transform 0.3s ease-out, opacity 0.3s ease-out; }
     </style>
 </head>
 <body>
-    <!-- View Only Notification Banner -->
-    <div id="view-only-banner" class="fixed top-0 left-0 right-0 bg-amber-100 border-b border-amber-200 z-20 hidden">
-        <div class="max-w-2xl mx-auto flex items-center justify-between p-3">
-            <p class="text-sm text-amber-800">
-                Dashboard is in view-only mode. 
-                <button id="auth-link" class="font-semibold underline hover:text-amber-900">Enter password to make changes.</button>
+    <!-- Header -->
+    <header class="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b">
+        <div class="max-w-4xl mx-auto py-4 px-4">
+             <div class="flex justify-between items-center">
+                <h1 class="text-xl font-bold tracking-tight text-gray-900">Dashboard</h1>
+            </div>
+        </div>
+    </header>
+
+    <main id="details-page-content" class="max-w-2xl mx-auto py-8 px-4">
+        <!-- JS will populate this -->
+        <p class="text-center text-gray-500">Loading book details...</p>
+    </main>
+
+    <!-- View-only Banner -->
+    <div id="view-only-banner" class="hidden fixed bottom-0 left-0 right-0 bg-yellow-100 border-t border-yellow-200 p-4 z-20">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <p class="text-sm text-yellow-800">
+                This dashboard is in view-only mode. 
+                <a href="#" id="auth-link" class="font-bold underline">Enter password</a> to make changes.
             </p>
-            <button id="dismiss-banner-btn" class="p-1 rounded-full hover:bg-amber-200">
-                <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            <button id="dismiss-banner-btn" class="p-1 rounded-full hover:bg-yellow-200">
+                <svg class="w-5 h-5 text-yellow-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
     </div>
 
-    <main id="details-page-content" class="max-w-2xl mx-auto py-8 px-4">
-        <p class="text-center text-gray-500">Loading book details...</p>
-    </main>
-    
-    <div id="password-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center hidden opacity-0 z-50 p-4">
-        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-sm scale-95 opacity-0 p-6 text-center">
-            <h3 class="text-xl font-semibold mb-2">Enter Admin Password</h3>
-            <p class="text-gray-500 mb-4 text-sm">This action requires authentication.</p>
-            <input id="password-input" type="password" class="w-full px-3 py-2 border rounded-lg mb-4">
-            <div class="flex items-center justify-center mb-4"><input id="remember-me" type="checkbox" class="h-4 w-4 rounded"><label for="remember-me" class="ml-2 text-sm text-gray-600">Remember for 30 days</label></div>
-            <div class="flex gap-2">
-                <button id="password-cancel-btn" class="flex-1 bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
-                <button id="password-submit-btn" class="flex-1 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Confirm</button>
+    <!-- Password Modal -->
+    <div id="password-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="modal-content bg-white rounded-xl shadow-lg w-full max-w-sm p-6 opacity-0 scale-95">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Enter Password</h2>
+            <p class="text-sm text-gray-600 mb-4">You need to provide the admin password to perform this action.</p>
+            <input type="password" id="password-input" class="w-full p-2 border rounded-lg bg-gray-50 mb-4" placeholder="••••••••">
+            <div class="flex items-center mb-4">
+                <input id="remember-me" type="checkbox" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <label for="remember-me" class="ml-2 block text-sm text-gray-900">Remember me for 30 days</label>
+            </div>
+            <div class="flex justify-end gap-2">
+                <button id="password-cancel-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button id="password-submit-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Submit</button>
             </div>
         </div>
     </div>
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity duration-300 z-50"><p id="toast-message"></p></div>
+    
     <script src="/dashboard/script.js" defer></script>
 </body>
 </html>
