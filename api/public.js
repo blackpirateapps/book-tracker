@@ -9,6 +9,11 @@ const client = createClient({
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
+      // This header tells Vercel's CDN to cache the response for 600 seconds (10 minutes).
+      // s-maxage applies to shared caches like a CDN.
+      // stale-while-revalidate allows serving a stale (old) copy while a new one is fetched in the background.
+      res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
+
       // Ensure the table exists before trying to read from it.
       await client.execute(`
         CREATE TABLE IF NOT EXISTS books (
