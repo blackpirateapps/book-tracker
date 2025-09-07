@@ -10,23 +10,19 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
       // This header tells Vercel's CDN to cache the response for 600 seconds (10 minutes).
+      // s-maxage applies to shared caches like a CDN.
+      // stale-while-revalidate allows serving a stale (old) copy while a new one is fetched in the background.
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
 
-      // MODIFIED: Added 'hasHighlights' column to the table definition.
+      // Ensure the table exists before trying to read from it.
       await client.execute(`
         CREATE TABLE IF NOT EXISTS books (
           id TEXT PRIMARY KEY, title TEXT, authors TEXT, imageLinks TEXT, 
           pageCount INTEGER, publishedDate TEXT, industryIdentifiers TEXT, 
-          highlights TEXT, startedOn TEXT, finishedOn TEXT, readingMedium TEXT, shelf TEXT,
-          hasHighlights INTEGER DEFAULT 0
+          highlights TEXT, startedOn TEXT, finishedOn TEXT, readingMedium TEXT, shelf TEXT
         );
       `);
-
-      // MODIFIED: Selects 'hasHighlights' but NOT the full 'highlights' text.
-      const result = await client.execute(
-        "SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights FROM books"
-      );
-      
+      const result = await client.execute("SELECT * FROM books");
       return res.status(200).json(result.rows);
     } catch (e) {
       console.error(e);
@@ -37,3 +33,4 @@ export default async function handler(req, res) {
   // Reject any other method
   return res.status(405).json({ error: `Method ${req.method} not allowed.` });
 }
+

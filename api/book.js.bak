@@ -25,9 +25,7 @@ export default async function handler(req, res) {
     // --- GET Request Handler (Public Fetch) ---
     if (req.method === 'GET') {
         try {
-            // MODIFIED: This is now the lightweight query for the public library view.
-            // It selects the new 'hasHighlights' flag but excludes the full 'highlights' text.
-            const result = await client.execute("SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights FROM books");
+            const result = await client.execute("SELECT * FROM books");
             return res.status(200).json(result.rows);
         } catch (e) {
             console.error(e);
@@ -49,41 +47,41 @@ export default async function handler(req, res) {
                 case 'update':
                     const bookData = data;
 
-                    // --- IMAGE PROCESSING LOGIC (Unchanged) ---
+                    // --- IMAGE PROCESSING LOGIC ---
+                    // Check if the image link is an external one that needs processing
                     if (bookData.imageLinks?.thumbnail && bookData.imageLinks.thumbnail.startsWith('http')) {
                         try {
                             const response = await fetch(bookData.imageLinks.thumbnail);
                             if (response.ok) {
                                 const imageBuffer = await response.arrayBuffer();
+                                // Compress to WebP and upload to Vercel Blob
                                 const webpBuffer = await sharp(Buffer.from(imageBuffer)).webp({ quality: 80 }).toBuffer();
                                 const blob = await put(`${bookData.id}.webp`, webpBuffer, {
                                     access: 'public',
                                     contentType: 'image/webp',
                                 });
+                                // Update the book's image link to the permanent blob URL
                                 bookData.imageLinks.thumbnail = blob.url;
                             } else {
+                                // If fetching fails, clear the image link
                                 bookData.imageLinks.thumbnail = null; 
                             }
                         } catch (imgError) {
                             console.error("Image processing failed:", imgError);
-                            bookData.imageLinks.thumbnail = null;
+                            bookData.imageLinks.thumbnail = null; // Clear on error
                         }
                     }
 
-                    // --- SERIALIZE DATA FOR DATABASE ---
+                    // Serialize complex fields back to JSON strings for DB storage
                     const authorsStr = JSON.stringify(bookData.authors || []);
                     const imageLinksStr = JSON.stringify(bookData.imageLinks || {});
                     const identifiersStr = JSON.stringify(bookData.industryIdentifiers || []);
                     const highlightsStr = JSON.stringify(bookData.highlights || []);
-                    
-                    // NEW: Automatically determine the value for the hasHighlights flag.
-                    const hasHighlights = (bookData.highlights && bookData.highlights.length > 0) ? 1 : 0;
 
-                    // MODIFIED: The SQL query now includes the 'hasHighlights' column.
                     await client.execute({
                         sql: `
-                            INSERT INTO books (id, title, authors, imageLinks, pageCount, publishedDate, industryIdentifiers, highlights, startedOn, finishedOn, readingMedium, shelf, hasHighlights) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO books (id, title, authors, imageLinks, pageCount, publishedDate, industryIdentifiers, highlights, startedOn, finishedOn, readingMedium, shelf) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             ON CONFLICT(id) DO UPDATE SET
                                 title = excluded.title,
                                 authors = excluded.authors,
@@ -95,11 +93,9 @@ export default async function handler(req, res) {
                                 startedOn = excluded.startedOn,
                                 finishedOn = excluded.finishedOn,
                                 readingMedium = excluded.readingMedium,
-                                shelf = excluded.shelf,
-                                hasHighlights = excluded.hasHighlights;
+                                shelf = excluded.shelf;
                         `,
-                        // MODIFIED: Added the 'hasHighlights' variable to the arguments array.
-                        args: [bookData.id, bookData.title, authorsStr, imageLinksStr, bookData.pageCount, bookData.publishedDate, identifiersStr, highlightsStr, bookData.startedOn, bookData.finishedOn, bookData.readingMedium, bookData.shelf, hasHighlights]
+                        args: [bookData.id, bookData.title, authorsStr, imageLinksStr, bookData.pageCount, bookData.publishedDate, identifiersStr, highlightsStr, bookData.startedOn, bookData.finishedOn, bookData.readingMedium, bookData.shelf]
                     });
                     return res.status(200).json({ message: action === 'add' ? 'Book added successfully!' : 'Book updated successfully!' });
 
@@ -108,7 +104,6 @@ export default async function handler(req, res) {
                     return res.status(200).json({ message: "Book removed successfully!" });
 
                 case 'export':
-                     // Export remains unchanged, fetching all columns for a full backup.
                      const result = await client.execute("SELECT * FROM books");
                      return res.status(200).json(result.rows);
 
@@ -128,7 +123,6 @@ export default async function handler(req, res) {
 async function initializeDatabase() {
     try {
         await client.batch([
-            // MODIFIED: Added the 'hasHighlights' column with a default value of 0.
             `CREATE TABLE IF NOT EXISTS books (
                 id TEXT PRIMARY KEY,
                 title TEXT,
@@ -141,12 +135,13 @@ async function initializeDatabase() {
                 startedOn TEXT,
                 finishedOn TEXT,
                 readingMedium TEXT,
-                shelf TEXT,
-                hasHighlights INTEGER DEFAULT 0
+                shelf TEXT
             );`,
+            // NEW: Add an index on the 'shelf' column to speed up queries that filter or group by shelf.
             `CREATE INDEX IF NOT EXISTS idx_shelf ON books(shelf);`
         ], 'write');
     } catch (e) {
         console.error("Database initialization failed:", e);
     }
 }
+
