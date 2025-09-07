@@ -12,11 +12,24 @@
         @supports (font-variation-settings: normal) {
             :root { font-family: 'Inter var', sans-serif; }
         }
-        body { background-color: #f8f8f8; }
+        body { background-color: #f8f8f8; padding-top: 5rem; /* Space for the banner */ }
         .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
     </style>
 </head>
 <body>
+    <!-- View Only Notification Banner -->
+    <div id="view-only-banner" class="fixed top-0 left-0 right-0 bg-amber-100 border-b border-amber-200 z-20 hidden">
+        <div class="max-w-2xl mx-auto flex items-center justify-between p-3">
+            <p class="text-sm text-amber-800">
+                Dashboard is in view-only mode. 
+                <button id="auth-link" class="font-semibold underline hover:text-amber-900">Enter password to make changes.</button>
+            </p>
+            <button id="dismiss-banner-btn" class="p-1 rounded-full hover:bg-amber-200">
+                <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </div>
+
     <div id="main-dashboard" class="max-w-2xl mx-auto py-8 px-4">
         <!-- Header -->
         <header class="pb-4 mb-6 relative">

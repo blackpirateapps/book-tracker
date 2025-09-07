@@ -13,11 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toast-message');
     
-    const setCookie = (name, value, days) => { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax; Secure"; };
+    const setCookie = (name, value, days) => { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/dashboard; SameSite=Lax; Secure"; };
     const getCookie = (name) => { const nameEQ = name + "="; const ca = document.cookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) === ' ') c = c.substring(1, c.length); if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length); } return null; };
     const showToast = (message, type = 'success') => { if(!toast || !toastMessage) return; toastMessage.textContent = message; toast.className = `fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${type === 'success' ? 'bg-slate-900' : 'bg-red-600'}`; toast.classList.remove('opacity-0'); setTimeout(() => toast.classList.add('opacity-0'), 3000);};
-    const openModal = (modal) => { modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); modal.querySelector('.modal-content').classList.remove('scale-95'); }, 10);};
-    const closeModal = (modal) => { modal.classList.add('opacity-0'); modal.querySelector('.modal-content').classList.add('scale-95'); setTimeout(() => modal.classList.add('hidden'), 300);};
+    const openModal = (modal) => { modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0'); }, 10);};
+    const closeModal = (modal) => { modal.classList.add('opacity-0'); modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300);};
     const groupBooksIntoLibrary = (books) => { const newLibrary = { watchlist: [], currentlyReading: [], read: [] }; books.forEach(book => { try { book.authors = JSON.parse(book.authors); } catch (e) { book.authors = []; } try { book.imageLinks = JSON.parse(book.imageLinks); } catch (e) { book.imageLinks = {}; } try { book.industryIdentifiers = JSON.parse(book.industryIdentifiers); } catch (e) { book.industryIdentifiers = []; } try { book.highlights = JSON.parse(book.highlights); } catch (e) { book.highlights = []; } if (newLibrary[book.shelf]) { newLibrary[book.shelf].push(book); }}); return newLibrary;};
     
     const fetchBooksFromServer = async () => {
@@ -50,7 +50,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!password) {
             password = passwordInput.value;
-            if (rememberMeCheckbox.checked) setCookie(PWD_COOKIE, password, 30);
+            if (rememberMeCheckbox.checked) {
+                setCookie(PWD_COOKIE, password, 30);
+                manageViewOnlyBanner(); // Hide banner immediately
+            }
         }
         if (!password) { showToast("Password cannot be empty.", "error"); return {success: false}; }
         if (passwordModal) closeModal(passwordModal);
@@ -66,6 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Authenticated action failed:", error);
             showToast(error.message, "error");
+            setCookie(PWD_COOKIE, '', -1); // Clear invalid cookie
+            manageViewOnlyBanner(); // Show banner again
             return {success: false};
         } finally {
             if (passwordInput) passwordInput.value = '';
@@ -77,27 +82,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const requestPassword = (callback) => {
         if (getCookie(PWD_COOKIE)) { callback(); return; }
         const passwordModal = document.getElementById('password-modal');
-        afterPasswordCallback = callback;
-        openModal(passwordModal);
+        if (passwordModal) {
+            afterPasswordCallback = callback;
+            openModal(passwordModal);
+        } else {
+            showToast("Could not open password prompt.", "error");
+        }
+    };
+
+    const manageViewOnlyBanner = () => {
+        const banner = document.getElementById('view-only-banner');
+        if (!banner) return;
+        if (getCookie(PWD_COOKIE)) {
+            banner.classList.add('hidden');
+        } else {
+            banner.classList.remove('hidden');
+        }
     };
     
     const createBookListItemHTML = (book, shelf) => {
         const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
         const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
+        // The main part of the item is now a link, wrapping the image and text
         return `
-            <div class="book-list-item flex items-center p-4 space-x-4 relative">
-                <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
-                <div class="flex-grow">
-                    <p class="font-semibold text-gray-800">${book.title}</p>
-                    <p class="text-sm text-gray-500">${authors}</p>
-                </div>
+            <div class="book-list-item flex items-center p-4 space-x-4 relative group">
+                <a href="/dashboard/details.html?id=${book.id}" class="flex items-center space-x-4 flex-grow min-w-0">
+                    <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
+                    <div class="flex-grow min-w-0">
+                        <p class="font-semibold text-gray-800 truncate group-hover:underline">${book.title}</p>
+                        <p class="text-sm text-gray-500 truncate">${authors}</p>
+                    </div>
+                </a>
                 <div class="flex-shrink-0">
                      <button class="options-btn-toggle p-2 rounded-full hover:bg-gray-200">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
                      </button>
                      <div class="absolute right-4 top-14 mt-2 w-48 bg-white rounded-xl shadow-lg border text-sm z-10 hidden">
-                        <a href="/dashboard/details.html?id=${book.id}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">View Details</a>
-                        <div class="border-t my-1"></div>
                         <p class="px-4 pt-2 pb-1 text-xs text-gray-400 font-semibold">Move to</p>
                         ${shelf !== 'currentlyReading' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="currentlyReading">Currently Reading</button>` : ''}
                         ${shelf !== 'watchlist' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="watchlist">Watchlist</button>` : ''}
@@ -119,9 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const clearSearchBtn = document.getElementById('clear-search-btn');
         const homepageContainers = { currentlyReading: document.getElementById('homepage-currentlyReading'), recentReads: document.getElementById('homepage-recentReads') };
         const homepageMessages = { currentlyReading: document.getElementById('homepage-currentlyReading-message'), recentReads: document.getElementById('homepage-recentReads-message') };
-        const menuButton = document.getElementById('menu-button');
-        const menu = document.getElementById('menu');
-        const forceRefreshBtn = document.getElementById('force-refresh-btn');
         
         const renderHomepageSummaries = () => { 
             const crBooks = library.currentlyReading; homepageContainers.currentlyReading.innerHTML = ''; 
@@ -142,13 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <div class="book-list-item flex items-center p-4 space-x-4">
                      <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
-                    <div class="flex-grow">
-                        <p class="font-semibold text-gray-800">${book.title}</p>
-                        <p class="text-sm text-gray-500">${authors}</p>
+                    <div class="flex-grow min-w-0">
+                        <p class="font-semibold text-gray-800 truncate">${book.title}</p>
+                        <p class="text-sm text-gray-500 truncate">${authors}</p>
                     </div>
                     <div class="flex-shrink-0 flex gap-2">
                         <button data-book-info='${JSON.stringify(book)}' data-target-shelf="currentlyReading" title="Add to Currently Reading" class="add-btn text-sm bg-blue-100 text-blue-700 font-semibold py-1.5 px-3 rounded-lg hover:bg-blue-200">Reading</button>
-                        <button data-book-info='${JSON.stringify(book)}' data-target-shelf="read" title="Add to Read" class="add-btn text-sm bg-green-100 text-green-700 font-semibold py-1.5 px-3 rounded-lg hover:bg-green-200">Finished</button>
+                        <button data-book-info='${JSON.stringify(book)}' data-target-shelf="watchlist" title="Add to Watchlist" class="add-btn text-sm bg-gray-100 text-gray-700 font-semibold py-1.5 px-3 rounded-lg hover:bg-gray-200">Watch</button>
                     </div>
                 </div>`;
         };
@@ -174,8 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         searchForm.addEventListener('submit', handleSearch);
         clearSearchBtn.addEventListener('click', () => { searchSection.classList.add('hidden'); searchInput.value = ''; });
-        menuButton.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
-        forceRefreshBtn.addEventListener('click', () => { showToast('Refreshing from database...'); getLibrary(true).then(lib => { if(lib) { renderHomepageSummaries(); showToast('Library updated!'); } else { showToast('Failed to update library.', 'error'); }}); menu.classList.add('hidden'); });
         
         getLibrary().then(lib => { if (lib) renderHomepageSummaries(); });
     }
@@ -201,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const renderAllLibraryShelves = () => Object.keys(shelfContainers).forEach(renderShelf);
         
-        // Data management buttons and logic
         const importHighlightsBtn = document.getElementById('import-highlights-btn');
         const highlightsFileInput = document.getElementById('highlights-file-input');
         const highlightImportModal = document.getElementById('highlight-import-modal');
@@ -214,11 +228,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const parseMDHighlights = (mdContent) => { const highlights = []; let title = 'Unknown Title'; const frontmatterMatch = mdContent.match(/---\s*title:\s*"(.*?)"\s*---/); if (frontmatterMatch && frontmatterMatch[1]) title = frontmatterMatch[1]; const lines = mdContent.split('\n'); for (const line of lines) { if (line.trim().startsWith('- ')) { const highlightText = line.trim().substring(2).replace(/\s*\(location.*?\)\s*$/, '').trim(); if (highlightText) highlights.push(highlightText); } } return { title, highlights }; };
         const parseHTMLHighlights = (htmlContent) => { const doc = new DOMParser().parseFromString(htmlContent, 'text/html'); const title = doc.querySelector('.bookTitle')?.textContent.trim() || 'Unknown Title'; const highlights = Array.from(doc.querySelectorAll('.noteText')).map(el => el.textContent.trim()); return { title, highlights }; };
 
-        importHighlightsBtn.addEventListener('click', () => highlightsFileInput.click());
+        importHighlightsBtn.addEventListener('click', () => requestPassword(() => highlightsFileInput.click()));
         highlightsFileInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { let parsed; if (file.name.endsWith('.md')) parsed = parseMDHighlights(event.target.result); else if (file.name.endsWith('.html')) parsed = parseHTMLHighlights(event.target.result); else { showToast('Unsupported file type. Please use .html or .md', 'error'); return; } if (parsed.highlights.length === 0) { showToast('No highlights found in the file.', 'error'); return; } tempHighlights = parsed.highlights; highlightBookTitle.textContent = parsed.title || 'Unknown Title'; highlightBookSelect.innerHTML = '<option value="">Select a book...</option>'; Object.values(library).flat().forEach(book => { const option = document.createElement('option'); option.value = `${book.shelf}:${book.id}`; option.textContent = book.title; highlightBookSelect.appendChild(option); }); openModal(highlightImportModal); }; reader.readAsText(file); e.target.value = null; });
         confirmImportBtn.addEventListener('click', () => { const selected = highlightBookSelect.value; if (!selected) return showToast('Please select a book.', 'error'); const [shelf, bookId] = selected.split(':'); const book = library[shelf]?.find(b => b.id === bookId); if (!book) return showToast('Could not find selected book.', 'error'); book.highlights = [...(book.highlights || []), ...tempHighlights]; requestPassword(async () => { const {success} = await performAuthenticatedAction({ action: 'update', data: book }); if (success) { tempHighlights = []; closeModal(highlightImportModal); await getLibrary(true); renderAllLibraryShelves(); }}); });
         exportDataBtn.addEventListener('click', () => { requestPassword(async () => { const {success, data} = await performAuthenticatedAction({ action: 'export' }); if (success) { const booksToExport = groupBooksIntoLibrary(data); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(booksToExport, null, 2)], { type: 'application/json' })); link.download = `book-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Data exported successfully!'); }}); });
-        importDataBtn.addEventListener('click', () => importFileInput.click());
+        importDataBtn.addEventListener('click', () => requestPassword(() => importFileInput.click()));
         importFileInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { try { const importedLibrary = JSON.parse(event.target.result); if (!('watchlist' in importedLibrary && 'currentlyReading' in importedLibrary && 'read' in importedLibrary)) throw new Error('Invalid backup file format.'); const allBooks = Object.values(importedLibrary).flat(); if(allBooks.length === 0) return showToast('Backup file is empty.', 'error'); requestPassword(async () => { showToast(`Importing ${allBooks.length} books...`, 'success'); for (const book of allBooks) { await performAuthenticatedAction({ action: 'add', data: book }); } showToast('Import complete!', 'success'); await getLibrary(true); renderAllLibraryShelves(); }); } catch (error) { showToast('Failed to import data. Invalid file.', 'error'); }}; reader.readAsText(file); e.target.value = null; });
         
         getLibrary().then(lib => { if (lib) renderAllLibraryShelves(); });
@@ -236,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsContainer.addEventListener('click', async (e) => {
             const container = e.target.closest('#reading-log-container'); if (!container) return;
             const { bookId, shelf } = container.dataset;
-            if (e.target.id === 'edit-log-btn') renderReadingLogEdit(bookId, shelf);
+            if (e.target.id === 'edit-log-btn') requestPassword(() => renderReadingLogEdit(bookId, shelf));
             if (e.target.id === 'cancel-log-edit-btn') renderReadingLogView(bookId, shelf);
             if (e.target.id === 'save-log-btn') {
                 const book = { ...library[shelf]?.find(b => b.id === bookId) };
@@ -254,7 +268,14 @@ document.addEventListener('DOMContentLoaded', () => {
         getLibrary().then(lib => { if (lib) { const params = new URLSearchParams(window.location.search); const bookId = params.get('id'); const book = Object.values(lib).flat().find(b => b.id === bookId); renderDetailsPage(book); }});
     }
 
-    // --- SHARED EVENT LISTENERS ---
+    // --- SHARED INITIALIZATION & EVENT LISTENERS ---
+    manageViewOnlyBanner();
+    const banner = document.getElementById('view-only-banner');
+    if (banner) {
+        banner.querySelector('#dismiss-banner-btn').addEventListener('click', () => banner.classList.add('hidden'));
+        banner.querySelector('#auth-link').addEventListener('click', () => requestPassword(() => { /* Open modal only */ }));
+    }
+
     const passwordModal = document.getElementById('password-modal');
     if (passwordModal) {
         passwordModal.querySelector('#password-submit-btn').addEventListener('click', () => { if (afterPasswordCallback) afterPasswordCallback(); });
@@ -265,12 +286,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target; 
         const closest = (selector) => target.closest(selector); 
         
-        // Handle closing modals
         const modalToClose = closest('.modal-backdrop'); 
         if (target.classList.contains('close-highlight-modal-btn')) closeModal(document.getElementById('highlight-import-modal')); 
         if (target.matches('.modal-backdrop:not(#password-modal)')) closeModal(target);
 
-        // Handle book actions that might exist on any page
         const handleBookAction = (callback) => requestPassword(async () => { const {success} = await callback(); if (success) { window.location.reload(); } });
         const handleAddBook = (bookData, targetShelf) => { const bookWithShelf = { ...bookData, shelf: targetShelf }; if (targetShelf === 'currentlyReading') bookWithShelf.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read') bookWithShelf.finishedOn = new Date().toISOString().split('T')[0]; handleBookAction(() => performAuthenticatedAction({ action: 'add', data: bookWithShelf })); };
         const handleRemoveBook = (bookId) => handleBookAction(() => performAuthenticatedAction({ action: 'delete', data: { id: bookId } }));
@@ -279,23 +298,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const addBtn = closest('.add-btn');
         if (addBtn) handleAddBook(JSON.parse(addBtn.dataset.bookInfo), addBtn.dataset.targetShelf);
 
+        const optionsToggle = closest('.options-btn-toggle');
+        if (optionsToggle) {
+            e.stopPropagation(); // Prevent link navigation when clicking the options button
+            document.querySelectorAll('.options-btn-toggle').forEach(btn => {
+                const dropdown = btn.nextElementSibling;
+                if(btn !== optionsToggle) dropdown.classList.add('hidden');
+            });
+            optionsToggle.nextElementSibling.classList.toggle('hidden');
+        } else {
+            document.querySelectorAll('.options-btn-toggle').forEach(btn => btn.nextElementSibling.classList.add('hidden'));
+        }
+
         const removeBtn = closest('.remove-btn');
         if (removeBtn) handleRemoveBook(removeBtn.dataset.bookId);
         
-        if (target.dataset.targetShelf) handleMoveBook(target.dataset.bookId, target.dataset.currentShelf, target.dataset.targetShelf);
-        
-        const optionsToggle = closest('.options-btn-toggle');
-        document.querySelectorAll('.options-btn-toggle').forEach(btn => {
-            const dropdown = btn.nextElementSibling;
-            if(btn !== optionsToggle) dropdown.classList.add('hidden');
-        });
-        if(optionsToggle) optionsToggle.nextElementSibling.classList.toggle('hidden');
+        if (target.dataset.targetShelf && closest('button')) handleMoveBook(target.dataset.bookId, target.dataset.currentShelf, target.dataset.targetShelf);
 
         const menuButton = document.getElementById('menu-button');
         const menu = document.getElementById('menu');
-        if (menuButton && menu && !menuButton.contains(target) && !menu.contains(target)) {
+        if (menuButton && menu && !menuButton.contains(target) && !menu.contains(target) && !closest('#menu')) {
             menu.classList.add('hidden');
         }
     });
+
+    const forceRefreshBtn = document.getElementById('force-refresh-btn');
+    if(forceRefreshBtn) {
+         forceRefreshBtn.addEventListener('click', () => { showToast('Refreshing from database...'); getLibrary(true).then(lib => { if(lib) { showToast('Library updated!'); window.location.reload(); } else { showToast('Failed to update library.', 'error'); }}); const menu = document.getElementById('menu'); if(menu) menu.classList.add('hidden'); });
+    }
+     const menuButton = document.getElementById('menu-button');
+     const menu = document.getElementById('menu');
+     if(menuButton) menuButton.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
 });
 
