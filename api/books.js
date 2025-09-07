@@ -25,9 +25,7 @@ export default async function handler(req, res) {
     // --- GET Request Handler (Public Fetch) ---
     if (req.method === 'GET') {
         try {
-            // MODIFIED: This is now the lightweight query for the public library view.
-            // It selects the new 'hasHighlights' flag but excludes the full 'highlights' text.
-            const result = await client.execute("SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights FROM books");
+            const result = await client.execute("SELECT * FROM books");
             return res.status(200).json(result.rows);
         } catch (e) {
             console.error(e);
@@ -49,7 +47,7 @@ export default async function handler(req, res) {
                 case 'update':
                     const bookData = data;
 
-                    // --- IMAGE PROCESSING LOGIC (Unchanged) ---
+                    // --- IMAGE PROCESSING LOGIC ---
                     if (bookData.imageLinks?.thumbnail && bookData.imageLinks.thumbnail.startsWith('http')) {
                         try {
                             const response = await fetch(bookData.imageLinks.thumbnail);
@@ -70,7 +68,7 @@ export default async function handler(req, res) {
                         }
                     }
 
-                    // --- SERIALIZE DATA FOR DATABASE ---
+                    // Serialize complex fields back to JSON strings for DB storage
                     const authorsStr = JSON.stringify(bookData.authors || []);
                     const imageLinksStr = JSON.stringify(bookData.imageLinks || {});
                     const identifiersStr = JSON.stringify(bookData.industryIdentifiers || []);
@@ -108,7 +106,6 @@ export default async function handler(req, res) {
                     return res.status(200).json({ message: "Book removed successfully!" });
 
                 case 'export':
-                     // Export remains unchanged, fetching all columns for a full backup.
                      const result = await client.execute("SELECT * FROM books");
                      return res.status(200).json(result.rows);
 
