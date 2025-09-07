@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             password = passwordInput.value;
             if (rememberMeCheckbox.checked) {
                 setCookie(PWD_COOKIE, password, 30);
-                manageViewOnlyBanner(); // Hide banner immediately
+                manageViewOnlyBanner();
             }
         }
         if (!password) { showToast("Password cannot be empty.", "error"); return {success: false}; }
@@ -62,15 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, password })});
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'An unknown error occurred.');
-            if (payload.action !== 'export') {
-                 showToast(result.message || 'Action successful!', 'success');
-            }
+            if (payload.action !== 'export') { showToast(result.message || 'Action successful!', 'success'); }
             return {success: true, data: result};
         } catch (error) {
             console.error("Authenticated action failed:", error);
             showToast(error.message, "error");
-            setCookie(PWD_COOKIE, '', -1); // Clear invalid cookie
-            manageViewOnlyBanner(); // Show banner again
+            setCookie(PWD_COOKIE, '', -1);
+            manageViewOnlyBanner();
             return {success: false};
         } finally {
             if (passwordInput) passwordInput.value = '';
@@ -91,19 +89,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const manageViewOnlyBanner = () => {
-        const banner = document.getElementById('view-only-banner');
-        if (!banner) return;
-        if (getCookie(PWD_COOKIE)) {
-            banner.classList.add('hidden');
-        } else {
-            banner.classList.remove('hidden');
-        }
+        const banners = document.querySelectorAll('#view-only-banner');
+        banners.forEach(banner => {
+            if (!banner) return;
+            if (getCookie(PWD_COOKIE)) {
+                banner.classList.add('hidden');
+            } else {
+                banner.classList.remove('hidden');
+            }
+        });
     };
     
     const createBookListItemHTML = (book, shelf) => {
         const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
         const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
-        // The main part of the item is now a link, wrapping the image and text
         return `
             <div class="book-list-item flex items-center p-4 space-x-4 relative group">
                 <a href="/dashboard/details.html?id=${book.id}" class="flex items-center space-x-4 flex-grow min-w-0">
@@ -242,34 +241,200 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('details-page-content')) {
         const detailsContainer = document.getElementById('details-page-content');
         
-        const renderDetailsPage = (book) => { if (!book) { detailsContainer.innerHTML = `<a href="/dashboard/" class="text-blue-500 mb-8 inline-block">&larr; Back to Dashboard</a><p class="text-center">Book not found.</p>`; return; } const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/128x192/e2e8f0/475569?text=N/A`; const authors = book.authors ? book.authors.join(', ') : 'Unknown Author'; const pageCount = book.pageCount ? `${book.pageCount} pages` : 'N/A'; const publishedDate = book.publishedDate ? book.publishedDate : 'N/A'; const isbn = book.industryIdentifiers?.find(id => id.type === 'ISBN_13' || id.type === 'ISBN_10')?.identifier || 'N/A'; const goodreadsLink = `https://www.goodreads.com/search?q=${encodeURIComponent(book.title + ' ' + (book.authors ? book.authors[0] : ''))}`; detailsContainer.innerHTML = `<a href="/dashboard/" class="text-blue-500 mb-8 inline-block">&larr; Back to Dashboard</a><div class="text-center mb-8"><img src="${coverUrl}" alt="Cover" class="w-32 h-48 object-cover rounded-lg shadow-lg mx-auto mb-4"><h1 class="text-2xl font-bold tracking-tight text-gray-900">${book.title}</h1><p class="text-md text-gray-600 mt-1">${authors}</p></div><div class="space-y-8"><section id="reading-log-container" data-book-id="${book.id}" data-shelf="${book.shelf}"></section><section><div class="bg-white rounded-xl border p-6"><h2 class="text-lg font-semibold text-gray-900 mb-4">Metadata</h2><div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-700"><div><strong>Published:</strong> ${publishedDate}</div><div><strong>Pages:</strong> ${pageCount}</div><div><strong>ISBN:</strong> ${isbn}</div><div><a href="${goodreadsLink}" target="_blank" class="text-blue-600 hover:underline font-semibold">Find on Goodreads</a></div></div></div></section><section><div class="bg-white rounded-xl border p-6" data-book-id="${book.id}" data-shelf="${book.shelf}"><div id="highlights-heading-container" class="flex justify-between items-center mb-4"></div><div id="highlights-content-container"></div></div></section></div>`; renderReadingLogView(book.id, book.shelf); HighlightsManager.renderView(book.id, book.shelf);};
-        const renderReadingLogView = (bookId, shelf) => { const container = document.getElementById('reading-log-container'); const book = library[shelf]?.find(b => b.id === bookId); if (!container || !book) return; let durationHTML = ''; if (shelf === 'read' && book.startedOn && book.finishedOn) { const diffDays = Math.max(1, Math.ceil(Math.abs(new Date(book.finishedOn) - new Date(book.startedOn)) / (1000 * 60 * 60 * 24))); durationHTML = `<div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Time to Finish:</span><span>${diffDays} day${diffDays !== 1 ? 's' : ''}</span></div>`; } container.innerHTML = `<div class="bg-white rounded-xl border p-6"><div class="flex justify-between items-center mb-4"><h2 class="text-lg font-semibold text-gray-900">Reading Log</h2><button id="edit-log-btn" class="text-sm font-semibold text-blue-600 hover:underline">Edit</button></div><div class="space-y-2 text-sm"><div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Medium:</span><span>${book.readingMedium || 'Not set'}</span></div><div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Started On:</span><span>${book.startedOn || 'Not set'}</span></div>${shelf === 'read' ? `<div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Finished On:</span><span>${book.finishedOn || 'Not set'}</span></div>${durationHTML}` : ''}</div></div>`;};
-        const renderReadingLogEdit = (bookId, shelf) => { const container = document.getElementById('reading-log-container'); const book = library[shelf]?.find(b => b.id === bookId); if (!container || !book) return; const mediums = ["Paperback", "Kindle Paperwhite", "Mobile", "Tablet"]; const mediumOptions = mediums.map(m => `<option value="${m}" ${book.readingMedium === m ? 'selected' : ''}>${m}</option>`).join(''); container.innerHTML = `<div class="bg-white rounded-xl border p-6"><h2 class="text-lg font-semibold text-gray-900 mb-4">Edit Reading Log</h2><div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm"><div><label for="reading-medium" class="font-semibold block mb-1 text-gray-600">Medium</label><select id="reading-medium" class="w-full p-2 border rounded-lg bg-gray-50"><option value="">Not set</option>${mediumOptions}</select></div><div><label for="started-on" class="font-semibold block mb-1 text-gray-600">Started On</label><input type="date" id="started-on" value="${book.startedOn || ''}" class="w-full p-2 border rounded-lg bg-gray-50"></div>${shelf === 'read' ? `<div><label for="finished-on" class="font-semibold block mb-1 text-gray-600">Finished On</label><input type="date" id="finished-on" value="${book.finishedOn || ''}" class="w-full p-2 border rounded-lg bg-gray-50"></div>` : ''}</div><div class="flex justify-end gap-2 mt-4"><button id="cancel-log-edit-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button><button id="save-log-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save</button></div></div>`;};
+        const renderDetailsPage = (book) => {
+            if (!book) { detailsContainer.innerHTML = `<a href="/dashboard/" class="text-blue-500 mb-8 inline-block">&larr; Back to Dashboard</a><p class="text-center">Book not found.</p>`; return; }
+            const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/128x192/e2e8f0/475569?text=N/A`;
+            const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
+            const pageCount = book.pageCount ? `${book.pageCount} pages` : 'N/A';
+            const publishedDate = book.publishedDate ? book.publishedDate : 'N/A';
+            const isbn = book.industryIdentifiers?.find(id => id.type === 'ISBN_13' || id.type === 'ISBN_10')?.identifier || 'N/A';
+            const goodreadsLink = `https://www.goodreads.com/search?q=${encodeURIComponent(book.title + ' ' + (book.authors ? book.authors[0] : ''))}`;
+            
+            detailsContainer.innerHTML = `
+                <a href="/dashboard/" class="text-blue-500 mb-8 inline-block">&larr; Back to Dashboard</a>
+                <div class="text-center mb-8">
+                    <img src="${coverUrl}" alt="Cover" class="w-32 h-48 object-cover rounded-lg shadow-lg mx-auto mb-4">
+                    <h1 class="text-2xl font-bold tracking-tight text-gray-900">${book.title}</h1>
+                    <p class="text-md text-gray-600 mt-1">${authors}</p>
+                </div>
+                <div class="space-y-8">
+                    <section id="reading-log-container" data-book-id="${book.id}" data-shelf="${book.shelf}"></section>
+                    <section>
+                        <div class="bg-white rounded-xl border p-6">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-4">Metadata</h2>
+                            <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-700">
+                                <div><strong>Published:</strong> ${publishedDate}</div>
+                                <div><strong>Pages:</strong> ${pageCount}</div>
+                                <div><strong>ISBN:</strong> ${isbn}</div>
+                                <div><a href="${goodreadsLink}" target="_blank" class="text-blue-600 hover:underline font-semibold">Find on Goodreads</a></div>
+                            </div>
+                        </div>
+                    </section>
+                    <section>
+                        <div class="bg-white rounded-xl border p-6" data-book-id="${book.id}" data-shelf="${book.shelf}">
+                             <div id="highlights-heading-container" class="flex justify-between items-center mb-4"></div>
+                            <div id="highlights-content-container"></div>
+                        </div>
+                    </section>
+                </div>`;
+            
+            renderReadingLogView(book.id, book.shelf);
+            renderHighlightsView(book.id, book.shelf);
+        };
+
+        const renderReadingLogView = (bookId, shelf) => {
+            const container = document.getElementById('reading-log-container');
+            const book = library[shelf]?.find(b => b.id === bookId);
+            if (!container || !book) return;
+            let durationHTML = '';
+            if (shelf === 'read' && book.startedOn && book.finishedOn) {
+                const diffDays = Math.max(1, Math.ceil(Math.abs(new Date(book.finishedOn) - new Date(book.startedOn)) / (1000 * 60 * 60 * 24)));
+                durationHTML = `<div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Time to Finish:</span><span>${diffDays} day${diffDays !== 1 ? 's' : ''}</span></div>`;
+            }
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900">Reading Log</h2>
+                        <button id="edit-log-btn" class="text-sm font-semibold text-blue-600 hover:underline">Edit</button>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Medium:</span><span>${book.readingMedium || 'Not set'}</span></div>
+                        <div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Started On:</span><span>${book.startedOn || 'Not set'}</span></div>
+                        ${shelf === 'read' ? `<div class="flex justify-between items-center"><span class="font-semibold text-gray-600">Finished On:</span><span>${book.finishedOn || 'Not set'}</span></div>${durationHTML}` : ''}
+                    </div>
+                </div>`;
+        };
+
+        const renderReadingLogEdit = (bookId, shelf) => {
+            const container = document.getElementById('reading-log-container');
+            const book = library[shelf]?.find(b => b.id === bookId);
+            if (!container || !book) return;
+            const mediums = ["Paperback", "Kindle Paperwhite", "Mobile", "Tablet"];
+            const mediumOptions = mediums.map(m => `<option value="${m}" ${book.readingMedium === m ? 'selected' : ''}>${m}</option>`).join('');
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Edit Reading Log</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div><label for="reading-medium" class="font-semibold block mb-1 text-gray-600">Medium</label><select id="reading-medium" class="w-full p-2 border rounded-lg bg-gray-50"><option value="">Not set</option>${mediumOptions}</select></div>
+                        <div><label for="started-on" class="font-semibold block mb-1 text-gray-600">Started On</label><input type="date" id="started-on" value="${book.startedOn || ''}" class="w-full p-2 border rounded-lg bg-gray-50"></div>
+                        ${shelf === 'read' ? `<div><label for="finished-on" class="font-semibold block mb-1 text-gray-600">Finished On</label><input type="date" id="finished-on" value="${book.finishedOn || ''}" class="w-full p-2 border rounded-lg bg-gray-50"></div>` : ''}
+                    </div>
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button id="cancel-log-edit-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                        <button id="save-log-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save</button>
+                    </div>
+                </div>`;
+        };
+
+        const renderHighlightsView = (bookId, shelf) => {
+            const headingContainer = document.getElementById('highlights-heading-container');
+            const contentContainer = document.getElementById('highlights-content-container');
+            const book = library[shelf]?.find(b => b.id === bookId);
+            if (!headingContainer || !contentContainer || !book) return;
+
+            headingContainer.innerHTML = `
+                <h2 class="text-lg font-semibold text-gray-900">Highlights</h2>
+                <button id="edit-highlights-btn" class="text-sm font-semibold text-blue-600 hover:underline">Edit</button>
+            `;
+            
+            if (book.highlights && book.highlights.length > 0) {
+                contentContainer.innerHTML = '<div class="space-y-4">' + book.highlights.map(h => `<p class="highlight-item text-gray-700">${h}</p>`).join('') + '</div>';
+            } else {
+                contentContainer.innerHTML = '<p class="text-gray-500">No highlights for this book. Click "Edit" to add some.</p>';
+            }
+        };
+        
+        const renderHighlightsEdit = (bookId, shelf) => {
+            const headingContainer = document.getElementById('highlights-heading-container');
+            const contentContainer = document.getElementById('highlights-content-container');
+            const book = library[shelf]?.find(b => b.id === bookId);
+            if (!headingContainer || !contentContainer || !book) return;
+
+            headingContainer.innerHTML = `<h2 class="text-lg font-semibold text-gray-900">Edit Highlights</h2>`;
+            
+            const markdownText = book.highlights.map(h => `- ${h}`).join('\n');
+            contentContainer.innerHTML = `
+                <div>
+                    <textarea id="highlights-textarea" class="w-full h-64 p-3 border rounded-lg bg-gray-50 text-sm font-mono" placeholder="- Type or paste a highlight per line...">${markdownText}</textarea>
+                    <p class="text-xs text-gray-500 mt-1">Each item in a Markdown list (- item) will become a separate highlight.</p>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button id="cancel-highlights-edit-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button id="save-highlights-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save Highlights</button>
+                </div>
+            `;
+        };
+
+        const parseMarkdownHighlights = (text) => {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const isList = lines.some(l => l.startsWith('- ') || l.startsWith('* ') || /^\d+\.\s/.test(l));
+            if (isList) {
+                return lines.map(line => line.replace(/^(- |\* |\d+\.\s)/, '').trim()).filter(line => line);
+            } else if (text.trim()) {
+                return [text.trim()];
+            }
+            return [];
+        };
         
         detailsContainer.addEventListener('click', async (e) => {
-            const logContainer = e.target.closest('#reading-log-container'); if (logContainer) { const { bookId, shelf } = logContainer.dataset; if (e.target.id === 'edit-log-btn') requestPassword(() => renderReadingLogEdit(bookId, shelf)); if (e.target.id === 'cancel-log-edit-btn') renderReadingLogView(bookId, shelf); if (e.target.id === 'save-log-btn') { const book = { ...library[shelf]?.find(b => b.id === bookId) }; if (book) { book.readingMedium = logContainer.querySelector('#reading-medium').value; book.startedOn = logContainer.querySelector('#started-on').value; const finishedOnInput = logContainer.querySelector('#finished-on'); if (finishedOnInput) book.finishedOn = finishedOnInput.value; requestPassword(async () => { const { success } = await performAuthenticatedAction({ action: 'update', data: book }); if (success) { await getLibrary(true); const updatedBook = Object.values(library).flat().find(b => b.id === bookId); if (updatedBook) renderReadingLogView(updatedBook.id, updatedBook.shelf); } }); } } }
+            const logContainer = e.target.closest('#reading-log-container');
+            if (logContainer) {
+                const { bookId, shelf } = logContainer.dataset;
+                if (e.target.id === 'edit-log-btn') requestPassword(() => renderReadingLogEdit(bookId, shelf));
+                if (e.target.id === 'cancel-log-edit-btn') renderReadingLogView(bookId, shelf);
+                if (e.target.id === 'save-log-btn') {
+                    const book = { ...library[shelf]?.find(b => b.id === bookId) };
+                    if (book) {
+                        book.readingMedium = logContainer.querySelector('#reading-medium').value;
+                        book.startedOn = logContainer.querySelector('#started-on').value;
+                        const finishedOnInput = logContainer.querySelector('#finished-on');
+                        if (finishedOnInput) book.finishedOn = finishedOnInput.value;
+                        requestPassword(async () => {
+                            const { success } = await performAuthenticatedAction({ action: 'update', data: book });
+                            if (success) {
+                                await getLibrary(true);
+                                const updatedBook = Object.values(library).flat().find(b => b.id === bookId);
+                                if (updatedBook) renderReadingLogView(updatedBook.id, updatedBook.shelf);
+                            }
+                        });
+                    }
+                }
+            }
 
             const highlightsSection = e.target.closest('section > .bg-white');
             if(highlightsSection && highlightsSection.querySelector('#highlights-heading-container')) {
                 const { bookId, shelf } = highlightsSection.dataset;
-                if (e.target.id === 'edit-highlights-btn') HighlightsManager.handleEdit(bookId, shelf);
-                if (e.target.id === 'cancel-highlights-edit-btn') HighlightsManager.handleCancel(bookId, shelf);
-                if (e.target.id === 'save-highlights-btn') HighlightsManager.handleSave(bookId, shelf);
+                if (e.target.id === 'edit-highlights-btn') requestPassword(() => renderHighlightsEdit(bookId, shelf));
+                if (e.target.id === 'cancel-highlights-edit-btn') renderHighlightsView(bookId, shelf);
+                if (e.target.id === 'save-highlights-btn') {
+                    const book = { ...library[shelf]?.find(b => b.id === bookId) };
+                    if (book) {
+                        const textarea = document.getElementById('highlights-textarea');
+                        book.highlights = parseMarkdownHighlights(textarea.value);
+                        requestPassword(async () => {
+                             const { success } = await performAuthenticatedAction({ action: 'update', data: book });
+                             if (success) {
+                                await getLibrary(true);
+                                const updatedBook = Object.values(library).flat().find(b => b.id === bookId);
+                                if (updatedBook) renderHighlightsView(updatedBook.id, updatedBook.shelf);
+                             }
+                        });
+                    }
+                }
             }
         });
 
-        getLibrary().then(lib => { if (lib) { const params = new URLSearchParams(window.location.search); const bookId = params.get('id'); const book = Object.values(lib).flat().find(b => b.id === bookId); renderDetailsPage(book); }});
+        getLibrary().then(lib => { 
+            if (lib) { 
+                const params = new URLSearchParams(window.location.search); 
+                const bookId = params.get('id'); 
+                const book = Object.values(lib).flat().find(b => b.id === bookId); 
+                renderDetailsPage(book); 
+            }
+        });
     }
 
     // --- SHARED INITIALIZATION & EVENT LISTENERS ---
-    if (typeof HighlightsManager !== 'undefined') {
-        HighlightsManager.init({
-            getLibrary: () => library,
-            requestPassword,
-            performAuthenticatedAction,
-            updateLibrary: getLibrary
-        });
-    }
     manageViewOnlyBanner();
     const banner = document.getElementById('view-only-banner');
     if (banner) {
