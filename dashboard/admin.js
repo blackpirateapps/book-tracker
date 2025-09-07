@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
     const API_ENDPOINT = '/api/books';
     const MIGRATE_API_ENDPOINT = '/api/migrate-images';
+    const PARSE_API_ENDPOINT = '/api/parse-highlights';
     const PWD_COOKIE = 'book-tracker-admin-pwd';
     
     // --- STATE MANAGEMENT ---
@@ -221,17 +222,61 @@ document.addEventListener('DOMContentLoaded', () => {
         const exportDataBtn = document.getElementById('export-data-btn');
         const importDataBtn = document.getElementById('import-data-btn');
         const importFileInput = document.getElementById('import-file-input');
-        const parseMDHighlights = (mdContent) => { const highlights = []; let title = 'Unknown Title'; const frontmatterMatch = mdContent.match(/---\s*title:\s*"(.*?)"\s*---/); if (frontmatterMatch && frontmatterMatch[1]) title = frontmatterMatch[1]; const lines = mdContent.split('\n'); for (const line of lines) { if (line.trim().startsWith('- ')) { const highlightText = line.trim().substring(2).replace(/\s*\(location.*?\)\s*$/, '').trim(); if (highlightText) highlights.push(highlightText); } } return { title, highlights }; };
-        const parseHTMLHighlights = (htmlContent) => { const doc = new DOMParser().parseFromString(htmlContent, 'text/html'); const title = doc.querySelector('.bookTitle')?.textContent.trim() || 'Unknown Title'; const highlights = Array.from(doc.querySelectorAll('.noteText')).map(el => el.textContent.trim()); return { title, highlights }; };
-
+        
         importHighlightsBtn.addEventListener('click', () => requestPassword(() => highlightsFileInput.click()));
-        highlightsFileInput.addEventListener('change', (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (event) => { let parsed; if (file.name.endsWith('.md')) parsed = parseMDHighlights(event.target.result); else if (file.name.endsWith('.html')) parsed = parseHTMLHighlights(event.target.result); else { showToast('Unsupported file type. Please use .html or .md', 'error'); return; } if (parsed.highlights.length === 0) { showToast('No highlights found in the file.', 'error'); return; } tempHighlights = parsed.highlights; highlightBookTitle.textContent = parsed.title || 'Unknown Title'; highlightBookSelect.innerHTML = '<option value="">Select a book...</option>'; Object.values(library).flat().forEach(book => { const option = document.createElement('option'); option.value = `${book.shelf}:${book.id}`; option.textContent = book.title; highlightBookSelect.appendChild(option); }); openModal(highlightImportModal); }; reader.readAsText(file); e.target.value = null; });
+        
+        highlightsFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const fileContent = event.target.result;
+                try {
+                    const response = await fetch(PARSE_API_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fileContent, fileName: file.name }),
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Failed to parse file on server.');
+                    }
+
+                    const parsed = await response.json();
+
+                    if (parsed.highlights.length === 0) {
+                        showToast('No highlights found in the file.', 'error');
+                        return;
+                    }
+
+                    tempHighlights = parsed.highlights;
+                    highlightBookTitle.textContent = parsed.title || 'Unknown Title';
+                    highlightBookSelect.innerHTML = '<option value="">Select a book...</option>';
+                    Object.values(library).flat().forEach(book => {
+                        const option = document.createElement('option');
+                        option.value = `${book.shelf}:${book.id}`;
+                        option.textContent = book.title;
+                        highlightBookSelect.appendChild(option);
+                    });
+                    openModal(highlightImportModal);
+
+                } catch (error) {
+                    showToast(error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = null;
+        });
+
         confirmImportBtn.addEventListener('click', () => { 
             const selected = highlightBookSelect.value; if (!selected) return showToast('Please select a book.', 'error'); 
             const [shelf, bookId] = selected.split(':'); const book = library[shelf]?.find(b => b.id === bookId); if (!book) return showToast('Could not find selected book.', 'error'); 
             book.highlights = [...(book.highlights || []), ...tempHighlights]; 
             requestPassword(async () => { const {success} = await performAuthenticatedAction({ action: 'update', data: book }); if (success) { tempHighlights = []; closeModal(highlightImportModal); window.location.reload(); }}); 
         });
+
         exportDataBtn.addEventListener('click', () => { requestPassword(async () => { const {success, data} = await performAuthenticatedAction({ action: 'export' }); if (success) { const booksToExport = groupBooksIntoLibrary(data); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(booksToExport, null, 2)], { type: 'application/json' })); link.download = `book-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Data exported successfully!'); }}); });
         importDataBtn.addEventListener('click', () => requestPassword(() => importFileInput.click()));
         importFileInput.addEventListener('change', (e) => { 
