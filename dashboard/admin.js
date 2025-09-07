@@ -35,22 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const performAuthenticatedAction = async (payload, endpoint = API_ENDPOINT) => {
-        let password = getCookie(PWD_COOKIE);
-        const passwordModal = document.getElementById('password-modal');
-        const passwordInput = document.getElementById('password-input');
-        const rememberMeCheckbox = document.getElementById('remember-me');
-
-        if (!password) {
-            password = passwordInput.value;
-            if (rememberMeCheckbox.checked) {
-                setCookie(PWD_COOKIE, password, 30);
-                manageViewOnlyBanner();
-            }
+    // REFACTORED: Now accepts the password directly, making it more robust.
+    const performAuthenticatedAction = async (payload, password, endpoint = API_ENDPOINT) => {
+        if (!password) { 
+            showToast("Password cannot be empty.", "error"); 
+            return {success: false}; 
         }
-        if (!password) { showToast("Password cannot be empty.", "error"); return {success: false}; }
-        if (passwordModal) closeModal(passwordModal);
-        
         try {
             const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, password })});
             const result = await response.json();
@@ -62,20 +52,22 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Authenticated action failed:", error);
             showToast(error.message, "error");
-            setCookie(PWD_COOKIE, '', -1);
+            setCookie(PWD_COOKIE, '', -1); // Clear cookie on auth failure
             manageViewOnlyBanner();
             return {success: false};
-        } finally {
-            if (passwordInput) passwordInput.value = '';
-            if (rememberMeCheckbox) rememberMeCheckbox.checked = false;
-            afterPasswordCallback = null;
         }
     };
     
+    // REFACTORED: Now only accepts a function that takes a password.
     const requestPassword = (callback) => {
-        if (getCookie(PWD_COOKIE)) { callback(); return; }
+        const existingPassword = getCookie(PWD_COOKIE);
+        if (existingPassword) {
+            callback(existingPassword); // Pass the cookie password directly
+            return;
+        }
         const passwordModal = document.getElementById('password-modal');
         if (passwordModal) {
+            // The callback is stored and will be called with the new password by the modal's event listener
             afterPasswordCallback = callback;
             openModal(passwordModal);
         } else {
@@ -150,6 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const createSearchResultItemHTML = (book) => {
             const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
             const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
+            // FIXED: Escapes single quotes in the book data to prevent breaking the HTML attribute.
+            const bookInfoStr = JSON.stringify(book).replace(/'/g, "&apos;");
             return `
                 <div class="book-list-item flex items-center p-4 space-x-4">
                      <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
@@ -158,8 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="text-sm text-gray-500 truncate">${authors}</p>
                     </div>
                     <div class="flex-shrink-0 flex gap-2">
-                        <button data-book-info='${JSON.stringify(book)}' data-target-shelf="currentlyReading" title="Add to Currently Reading" class="add-btn text-sm bg-blue-100 text-blue-700 font-semibold py-1.5 px-3 rounded-lg hover:bg-blue-200">Reading</button>
-                        <button data-book-info='${JSON.stringify(book)}' data-target-shelf="watchlist" title="Add to Watchlist" class="add-btn text-sm bg-gray-100 text-gray-700 font-semibold py-1.5 px-3 rounded-lg hover:bg-gray-200">Watch</button>
+                        <button data-book-info='${bookInfoStr}' data-target-shelf="currentlyReading" title="Add to Currently Reading" class="add-btn text-sm bg-blue-100 text-blue-700 font-semibold py-1.5 px-3 rounded-lg hover:bg-blue-200">Reading</button>
+                        <button data-book-info='${bookInfoStr}' data-target-shelf="watchlist" title="Add to Watchlist" class="add-btn text-sm bg-gray-100 text-gray-700 font-semibold py-1.5 px-3 rounded-lg hover:bg-gray-200">Watch</button>
                     </div>
                 </div>`;
         };
@@ -274,19 +268,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const selected = highlightBookSelect.value; if (!selected) return showToast('Please select a book.', 'error'); 
             const [shelf, bookId] = selected.split(':'); const book = library[shelf]?.find(b => b.id === bookId); if (!book) return showToast('Could not find selected book.', 'error'); 
             book.highlights = [...(book.highlights || []), ...tempHighlights]; 
-            requestPassword(async () => { const {success} = await performAuthenticatedAction({ action: 'update', data: book }); if (success) { tempHighlights = []; closeModal(highlightImportModal); window.location.reload(); }}); 
+            requestPassword(async (password) => { const {success} = await performAuthenticatedAction({ action: 'update', data: book }, password); if (success) { tempHighlights = []; closeModal(highlightImportModal); window.location.reload(); }}); 
         });
 
-        exportDataBtn.addEventListener('click', () => { requestPassword(async () => { const {success, data} = await performAuthenticatedAction({ action: 'export' }); if (success) { const booksToExport = groupBooksIntoLibrary(data); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(booksToExport, null, 2)], { type: 'application/json' })); link.download = `book-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Data exported successfully!'); }}); });
-        importDataBtn.addEventListener('click', () => requestPassword(() => importFileInput.click()));
+        exportDataBtn.addEventListener('click', () => { requestPassword(async (password) => { const {success, data} = await performAuthenticatedAction({ action: 'export' }, password); if (success) { const booksToExport = groupBooksIntoLibrary(data); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(booksToExport, null, 2)], { type: 'application/json' })); link.download = `book-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Data exported successfully!'); }}); });
+        importDataBtn.addEventListener('click', () => requestPassword((password) => importFileInput.click()));
         importFileInput.addEventListener('change', (e) => { 
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); 
             reader.onload = (event) => { try { 
                 const importedLibrary = JSON.parse(event.target.result); if (!('watchlist' in importedLibrary && 'currentlyReading' in importedLibrary && 'read' in importedLibrary)) throw new Error('Invalid backup file format.'); 
                 const allBooks = Object.values(importedLibrary).flat(); if(allBooks.length === 0) return showToast('Backup file is empty.', 'error'); 
-                requestPassword(async () => { 
+                requestPassword(async (password) => { 
                     showToast(`Importing ${allBooks.length} books...`, 'success'); 
-                    for (const book of allBooks) { await performAuthenticatedAction({ action: 'add', data: book }); } 
+                    for (const book of allBooks) { await performAuthenticatedAction({ action: 'add', data: book }, password); } 
                     showToast('Import complete! Refreshing...', 'success'); 
                     setTimeout(() => window.location.reload(), 1000); 
                 }); 
@@ -451,8 +445,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         book.startedOn = logContainer.querySelector('#started-on').value;
                         const finishedOnInput = logContainer.querySelector('#finished-on');
                         if (finishedOnInput) book.finishedOn = finishedOnInput.value;
-                        requestPassword(async () => {
-                            const { success } = await performAuthenticatedAction({ action: 'update', data: book });
+                        requestPassword(async (password) => {
+                            const { success } = await performAuthenticatedAction({ action: 'update', data: book }, password);
                             if (success) { window.location.reload(); }
                         });
                     }
@@ -469,8 +463,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (book) {
                         const textarea = document.getElementById('highlights-textarea');
                         book.highlights = parseMarkdownHighlights(textarea.value);
-                        requestPassword(async () => {
-                             const { success } = await performAuthenticatedAction({ action: 'update', data: book });
+                        requestPassword(async (password) => {
+                             const { success } = await performAuthenticatedAction({ action: 'update', data: book }, password);
                              if (success) { window.location.reload(); }
                         });
                     }
@@ -523,10 +517,10 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         startBtn.addEventListener('click', () => {
-            requestPassword(() => {
+            requestPassword((password) => {
                 logEl.innerHTML = 'Starting migration...\n';
                 statusEl.textContent = 'Beginning migration process...';
-                runMigrationBatch();
+                runMigrationBatch(password); // Pass password to first call
             });
         });
     }
@@ -541,8 +535,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const passwordModal = document.getElementById('password-modal');
     if (passwordModal) {
-        passwordModal.querySelector('#password-submit-btn').addEventListener('click', () => { if (afterPasswordCallback) afterPasswordCallback(); });
-        passwordModal.querySelector('#password-cancel-btn').addEventListener('click', () => closeModal(passwordModal));
+        passwordModal.querySelector('#password-submit-btn').addEventListener('click', () => {
+            const passwordInput = document.getElementById('password-input');
+            const rememberMeCheckbox = document.getElementById('remember-me');
+            const password = passwordInput.value;
+            if (!password) { showToast("Password cannot be empty.", "error"); return; }
+            if (rememberMeCheckbox.checked) { setCookie(PWD_COOKIE, password, 30); manageViewOnlyBanner(); }
+            closeModal(passwordModal);
+            if (afterPasswordCallback) { afterPasswordCallback(password); }
+            passwordInput.value = '';
+            rememberMeCheckbox.checked = false;
+            afterPasswordCallback = null;
+        });
+        passwordModal.querySelector('#password-cancel-btn').addEventListener('click', () => {
+            const passwordInput = document.getElementById('password-input');
+            const rememberMeCheckbox = document.getElementById('remember-me');
+            closeModal(passwordModal);
+            passwordInput.value = '';
+            rememberMeCheckbox.checked = false;
+            afterPasswordCallback = null;
+        });
     }
     
     document.body.addEventListener('click', (e) => {
@@ -553,13 +565,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (target.classList.contains('close-highlight-modal-btn')) closeModal(document.getElementById('highlight-import-modal')); 
         if (target.matches('.modal-backdrop:not(#password-modal)')) closeModal(target);
 
-        const handleBookAction = (callback) => requestPassword(async () => { const {success} = await callback(); if (success) { window.location.reload(); } });
-        const handleAddBook = (bookData, targetShelf) => { const bookWithShelf = { ...bookData, shelf: targetShelf }; if (targetShelf === 'currentlyReading') bookWithShelf.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read') bookWithShelf.finishedOn = new Date().toISOString().split('T')[0]; handleBookAction(() => performAuthenticatedAction({ action: 'add', data: bookWithShelf })); };
-        const handleRemoveBook = (bookId) => handleBookAction(() => performAuthenticatedAction({ action: 'delete', data: { id: bookId } }));
-        const handleMoveBook = (bookId, currentShelf, targetShelf) => { const bookToMove = { ...library[currentShelf].find(b => b.id === bookId) }; if (!bookToMove) return; bookToMove.shelf = targetShelf; if (targetShelf === 'currentlyReading' && !bookToMove.startedOn) bookToMove.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read' && !bookToMove.finishedOn) { bookToMove.finishedOn = new Date().toISOString().split('T')[0]; if (!bookToMove.startedOn) bookToMove.startedOn = bookToMove.finishedOn; } handleBookAction(() => performAuthenticatedAction({ action: 'update', data: bookToMove }));};
+        const handleBookAction = (callback) => requestPassword(async (password) => { const {success} = await callback(password); if (success) { window.location.reload(); } });
+        const handleAddBook = (bookData, targetShelf) => { const bookWithShelf = { ...bookData, shelf: targetShelf }; if (targetShelf === 'currentlyReading') bookWithShelf.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read') bookWithShelf.finishedOn = new Date().toISOString().split('T')[0]; handleBookAction((password) => performAuthenticatedAction({ action: 'add', data: bookWithShelf }, password)); };
+        const handleRemoveBook = (bookId) => handleBookAction((password) => performAuthenticatedAction({ action: 'delete', data: { id: bookId } }, password));
+        const handleMoveBook = (bookId, currentShelf, targetShelf) => { const bookToMove = { ...library[currentShelf].find(b => b.id === bookId) }; if (!bookToMove) return; bookToMove.shelf = targetShelf; if (targetShelf === 'currentlyReading' && !bookToMove.startedOn) bookToMove.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read' && !bookToMove.finishedOn) { bookToMove.finishedOn = new Date().toISOString().split('T')[0]; if (!bookToMove.startedOn) bookToMove.startedOn = bookToMove.finishedOn; } handleBookAction((password) => performAuthenticatedAction({ action: 'update', data: bookToMove }, password));};
 
         const addBtn = closest('.add-btn');
-        if (addBtn) handleAddBook(JSON.parse(addBtn.dataset.bookInfo), addBtn.dataset.targetShelf);
+        if (addBtn) handleAddBook(JSON.parse(addBtn.dataset.bookInfo.replace(/&apos;/g, "'")), addBtn.dataset.targetShelf);
 
         const optionsToggle = closest('.options-btn-toggle');
         if (optionsToggle) {
@@ -596,4 +608,3 @@ document.addEventListener('DOMContentLoaded', () => {
      const menu = document.getElementById('menu');
      if(menuButton) menuButton.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
 });
-
