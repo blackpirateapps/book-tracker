@@ -34,56 +34,38 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
     };
-
-    // REFACTORED: Now accepts the password directly, making it more robust.
+    
     const performAuthenticatedAction = async (payload, password, endpoint = API_ENDPOINT) => {
-        if (!password) { 
-            showToast("Password cannot be empty.", "error"); 
-            return {success: false}; 
-        }
+        if (!password) { showToast("Password cannot be empty.", "error"); return {success: false}; }
         try {
             const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...payload, password })});
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || 'An unknown error occurred.');
-            if (payload.action !== 'export' && endpoint === API_ENDPOINT) { 
-                showToast(result.message || 'Action successful!', 'success'); 
-            }
+            if (payload.action !== 'export' && endpoint === API_ENDPOINT) { showToast(result.message || 'Action successful!', 'success'); }
             return {success: true, data: result};
         } catch (error) {
             console.error("Authenticated action failed:", error);
             showToast(error.message, "error");
-            setCookie(PWD_COOKIE, '', -1); // Clear cookie on auth failure
+            setCookie(PWD_COOKIE, '', -1);
             manageViewOnlyBanner();
             return {success: false};
         }
     };
     
-    // REFACTORED: Now only accepts a function that takes a password.
     const requestPassword = (callback) => {
         const existingPassword = getCookie(PWD_COOKIE);
-        if (existingPassword) {
-            callback(existingPassword); // Pass the cookie password directly
-            return;
-        }
+        if (existingPassword) { callback(existingPassword); return; }
         const passwordModal = document.getElementById('password-modal');
-        if (passwordModal) {
-            // The callback is stored and will be called with the new password by the modal's event listener
-            afterPasswordCallback = callback;
-            openModal(passwordModal);
-        } else {
-            showToast("Could not open password prompt.", "error");
-        }
+        if (passwordModal) { afterPasswordCallback = callback; openModal(passwordModal); } 
+        else { showToast("Could not open password prompt.", "error"); }
     };
 
     const manageViewOnlyBanner = () => {
         const banners = document.querySelectorAll('#view-only-banner');
         banners.forEach(banner => {
             if (!banner) return;
-            if (getCookie(PWD_COOKIE)) {
-                banner.classList.add('hidden');
-            } else {
-                banner.classList.remove('hidden');
-            }
+            if (getCookie(PWD_COOKIE)) banner.classList.add('hidden');
+            else banner.classList.remove('hidden');
         });
     };
     
@@ -109,6 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ${shelf !== 'watchlist' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="watchlist">Watchlist</button>` : ''}
                         ${shelf !== 'read' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="read">Read</button>` : ''}
                         <div class="border-t my-1"></div>
+                        <button data-book-id="${book.id}" data-shelf="${shelf}" class="edit-btn w-full text-left px-4 py-2 hover:bg-gray-100">Edit Details</button>
                         <button data-book-id="${book.id}" class="remove-btn w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">Remove Book</button>
                     </div>
                 </div>
@@ -142,7 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const createSearchResultItemHTML = (book) => {
             const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
             const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
-            // FIXED: Escapes single quotes in the book data to prevent breaking the HTML attribute.
             const bookInfoStr = JSON.stringify(book).replace(/'/g, "&apos;");
             return `
                 <div class="book-list-item flex items-center p-4 space-x-4">
@@ -190,7 +172,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('library-page-content')) {
         const shelfContainers = { watchlist: document.getElementById('shelf-watchlist'), currentlyReading: document.getElementById('shelf-currentlyReading'), read: document.getElementById('shelf-read') };
         const shelfMessages = { watchlist: document.getElementById('shelf-watchlist-message'), currentlyReading: document.getElementById('shelf-currentlyReading-message'), read: document.getElementById('shelf-read-message') };
-
+        const editBookModal = document.getElementById('edit-book-modal');
+        const importHighlightsBtn = document.getElementById('import-highlights-btn');
+        const highlightsFileInput = document.getElementById('highlights-file-input');
+        const highlightImportModal = document.getElementById('highlight-import-modal');
+        const highlightBookTitle = document.getElementById('highlight-book-title');
+        const highlightBookSelect = document.getElementById('highlight-book-select');
+        const confirmImportBtn = document.getElementById('confirm-import-btn');
+        const exportDataBtn = document.getElementById('export-data-btn');
+        const importDataBtn = document.getElementById('import-data-btn');
+        const importFileInput = document.getElementById('import-file-input');
+        
         const renderShelf = (shelfName) => { 
             const container = shelfContainers[shelfName];
             const messageEl = shelfMessages[shelfName];
@@ -207,44 +199,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const renderAllLibraryShelves = () => Object.keys(shelfContainers).forEach(renderShelf);
         
-        const importHighlightsBtn = document.getElementById('import-highlights-btn');
-        const highlightsFileInput = document.getElementById('highlights-file-input');
-        const highlightImportModal = document.getElementById('highlight-import-modal');
-        const highlightBookTitle = document.getElementById('highlight-book-title');
-        const highlightBookSelect = document.getElementById('highlight-book-select');
-        const confirmImportBtn = document.getElementById('confirm-import-btn');
-        const exportDataBtn = document.getElementById('export-data-btn');
-        const importDataBtn = document.getElementById('import-data-btn');
-        const importFileInput = document.getElementById('import-file-input');
-        
         importHighlightsBtn.addEventListener('click', () => requestPassword(() => highlightsFileInput.click()));
-        
         highlightsFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = async (event) => {
-                const fileContent = event.target.result;
                 try {
-                    const response = await fetch(PARSE_API_ENDPOINT, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ fileContent, fileName: file.name }),
-                    });
-
-                    if (!response.ok) {
-                        const err = await response.json();
-                        throw new Error(err.error || 'Failed to parse file on server.');
-                    }
-
+                    const { fileContent, fileName } = { fileContent: event.target.result, fileName: file.name };
+                    const response = await fetch(PARSE_API_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fileContent, fileName }) });
+                    if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Failed to parse file.'); }
                     const parsed = await response.json();
-
-                    if (parsed.highlights.length === 0) {
-                        showToast('No highlights found in the file.', 'error');
-                        return;
-                    }
-
+                    if (parsed.highlights.length === 0) return showToast('No highlights found in the file.', 'error');
                     tempHighlights = parsed.highlights;
                     highlightBookTitle.textContent = parsed.title || 'Unknown Title';
                     highlightBookSelect.innerHTML = '<option value="">Select a book...</option>';
@@ -255,10 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         highlightBookSelect.appendChild(option);
                     });
                     openModal(highlightImportModal);
-
-                } catch (error) {
-                    showToast(error.message, 'error');
-                }
+                } catch (error) { showToast(error.message, 'error'); }
             };
             reader.readAsText(file);
             e.target.value = null;
@@ -287,6 +250,51 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) { showToast('Failed to import data. Invalid file.', 'error'); }}; 
             reader.readAsText(file); e.target.value = null; 
         });
+        
+        if (editBookModal) {
+            const saveBtn = document.getElementById('edit-book-save-btn');
+            const cancelBtn = document.getElementById('edit-book-cancel-btn');
+            const cancelBtnTop = document.getElementById('edit-book-cancel-btn-top');
+            const removeBtn = document.getElementById('edit-book-remove-btn');
+            const idInput = document.getElementById('edit-book-id');
+            const shelfInput = document.getElementById('edit-book-shelf');
+
+            saveBtn.addEventListener('click', () => {
+                const bookId = idInput.value;
+                const shelf = shelfInput.value;
+                const originalBook = library[shelf]?.find(b => b.id === bookId);
+                if (!originalBook) return showToast('Could not find book to update.', 'error');
+                
+                const updatedBook = {
+                    ...originalBook,
+                    title: document.getElementById('edit-book-title').value.trim(),
+                    authors: document.getElementById('edit-book-authors').value.split(',').map(a => a.trim()).filter(a => a),
+                    imageLinks: { thumbnail: document.getElementById('edit-book-cover').value.trim() },
+                    readingMedium: document.getElementById('edit-book-medium').value,
+                    startedOn: document.getElementById('edit-book-started').value || null,
+                    finishedOn: document.getElementById('edit-book-finished').value || null,
+                };
+                
+                requestPassword(async (password) => {
+                    const { success } = await performAuthenticatedAction({ action: 'update', data: updatedBook }, password);
+                    if (success) { closeModal(editBookModal); window.location.reload(); }
+                });
+            });
+            
+            const closeEditModal = () => closeModal(editBookModal);
+            cancelBtn.addEventListener('click', closeEditModal);
+            cancelBtnTop.addEventListener('click', closeEditModal);
+
+            removeBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to permanently remove this book?')) {
+                    const bookId = idInput.value;
+                    requestPassword(async (password) => {
+                        const { success } = await performAuthenticatedAction({ action: 'delete', data: { id: bookId } }, password);
+                        if (success) { closeModal(editBookModal); window.location.reload(); }
+                    });
+                }
+            });
+        }
         
         (async () => {
             const success = await fetchAndSetLibrary();
@@ -489,20 +497,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const statusEl = document.getElementById('migration-status');
         const logEl = document.getElementById('migration-log');
 
-        const runMigrationBatch = async () => {
+        const runMigrationBatch = async (password) => {
             startBtn.disabled = true;
             startBtn.textContent = 'Migrating...';
             logEl.classList.remove('hidden');
 
-            const { success, data } = await performAuthenticatedAction({}, MIGRATE_API_ENDPOINT);
+            const { success, data } = await performAuthenticatedAction({}, password, MIGRATE_API_ENDPOINT);
 
             if (success) {
                 if (data.logs) data.logs.forEach(log => logEl.innerHTML += `${log}\n`);
-                logEl.scrollTop = logEl.scrollHeight; // Scroll to bottom
+                logEl.scrollTop = logEl.scrollHeight;
 
                 if (data.remainingCount > 0) {
                     statusEl.textContent = `Batch complete. ${data.remainingCount} images remaining. Starting next batch...`;
-                    setTimeout(runMigrationBatch, 1000); // Wait 1 second before next batch
+                    setTimeout(() => runMigrationBatch(password), 1000);
                 } else {
                     statusEl.textContent = 'Migration Complete! All images have been processed.';
                     startBtn.textContent = 'Migration Complete';
@@ -520,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
             requestPassword((password) => {
                 logEl.innerHTML = 'Starting migration...\n';
                 statusEl.textContent = 'Beginning migration process...';
-                runMigrationBatch(password); // Pass password to first call
+                runMigrationBatch(password);
             });
         });
     }
@@ -535,9 +543,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const passwordModal = document.getElementById('password-modal');
     if (passwordModal) {
-        passwordModal.querySelector('#password-submit-btn').addEventListener('click', () => {
-            const passwordInput = document.getElementById('password-input');
-            const rememberMeCheckbox = document.getElementById('remember-me');
+        const passwordInput = document.getElementById('password-input');
+        const rememberMeCheckbox = document.getElementById('remember-me');
+        
+        const handleSubmit = () => {
             const password = passwordInput.value;
             if (!password) { showToast("Password cannot be empty.", "error"); return; }
             if (rememberMeCheckbox.checked) { setCookie(PWD_COOKIE, password, 30); manageViewOnlyBanner(); }
@@ -546,10 +555,12 @@ document.addEventListener('DOMContentLoaded', () => {
             passwordInput.value = '';
             rememberMeCheckbox.checked = false;
             afterPasswordCallback = null;
-        });
+        };
+
+        passwordModal.querySelector('#password-submit-btn').addEventListener('click', handleSubmit);
+        passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
+        
         passwordModal.querySelector('#password-cancel-btn').addEventListener('click', () => {
-            const passwordInput = document.getElementById('password-input');
-            const rememberMeCheckbox = document.getElementById('remember-me');
             closeModal(passwordModal);
             passwordInput.value = '';
             rememberMeCheckbox.checked = false;
@@ -561,7 +572,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = e.target; 
         const closest = (selector) => target.closest(selector); 
         
-        const modalToClose = closest('.modal-backdrop'); 
         if (target.classList.contains('close-highlight-modal-btn')) closeModal(document.getElementById('highlight-import-modal')); 
         if (target.matches('.modal-backdrop:not(#password-modal)')) closeModal(target);
 
@@ -572,6 +582,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const addBtn = closest('.add-btn');
         if (addBtn) handleAddBook(JSON.parse(addBtn.dataset.bookInfo.replace(/&apos;/g, "'")), addBtn.dataset.targetShelf);
+
+        const editBtn = closest('.edit-btn');
+        if (editBtn) {
+            const { bookId, shelf } = editBtn.dataset;
+            const book = library[shelf]?.find(b => b.id === bookId);
+            if (book) {
+                const modal = document.getElementById('edit-book-modal');
+                document.getElementById('edit-book-id').value = book.id;
+                document.getElementById('edit-book-shelf').value = shelf;
+                document.getElementById('edit-book-title').value = book.title || '';
+                document.getElementById('edit-book-authors').value = book.authors?.join(', ') || '';
+                document.getElementById('edit-book-cover').value = book.imageLinks?.thumbnail || '';
+                document.getElementById('edit-book-medium').value = book.readingMedium || '';
+                document.getElementById('edit-book-started').value = book.startedOn || '';
+                document.getElementById('edit-book-finished').value = book.finishedOn || '';
+                openModal(modal);
+            }
+        }
 
         const optionsToggle = closest('.options-btn-toggle');
         if (optionsToggle) {
@@ -588,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const removeBtn = closest('.remove-btn');
         if (removeBtn) handleRemoveBook(removeBtn.dataset.bookId);
         
-        if (target.dataset.targetShelf && closest('button')) handleMoveBook(target.dataset.bookId, target.dataset.currentShelf, target.dataset.targetShelf);
+        if (target.dataset.targetShelf && closest('button[data-target-shelf]')) handleMoveBook(target.dataset.bookId, target.dataset.currentShelf, target.dataset.targetShelf);
 
         const menuButton = document.getElementById('menu-button');
         const menu = document.getElementById('menu');
