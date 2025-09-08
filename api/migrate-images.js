@@ -8,30 +8,35 @@ const client = createClient({
 });
 
 export default async function handler(req, res) {
-    // --- GET Request: Fetch all books that need migration ---
+    // --- GET Request: Fetch ALL books and add a migration status flag ---
     if (req.method === 'GET') {
         try {
-            const result = await client.execute("SELECT id, title, authors, imageLinks FROM books WHERE json_extract(imageLinks, '$.thumbnail') LIKE 'http%'");
-            const booksToMigrate = result.rows.map(book => {
+            const result = await client.execute("SELECT id, title, authors, imageLinks FROM books");
+            const allBooks = result.rows.map(book => {
                 let authors = [];
                 let imageLinks = {};
                 try { authors = JSON.parse(book.authors); } catch (e) {}
                 try { imageLinks = JSON.parse(book.imageLinks); } catch (e) {}
+                
+                const thumbnailUrl = imageLinks.thumbnail || null;
+                const needsMigration = thumbnailUrl ? thumbnailUrl.startsWith('http') : false;
+
                 return {
                     id: book.id,
                     title: book.title,
                     authors: authors,
-                    thumbnailUrl: imageLinks.thumbnail
+                    thumbnailUrl: thumbnailUrl,
+                    needsMigration: needsMigration
                 };
             });
-            return res.status(200).json(booksToMigrate);
+            return res.status(200).json(allBooks);
         } catch (e) {
             console.error("Failed to fetch books for migration:", e);
             return res.status(500).json({ error: "Could not fetch book list." });
         }
     }
 
-    // --- POST Request: Migrate a single book by its ID ---
+    // --- POST Request: Migrate a single book by its ID (Unchanged) ---
     if (req.method === 'POST') {
         const { password, bookId } = req.body;
         if (password !== process.env.ADMIN_PASSWORD) {

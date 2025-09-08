@@ -4,19 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Migration - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://rsms.me/">
-    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <link href="/styles/output.css" rel="stylesheet">
     <style>
-        :root { font-family: 'Inter', sans-serif; }
-        @supports (font-variation-settings: normal) { :root { font-family: 'Inter var', sans-serif; } }
-        body { background-color: #f8f8f8; }
+        .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
         .modal-content { transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
         .modal-backdrop { transition: opacity 0.2s ease-out; }
-        .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
     </style>
 </head>
-<body>
+<body class="bg-gray-50">
     <div id="migration-page">
         <header class="sticky top-0 bg-white/80 backdrop-blur-md z-20 border-b">
             <div class="max-w-4xl mx-auto py-4 px-4">
@@ -29,10 +24,10 @@
 
         <main class="max-w-2xl mx-auto py-8 px-4">
             <div class="bg-white rounded-xl border p-6">
-                <h2 class="text-lg font-semibold text-gray-900">Migrate Book Covers</h2>
-                <p class="text-sm text-gray-600 mt-2 mb-4">The books below are using external cover images. Migrate them to your Vercel Blob Storage for better performance and permanence. This process will compress them to the modern WebP format.</p>
+                <h2 class="text-lg font-semibold text-gray-900">Book Cover Status</h2>
+                <p class="text-sm text-gray-600 mt-2 mb-4">This tool shows the status of all your book covers. Click "Migrate" to process any books using external images and store them permanently in your Vercel Blob Storage.</p>
                 <div id="migration-list-container" class="mt-4 rounded-lg border">
-                    <p class="p-8 text-center text-gray-500">Loading books to migrate...</p>
+                    <p class="p-8 text-center text-gray-500">Loading book list...</p>
                 </div>
             </div>
         </main>
@@ -108,30 +103,47 @@
         // --- CORE MIGRATION LOGIC ---
         const createBookItemHTML = (book) => {
             const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
+            const coverUrl = book.thumbnailUrl || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
+
+            let buttonHTML;
+            if (book.needsMigration) {
+                buttonHTML = `<button class="migrate-btn text-sm bg-blue-600 text-white font-semibold py-1.5 px-4 rounded-lg hover:bg-blue-700">Migrate</button>`;
+            } else {
+                buttonHTML = `<button class="text-sm bg-green-100 text-green-800 font-semibold py-1.5 px-4 rounded-lg cursor-default flex items-center" disabled>
+                                <svg class="inline-block w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                Migrated
+                              </button>`;
+            }
+
             return `
                 <div class="book-list-item flex items-center p-4 space-x-4" data-book-id="${book.id}">
-                    <img src="${book.thumbnailUrl}" alt="Cover of ${book.title}" class="book-cover w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
+                    <img src="${coverUrl}" alt="Cover of ${book.title}" class="book-cover w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
                     <div class="flex-grow min-w-0">
                         <p class="font-semibold text-gray-800 truncate">${book.title}</p>
                         <p class="text-sm text-gray-500 truncate">${authors}</p>
-                        <p class="status-text text-xs text-amber-600 mt-1"></p>
+                        <p class="status-text text-xs mt-1"></p>
                     </div>
                     <div class="flex-shrink-0">
-                        <button class="migrate-btn text-sm bg-blue-600 text-white font-semibold py-1.5 px-4 rounded-lg hover:bg-blue-700">Migrate</button>
+                        ${buttonHTML}
                     </div>
                 </div>`;
         };
         
-        const fetchBooksToMigrate = async () => {
+        const fetchAllBooks = async () => {
             try {
                 const response = await fetch(API_ENDPOINT);
                 if (!response.ok) throw new Error('Failed to fetch book list.');
                 const books = await response.json();
                 
                 if (books.length === 0) {
-                    listContainer.innerHTML = `<p class="p-8 text-center text-gray-500">All book covers are already migrated. Nothing to do! 🎉</p>`;
+                    listContainer.innerHTML = `<p class="p-8 text-center text-gray-500">Your library is empty. Add some books first!</p>`;
                 } else {
-                    listContainer.innerHTML = books.map(createBookItemHTML).join('');
+                    const needsMigrationCount = books.filter(b => b.needsMigration).length;
+                    let headerHTML = '';
+                    if (needsMigrationCount === 0) {
+                        headerHTML = `<div class="p-4 text-center text-green-800 bg-green-50 border-b border-green-200"><p>All book covers are hosted on Vercel Blob. Nothing to do! 🎉</p></div>`;
+                    }
+                    listContainer.innerHTML = headerHTML + books.map(createBookItemHTML).join('');
                 }
             } catch (error) {
                 listContainer.innerHTML = `<p class="p-8 text-center text-red-500">${error.message}</p>`;
@@ -161,27 +173,29 @@
                     if (!response.ok) throw new Error(result.error || 'Migration failed.');
 
                     showToast('Cover migrated successfully!', 'success');
-                    migrateBtn.textContent = 'Migrated!';
-                    migrateBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                    migrateBtn.classList.add('bg-green-600');
+                    
+                    const newButton = document.createElement('button');
+                    newButton.className = 'text-sm bg-green-100 text-green-800 font-semibold py-1.5 px-4 rounded-lg cursor-default flex items-center';
+                    newButton.disabled = true;
+                    newButton.innerHTML = `<svg class="inline-block w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Migrated`;
+                    migrateBtn.replaceWith(newButton);
+
                     listItem.querySelector('.book-cover').src = result.newUrl;
                     statusText.textContent = 'Success!';
-                    statusText.classList.remove('text-amber-600', 'text-red-600');
-                    statusText.classList.add('text-green-600');
+                    statusText.className = 'status-text text-xs mt-1 text-green-600';
 
                 } catch (error) {
                     showToast(error.message, 'error');
                     migrateBtn.disabled = false;
                     migrateBtn.textContent = 'Retry';
                     statusText.textContent = `Error: ${error.message}`;
-                    statusText.classList.remove('text-amber-600', 'text-green-600');
-                    statusText.classList.add('text-red-600');
+                    statusText.className = 'status-text text-xs mt-1 text-red-600';
                 }
             });
         });
 
         // --- INITIALIZE PAGE ---
-        fetchBooksToMigrate();
+        fetchAllBooks();
     });
     </script>
 </body>
