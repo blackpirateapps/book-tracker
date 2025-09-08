@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = await response.json();
 
+            // MODIFIED: Replaced the two SVG icons with a single, simpler "plus" icon
             const quoteHTML = `
                 <blockquote class="text-gray-600 pr-10">
                     <p id="highlight-text" class="text-lg leading-relaxed">“${data.highlight}”</p>
@@ -25,11 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </figcaption>
                 </blockquote>
                 <button id="expand-highlight-btn" title="Expand highlight" class="absolute bottom-4 right-4 p-2 rounded-full hover:bg-gray-100">
-                    <svg id="expand-icon" class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M20.25 20.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
-                    </svg>
-                    <svg id="collapse-icon" class="w-5 h-5 text-gray-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 9L3.75 3.75M9 9h4.5m-4.5 0v4.5m0-4.5L15 15m0 0v-4.5m0 4.5h-4.5" />
+                    <svg id="expand-collapse-icon" class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
                 </button>
             `;
@@ -40,10 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const highlightText = document.getElementById('highlight-text');
             const expandButton = document.getElementById('expand-highlight-btn');
-            const expandIcon = document.getElementById('expand-icon');
-            const collapseIcon = document.getElementById('collapse-icon');
             
-            // MODIFIED: Logic to conditionally apply classes for gradient and button animation
             setTimeout(() => {
                 const isOverflowing = highlightText.scrollHeight > highlightText.clientHeight;
                 if (isOverflowing) {
@@ -52,10 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }, 100);
 
+            // MODIFIED: Simplified the click handler to only toggle one class
             expandButton.addEventListener('click', () => {
                 const isExpanded = highlightText.classList.toggle('expanded');
-                expandIcon.classList.toggle('hidden');
-                collapseIcon.classList.toggle('hidden');
+                // The CSS now handles the icon rotation automatically. We just update the title.
                 expandButton.setAttribute('title', isExpanded ? 'Collapse highlight' : 'Expand highlight');
             });
 

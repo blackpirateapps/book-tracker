@@ -18,14 +18,14 @@
         #highlight-text {
             max-height: 7.2rem; /* Clamp to 4 lines */
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
+            /* MODIFIED: Changed to a smoother, iOS-style easing curve */
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
         #highlight-text.expanded {
-            max-height: 50rem; /* Large enough for any highlight */
+            max-height: 50rem;
         }
         
-        /* MODIFIED: Gradient is now conditional on the .has-overflow class */
         #highlight-text.has-overflow:not(.expanded)::after {
             content: '';
             position: absolute;
@@ -37,17 +37,24 @@
             pointer-events: none;
         }
 
-        /* MODIFIED: Added styles for a smooth fade/scale animation for the button */
         #expand-highlight-btn {
             opacity: 0;
             transform: scale(0.8);
-            transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+            /* MODIFIED: Smoother easing to match the text animation */
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         #expand-highlight-btn.visible {
             opacity: 1;
             transform: scale(1);
         }
 
+        /* NEW: Styles to handle the icon rotation */
+        #expand-collapse-icon {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #highlight-text.expanded ~ #expand-highlight-btn #expand-collapse-icon {
+            transform: rotate(45deg);
+        }
     </style>
 </head>
 <body>
