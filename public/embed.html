@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Latest Read Book</title>
+    <!-- Uses the pre-compiled Tailwind CSS file for styling. -->
+    <link href="/styles/output.css" rel="stylesheet">
+    <style>
+        /* Uses a stack of common, browser-safe fonts. No external requests are made. */
+        :root { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            /* CSS variables for easy theme customization via URL parameters. */
+            --bg-color: #ffffff;
+            --text-color: #374151;
+            --quote-color: #111827;
+            --border-color: #e5e7eb;
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div id="widget-container" class="w-full h-full">
+        <!-- A skeleton loader is shown initially to prevent content popping or layout shifts. -->
+        <div id="skeleton" class="animate-pulse w-full">
+            <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">LATEST READ</p>
+            <div class="flex space-x-4">
+                <div class="w-20 h-28 bg-gray-200 rounded-md flex-shrink-0"></div>
+                <div class="flex-grow pt-1 space-y-3 w-full">
+                    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                    <div class="h-3 bg-gray-200 rounded w-3/4"></div>
+                    <div class="space-y-2 mt-4">
+                        <div class="h-3 bg-gray-200 rounded w-full"></div>
+                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- The actual content, which is hidden by default. -->
+        <div id="content" class="hidden"></div>
+
+        <!-- An error message, also hidden by default. -->
+         <div id="error" class="hidden flex items-center justify-center h-full text-center">
+            <p class="text-sm text-gray-500">Could not load latest read book.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const contentEl = document.getElementById('content');
+            const skeletonEl = document.getElementById('skeleton');
+            const errorEl = document.getElementById('error');
+            
+            // This function calculates the total height of the content and sends it to the parent page.
+            const sendHeight = () => {
+                const height = document.body.scrollHeight;
+                // The parent window receives this message and can use it to adjust the iframe's height.
+                // Using '*' is convenient for demos, but for production, you might restrict this to your site's origin for security.
+                window.parent.postMessage({ frameHeight: height, frameUrl: window.location.href }, '*');
+            };
+
+            // A ResizeObserver is the most reliable way to detect content size changes.
+            // It will automatically send the new height if the content reflows (e.g., on window resize).
+            const resizeObserver = new ResizeObserver(() => sendHeight());
+            resizeObserver.observe(document.body);
+
+            // This section reads URL parameters to allow for easy color theme customization.
+            const params = new URLSearchParams(window.location.search);
+            const theme = {
+                bg: params.get('bg'),
+                text: params.get('text'),
+                quote: params.get('quote'),
+                border: params.get('border')
+            };
+
+            const root = document.documentElement;
+            if (theme.bg) root.style.setProperty('--bg-color', `#${theme.bg}`);
+            if (theme.text) root.style.setProperty('--text-color', `#${theme.text}`);
+            if (theme.quote) root.style.setProperty('--quote-color', `#${theme.quote}`);
+            if (theme.border) root.style.setProperty('--border-color', `#${theme.border}`);
+            
+            try {
+                // Fetch the data from our new, fast API endpoint.
+                const response = await fetch('/api/latest-read');
+                if (!response.ok) throw new Error('Failed to fetch data');
+                const data = await response.json();
+
+                // Use a placeholder if no cover image URL is available.
+                const coverUrl = data.coverUrl || `https://placehold.co/80x112/${theme.bg || 'e2e8f0'}/${theme.text || '475569'}?text=N/A`;
+
+                // Build the HTML with the fetched data.
+                contentEl.innerHTML = `
+                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">LATEST READ</p>
+                    <div class="flex space-x-4">
+                        <img src="${coverUrl}" alt="Cover of ${data.title}" class="w-20 h-28 object-cover rounded-md shadow-sm flex-shrink-0" style="border: 1px solid var(--border-color);">
+                        <div class="flex-grow pt-1 min-w-0">
+                            <p class="font-bold truncate" style="color: var(--quote-color);">${data.title}</p>
+                            <p class="text-sm truncate">${data.author}</p>
+                            <blockquote class="mt-2 border-l-2 pl-3" style="border-color: var(--border-color);">
+                                <p class="text-sm italic" style="color: var(--quote-color);">“${data.highlight}”</p>
+                            </blockquote>
+                        </div>
+                    </div>
+                `;
+                
+                // Hide the skeleton and show the content.
+                skeletonEl.style.display = 'none';
+                contentEl.classList.remove('hidden');
+
+            } catch (err) {
+                // If anything goes wrong, show the error message.
+                console.error(err);
+                skeletonEl.style.display = 'none';
+                errorEl.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
+
