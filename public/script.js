@@ -1,7 +1,35 @@
 document.addEventListener('DOMContentLoaded', () => {
     const PUBLIC_API_ENDPOINT = '/api/public';
     const DETAILS_API_ENDPOINT = '/api/highlights';
+    const RANDOM_HIGHLIGHT_ENDPOINT = '/api/random-highlight'; // MODIFIED: New endpoint added
     const PUBLIC_CACHE_KEY = 'public-book-library-cache';
+
+    // MODIFIED: New function to fetch and display the random highlight
+    const fetchAndDisplayRandomHighlight = async () => {
+        const container = document.getElementById('random-highlight-container');
+        if (!container) return;
+
+        try {
+            const response = await fetch(RANDOM_HIGHLIGHT_ENDPOINT);
+            if (!response.ok) throw new Error('Could not fetch highlight.');
+            
+            const data = await response.json();
+
+            const quoteHTML = `
+                <blockquote class="text-gray-600">
+                    <p class="text-lg leading-relaxed">“${data.highlight}”</p>
+                    <figcaption class="mt-4 text-sm text-right text-gray-500">
+                        — ${data.author}, <cite class="font-semibold not-italic text-gray-700">${data.title}</cite>
+                    </figcaption>
+                </blockquote>
+            `;
+            container.innerHTML = quoteHTML;
+        } catch (error) {
+            console.error(error);
+            // If fetching fails, simply hide the container
+            container.style.display = 'none';
+        }
+    };
 
     const getPublicLibrary = async (forceRefresh = false) => {
         const cachedData = localStorage.getItem(PUBLIC_CACHE_KEY);
@@ -36,6 +64,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (document.getElementById('public-library')) {
+        // MODIFIED: Call the new function as soon as the page logic runs
+        fetchAndDisplayRandomHighlight();
+
         const currentlyReadingContainer = document.getElementById('public-currentlyReading');
         const readContainer = document.getElementById('public-read');
         const watchlistContainer = document.getElementById('public-watchlist');
