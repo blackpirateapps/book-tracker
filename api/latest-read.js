@@ -6,8 +6,8 @@ const client = createClient({
 });
 
 /**
- * This API endpoint is highly optimized to fetch only the single most recently read book
- * that contains highlights. It's designed to be fast and is heavily cached.
+ * This API endpoint is highly optimized to fetch the single most recently read book
+ * that contains highlights. It now handles the randomization server-side.
  */
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -15,12 +15,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // This header tells Vercel's Edge Network to cache the response for 10 minutes.
-    // This makes subsequent requests extremely fast as they are served from a CDN close to the user.
+    // The response is cached for 10 minutes to keep database calls to a minimum.
+    // The random highlight will be consistent for the duration of the cache.
     res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
 
-    // The SQL query is optimized to find the most recently finished book on the 'read' shelf
-    // that is guaranteed to have highlights, and it only fetches one row.
+    // The SQL query fetches the most recently finished book on the 'read' shelf
+    // that is guaranteed to have highlights.
     const result = await client.execute({
       sql: "SELECT title, authors, imageLinks, highlights FROM books WHERE shelf = 'read' AND hasHighlights = 1 ORDER BY finishedOn DESC LIMIT 1",
       args: [],
@@ -40,22 +40,23 @@ export default async function handler(req, res) {
     try { authors = JSON.parse(book.authors); } catch (e) {}
     try { imageLinks = JSON.parse(book.imageLinks); } catch (e) {}
 
-    // Ensure the book actually contains highlights after parsing.
     if (highlights.length === 0) {
         return res.status(404).json({ error: "Book was found, but it contained no highlights." });
     }
     
-    // Pick one random highlight from the book's array.
+    // MODIFIED: Randomization is now done on the server.
     const randomHighlight = highlights[Math.floor(Math.random() * highlights.length)];
+    
     const authorString = authors.length > 0 ? authors.join(', ') : 'Unknown Author';
     const coverUrl = imageLinks.thumbnail || null;
 
-    // Return the clean, structured data.
+    // Return the clean, structured data with only one pre-selected highlight.
     return res.status(200).json({
       title: book.title,
       author: authorString,
       coverUrl: coverUrl,
-      highlight: randomHighlight,
+      // MODIFIED: Return only the single random highlight.
+      highlight: randomHighlight, 
     });
 
   } catch (e) {

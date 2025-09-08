@@ -87,7 +87,7 @@
             if (theme.border) root.style.setProperty('--border-color', `#${theme.border}`);
             
             try {
-                // Fetch the data from our new, fast API endpoint.
+                // Fetch the data from our fast API endpoint.
                 const response = await fetch('/api/latest-read');
                 if (!response.ok) throw new Error('Failed to fetch data');
                 const data = await response.json();
@@ -95,7 +95,7 @@
                 // Use a placeholder if no cover image URL is available.
                 const coverUrl = data.coverUrl || `https://placehold.co/80x112/${theme.bg || 'e2e8f0'}/${theme.text || '475569'}?text=N/A`;
 
-                // Build the HTML with the fetched data.
+                // Build the HTML with the fetched data. The client no longer needs to do any randomization.
                 contentEl.innerHTML = `
                     <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">LATEST READ</p>
                     <div class="flex space-x-4">
