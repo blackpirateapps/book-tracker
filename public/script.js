@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const RANDOM_HIGHLIGHT_ENDPOINT = '/api/random-highlight';
     const PUBLIC_CACHE_KEY = 'public-book-library-cache';
 
-    // MODIFIED: Function now handles overflow and expand/collapse functionality
     const fetchAndDisplayRandomHighlight = async () => {
         const container = document.getElementById('random-highlight-container');
         if (!container) return;
@@ -25,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         — ${data.author}, <cite class="font-semibold not-italic text-gray-700">${data.title}</cite>
                     </figcaption>
                 </blockquote>
-                <button id="expand-highlight-btn" title="Expand highlight" class="absolute bottom-4 right-4 p-2 rounded-full hover:bg-gray-100 hidden">
+                <button id="expand-highlight-btn" title="Expand highlight" class="absolute bottom-4 right-4 p-2 rounded-full hover:bg-gray-100">
                     <svg id="expand-icon" class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M20.25 20.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
                     </svg>
@@ -44,11 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const expandIcon = document.getElementById('expand-icon');
             const collapseIcon = document.getElementById('collapse-icon');
             
-            // Check for overflow after a short delay to allow rendering
+            // MODIFIED: Logic to conditionally apply classes for gradient and button animation
             setTimeout(() => {
                 const isOverflowing = highlightText.scrollHeight > highlightText.clientHeight;
                 if (isOverflowing) {
-                    expandButton.classList.remove('hidden');
+                    highlightText.classList.add('has-overflow');
+                    expandButton.classList.add('visible');
                 }
             }, 100);
 
@@ -187,3 +187,4 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBookDetails();
     }
 });
+
