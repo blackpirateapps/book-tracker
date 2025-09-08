@@ -1,13 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     const PUBLIC_API_ENDPOINT = '/api/public';
     const DETAILS_API_ENDPOINT = '/api/highlights';
-    const RANDOM_HIGHLIGHT_ENDPOINT = '/api/random-highlight'; // MODIFIED: New endpoint added
+    const RANDOM_HIGHLIGHT_ENDPOINT = '/api/random-highlight';
     const PUBLIC_CACHE_KEY = 'public-book-library-cache';
 
-    // MODIFIED: New function to fetch and display the random highlight
+    // MODIFIED: Function now handles overflow and expand/collapse functionality
     const fetchAndDisplayRandomHighlight = async () => {
         const container = document.getElementById('random-highlight-container');
         if (!container) return;
+        
+        const skeleton = document.getElementById('highlight-skeleton');
+        const contentContainer = document.getElementById('highlight-content');
 
         try {
             const response = await fetch(RANDOM_HIGHLIGHT_ENDPOINT);
@@ -16,20 +19,52 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             const quoteHTML = `
-                <blockquote class="text-gray-600">
-                    <p class="text-lg leading-relaxed">“${data.highlight}”</p>
+                <blockquote class="text-gray-600 pr-10">
+                    <p id="highlight-text" class="text-lg leading-relaxed">“${data.highlight}”</p>
                     <figcaption class="mt-4 text-sm text-right text-gray-500">
                         — ${data.author}, <cite class="font-semibold not-italic text-gray-700">${data.title}</cite>
                     </figcaption>
                 </blockquote>
+                <button id="expand-highlight-btn" title="Expand highlight" class="absolute bottom-4 right-4 p-2 rounded-full hover:bg-gray-100 hidden">
+                    <svg id="expand-icon" class="w-5 h-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M20.25 20.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+                    </svg>
+                    <svg id="collapse-icon" class="w-5 h-5 text-gray-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 9L3.75 3.75M9 9h4.5m-4.5 0v4.5m0-4.5L15 15m0 0v-4.5m0 4.5h-4.5" />
+                    </svg>
+                </button>
             `;
-            container.innerHTML = quoteHTML;
+            contentContainer.innerHTML = quoteHTML;
+            
+            if(skeleton) skeleton.style.display = 'none';
+            contentContainer.classList.remove('hidden');
+
+            const highlightText = document.getElementById('highlight-text');
+            const expandButton = document.getElementById('expand-highlight-btn');
+            const expandIcon = document.getElementById('expand-icon');
+            const collapseIcon = document.getElementById('collapse-icon');
+            
+            // Check for overflow after a short delay to allow rendering
+            setTimeout(() => {
+                const isOverflowing = highlightText.scrollHeight > highlightText.clientHeight;
+                if (isOverflowing) {
+                    expandButton.classList.remove('hidden');
+                }
+            }, 100);
+
+            expandButton.addEventListener('click', () => {
+                const isExpanded = highlightText.classList.toggle('expanded');
+                expandIcon.classList.toggle('hidden');
+                collapseIcon.classList.toggle('hidden');
+                expandButton.setAttribute('title', isExpanded ? 'Collapse highlight' : 'Expand highlight');
+            });
+
         } catch (error) {
             console.error(error);
-            // If fetching fails, simply hide the container
             container.style.display = 'none';
         }
     };
+
 
     const getPublicLibrary = async (forceRefresh = false) => {
         const cachedData = localStorage.getItem(PUBLIC_CACHE_KEY);
@@ -64,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (document.getElementById('public-library')) {
-        // MODIFIED: Call the new function as soon as the page logic runs
         fetchAndDisplayRandomHighlight();
 
         const currentlyReadingContainer = document.getElementById('public-currentlyReading');
