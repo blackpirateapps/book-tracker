@@ -11,12 +11,13 @@
         :root { font-family: 'Inter', sans-serif; }
         @supports (font-variation-settings: normal) { :root { font-family: 'Inter var', sans-serif; } }
         body { background-color: #f8f8f8; }
-        .modal-content { transition: transform 0.3s ease-out, opacity 0.3s ease-out; }
+        .modal-content { transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
+        .modal-backdrop { transition: opacity 0.2s ease-out; }
+        .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
     </style>
 </head>
 <body>
     <div id="migration-page">
-        <!-- Header -->
         <header class="sticky top-0 bg-white/80 backdrop-blur-md z-20 border-b">
             <div class="max-w-4xl mx-auto py-4 px-4">
                  <div class="flex justify-between items-center">
@@ -26,19 +27,17 @@
             </div>
         </header>
 
-        <!-- Main Content -->
         <main class="max-w-2xl mx-auto py-8 px-4">
             <div class="bg-white rounded-xl border p-6">
-                <h2 class="text-lg font-semibold text-gray-900">Migrate Book Covers to Vercel Blob</h2>
-                <p class="text-sm text-gray-600 mt-2 mb-4">This tool will find books using external cover images, compress them to WebP, and store them permanently in your Vercel Blob Storage for better performance. This process is safe to run multiple times.</p>
-                <button id="start-migration-btn" class="w-full bg-blue-600 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-blue-700">Start Migration</button>
-                <div id="migration-status" class="mt-4 text-sm text-center text-gray-500"></div>
-                <div id="migration-log" class="mt-4 p-4 bg-gray-50 rounded-lg text-xs text-gray-600 font-mono h-48 overflow-y-auto hidden"></div>
+                <h2 class="text-lg font-semibold text-gray-900">Migrate Book Covers</h2>
+                <p class="text-sm text-gray-600 mt-2 mb-4">The books below are using external cover images. Migrate them to your Vercel Blob Storage for better performance and permanence. This process will compress them to the modern WebP format.</p>
+                <div id="migration-list-container" class="mt-4 rounded-lg border">
+                    <p class="p-8 text-center text-gray-500">Loading books to migrate...</p>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- Password Modal -->
     <div id="password-modal" class="modal-backdrop fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300">
         <div class="modal-content bg-white rounded-xl shadow-lg w-full max-w-sm p-6 opacity-0 scale-95">
             <h2 class="text-lg font-bold text-gray-900 mb-4">Enter Password</h2>
@@ -55,7 +54,135 @@
         </div>
     </div>
     
-    <script src="admin.js" defer></script>
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity duration-300 z-50"><p id="toast-message"></p></div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- CONFIGURATION & STATE ---
+        const API_ENDPOINT = '/api/migrate-images';
+        const PWD_COOKIE = 'book-tracker-admin-pwd';
+        let afterPasswordCallback = null;
+
+        // --- DOM ELEMENTS ---
+        const listContainer = document.getElementById('migration-list-container');
+        const passwordModal = document.getElementById('password-modal');
+
+        // --- HELPER FUNCTIONS ---
+        const setCookie = (name, value, days) => { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/dashboard; SameSite=Lax; Secure"; };
+        const getCookie = (name) => { const nameEQ = name + "="; const ca = document.cookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) === ' ') c = c.substring(1, c.length); if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length); } return null; };
+        const showToast = (message, type = 'success') => { const toast = document.getElementById('toast'); const toastMessage = toast.querySelector('p'); if(!toast || !toastMessage) return; toastMessage.textContent = message; toast.className = `fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${type === 'success' ? 'bg-slate-900' : 'bg-red-600'}`; toast.classList.remove('opacity-0'); setTimeout(() => toast.classList.add('opacity-0'), 3000);};
+        const openModal = (modal) => { modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0'); }, 10);};
+        const closeModal = (modal) => { modal.classList.add('opacity-0'); modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300);};
+
+        // --- AUTHENTICATION FLOW ---
+        const requestPassword = (callback) => {
+            const existingPassword = getCookie(PWD_COOKIE);
+            if (existingPassword) {
+                callback(existingPassword);
+                return;
+            }
+            if (passwordModal) {
+                afterPasswordCallback = callback;
+                openModal(passwordModal);
+            }
+        };
+
+        if (passwordModal) {
+            const passwordInput = document.getElementById('password-input');
+            const rememberMeCheckbox = document.getElementById('remember-me');
+            const handleSubmit = () => {
+                const password = passwordInput.value;
+                if (!password) { showToast("Password cannot be empty.", "error"); return; }
+                if (rememberMeCheckbox.checked) { setCookie(PWD_COOKIE, password, 30); }
+                closeModal(passwordModal);
+                if (afterPasswordCallback) { afterPasswordCallback(password); }
+                passwordInput.value = '';
+                rememberMeCheckbox.checked = false;
+                afterPasswordCallback = null;
+            };
+            passwordModal.querySelector('#password-submit-btn').addEventListener('click', handleSubmit);
+            passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
+            passwordModal.querySelector('#password-cancel-btn').addEventListener('click', () => { closeModal(passwordModal); afterPasswordCallback = null; });
+        }
+
+        // --- CORE MIGRATION LOGIC ---
+        const createBookItemHTML = (book) => {
+            const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
+            return `
+                <div class="book-list-item flex items-center p-4 space-x-4" data-book-id="${book.id}">
+                    <img src="${book.thumbnailUrl}" alt="Cover of ${book.title}" class="book-cover w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
+                    <div class="flex-grow min-w-0">
+                        <p class="font-semibold text-gray-800 truncate">${book.title}</p>
+                        <p class="text-sm text-gray-500 truncate">${authors}</p>
+                        <p class="status-text text-xs text-amber-600 mt-1"></p>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <button class="migrate-btn text-sm bg-blue-600 text-white font-semibold py-1.5 px-4 rounded-lg hover:bg-blue-700">Migrate</button>
+                    </div>
+                </div>`;
+        };
+        
+        const fetchBooksToMigrate = async () => {
+            try {
+                const response = await fetch(API_ENDPOINT);
+                if (!response.ok) throw new Error('Failed to fetch book list.');
+                const books = await response.json();
+                
+                if (books.length === 0) {
+                    listContainer.innerHTML = `<p class="p-8 text-center text-gray-500">All book covers are already migrated. Nothing to do! 🎉</p>`;
+                } else {
+                    listContainer.innerHTML = books.map(createBookItemHTML).join('');
+                }
+            } catch (error) {
+                listContainer.innerHTML = `<p class="p-8 text-center text-red-500">${error.message}</p>`;
+            }
+        };
+
+        listContainer.addEventListener('click', (e) => {
+            const migrateBtn = e.target.closest('.migrate-btn');
+            if (!migrateBtn) return;
+
+            const listItem = migrateBtn.closest('.book-list-item');
+            const bookId = listItem.dataset.bookId;
+            const statusText = listItem.querySelector('.status-text');
+
+            migrateBtn.disabled = true;
+            migrateBtn.textContent = 'Migrating...';
+            statusText.textContent = '';
+
+            requestPassword(async (password) => {
+                try {
+                    const response = await fetch(API_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ bookId, password })
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Migration failed.');
+
+                    showToast('Cover migrated successfully!', 'success');
+                    migrateBtn.textContent = 'Migrated!';
+                    migrateBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    migrateBtn.classList.add('bg-green-600');
+                    listItem.querySelector('.book-cover').src = result.newUrl;
+                    statusText.textContent = 'Success!';
+                    statusText.classList.remove('text-amber-600', 'text-red-600');
+                    statusText.classList.add('text-green-600');
+
+                } catch (error) {
+                    showToast(error.message, 'error');
+                    migrateBtn.disabled = false;
+                    migrateBtn.textContent = 'Retry';
+                    statusText.textContent = `Error: ${error.message}`;
+                    statusText.classList.remove('text-amber-600', 'text-green-600');
+                    statusText.classList.add('text-red-600');
+                }
+            });
+        });
+
+        // --- INITIALIZE PAGE ---
+        fetchBooksToMigrate();
+    });
+    </script>
 </body>
 </html>
-
