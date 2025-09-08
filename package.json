@@ -1,9 +1,16 @@
 {
+  "scripts": {
+    "build": "tailwindcss -i ./src/input.css -o ./public/styles/output.css --minify"
+  },
   "dependencies": {
     "@libsql/client": "latest",
     "@vercel/blob": "^0.23.2",
     "@vercel/kv": "^1.0.1",
     "sharp": "^0.33.4"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3"
   }
 }
-
