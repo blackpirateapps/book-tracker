@@ -5,8 +5,12 @@
       "destination": "/dashboard/index.html"
     },
     {
-      "source": "/dashboard/:path*",
-      "destination": "/dashboard/:path*"
+      "source": "/dashboard/library",
+      "destination": "/dashboard/dashboard.html"
+    },
+    {
+      "source": "/dashboard/library.html",
+      "destination": "/dashboard/dashboard.html"
     }
   ]
 }
