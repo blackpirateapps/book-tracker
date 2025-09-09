@@ -235,13 +235,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const shelfChangeMenu = bookElement.querySelector('.shelf-change-menu');
-        const shelves = ['currentlyReading', 'watchlist', 'read'];
-        shelves.forEach(shelf => {
-            if (book.shelf !== shelf) {
+        const shelves = {
+            currentlyReading: "Currently Reading",
+            watchlist: "To Read",
+            read: "Read"
+        };
+
+        Object.keys(shelves).forEach(shelfKey => {
+            if (book.shelf !== shelfKey) {
                 const button = document.createElement('button');
                 button.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 move-btn';
-                button.dataset.targetShelf = shelf;
-                button.textContent = shelf.charAt(0).toUpperCase() + shelf.slice(1).replace(/([A-Z])/g, ' $1').trim();
+                button.dataset.targetShelf = shelfKey;
+                button.textContent = shelves[shelfKey];
                 shelfChangeMenu.appendChild(button);
             }
         });
@@ -489,7 +494,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const initializePage = async () => {
-        const skeletonLoader = document.getElementById('skeleton-loader');
         const shelfOrder = ['currentlyReading', 'watchlist', 'read'];
         
         shelvesContainer.innerHTML = '';
@@ -497,8 +501,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const shelfClone = shelfTemplate.content.cloneNode(true);
             const shelfSection = shelfClone.querySelector('.shelf-section');
             shelfSection.dataset.shelfName = shelfName;
-            const title = shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
+
+            let title;
+            if (shelfName === 'watchlist') {
+                title = 'To Read';
+            } else {
+                title = shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
+            }
             shelfSection.querySelector('h2').textContent = title;
+
             const booksContainer = shelfSection.querySelector('.shelf-books-container');
             for(let i = 0; i < 3; i++) {
                 booksContainer.appendChild(skeletonBookTemplate.content.cloneNode(true));
@@ -514,8 +525,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const shelfClone = shelfTemplate.content.cloneNode(true);
                 const shelfSection = shelfClone.querySelector('.shelf-section');
                 shelfSection.dataset.shelfName = shelfName;
-                const title = shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
+                
+                let title;
+                if (shelfName === 'watchlist') {
+                    title = 'To Read';
+                } else {
+                    title = shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
+                }
                 shelfSection.querySelector('h2').textContent = title;
+                
                 shelvesContainer.appendChild(shelfSection);
             });
             renderAllShelves();
