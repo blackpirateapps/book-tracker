@@ -18,6 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const setCookie = (name, value, days) => { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/dashboard; SameSite=Lax; Secure"; };
     const getCookie = (name) => { const nameEQ = name + "="; const ca = document.cookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) === ' ') c = c.substring(1, c.length); if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length); } return null; };
     const showToast = (message, type = 'success') => { if(!toast || !toastMessage) return; toastMessage.textContent = message; toast.className = `fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${type === 'success' ? 'bg-slate-900' : 'bg-red-600'}`; toast.classList.remove('opacity-0'); setTimeout(() => toast.classList.add('opacity-0'), 3000);};
+    const openModal = (modal) => { modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0'); }, 10);};
+    const closeModal = (modal) => { modal.classList.add('opacity-0'); modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300);};
     
     const requestPassword = (callback) => {
         const existingPassword = getCookie(PWD_COOKIE);
@@ -25,8 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const passwordModal = document.getElementById('password-modal');
         if (passwordModal) { 
             afterPasswordCallback = callback; 
-            passwordModal.classList.remove('hidden');
-            setTimeout(() => passwordModal.classList.remove('opacity-0'), 10);
+            openModal(passwordModal);
         } 
     };
     
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         requestPassword(async (password) => {
             try {
                 const response = await fetch(UPDATE_API_ENDPOINT, {
-                    method: 'POST', // **THIS IS THE CRITICAL FIX**
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action: 'update', data: updatedBookData, password })
                 });
@@ -43,9 +44,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error(result.error || 'Update failed.');
 
                 showToast(result.message);
-                book = parseBook(result.book); // Update state with the confirmed data from server
-                renderPage(); // Re-render the whole page with fresh data
-                attachAllEditableListeners();
+                book = parseBook(result.book);
+                renderPage();
+                attachEditableListeners();
 
             } catch (error) {
                 showToast(error.message, 'error');
@@ -82,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
 
+            <section id="reading-log-section" class="mt-12"></section>
+
             <div class="mt-12">
                 <h2 class="text-xl font-semibold text-gray-900 border-b pb-2 mb-4">Description</h2>
                 <p class="text-gray-700 leading-relaxed editable" data-field="bookDescription">${book.bookDescription || 'No description available. Click to add one.'}</p>
@@ -95,9 +98,56 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div id="highlights-container"></div>
             </div>
         `;
+        renderReadingLog();
         renderHighlights();
     };
 
+    const renderReadingLog = () => {
+        const container = document.getElementById('reading-log-section');
+        if (!container) return;
+
+        if (isEditing.readingLog) {
+            const mediums = ["Paperback", "Kindle Paperwhite", "Mobile", "Tablet"];
+            const mediumOptions = mediums.map(m => `<option value="${m}" ${book.readingMedium === m ? 'selected' : ''}>${m}</option>`).join('');
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Edit Reading Log</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div><label for="reading-medium" class="font-semibold block mb-1 text-gray-600">Medium</label><select id="reading-medium" class="w-full p-2 border rounded-lg bg-gray-50"><option value="">Not set</option>${mediumOptions}</select></div>
+                        <div><label for="started-on" class="font-semibold block mb-1 text-gray-600">Started On</label><input type="date" id="started-on" value="${book.startedOn || ''}" class="w-full p-2 border rounded-lg bg-gray-50"></div>
+                        <div><label for="finished-on" class="font-semibold block mb-1 text-gray-600">Finished On</label><input type="date" id="finished-on" value="${book.finishedOn || ''}" class="w-full p-2 border rounded-lg bg-gray-50"></div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button id="cancel-log-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                        <button id="save-log-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            let durationHTML = '';
+            if (book.startedOn && book.finishedOn) {
+                const diffTime = Math.abs(new Date(book.finishedOn) - new Date(book.startedOn));
+                const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                durationHTML = `<div class="flex justify-between"><strong class="text-gray-600">Time to Finish:</strong><span>${diffDays} day${diffDays !== 1 ? 's' : ''}</span></div>`;
+            }
+
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Reading Log</h2>
+                        <button id="edit-log-btn" class="text-sm font-semibold text-blue-600 hover:underline">Edit</button>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-700">
+                        <div class="flex justify-between"><strong class="text-gray-600">Medium:</strong><span>${book.readingMedium || 'Not set'}</span></div>
+                        <div class="flex justify-between"><strong class="text-gray-600">Started On:</strong><span>${book.startedOn || 'Not set'}</span></div>
+                        <div class="flex justify-between"><strong class="text-gray-600">Finished On:</strong><span>${book.finishedOn || 'Not set'}</span></div>
+                        ${durationHTML}
+                    </div>
+                </div>
+            `;
+        }
+    };
+    
     const renderHighlights = () => {
         const container = document.getElementById('highlights-container');
         if (isEditing.highlights) {
@@ -118,13 +168,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const attachAllEditableListeners = () => {
+    const attachEditableListeners = () => {
         contentContainer.querySelectorAll('.editable').forEach(el => {
             el.addEventListener('click', handleEditableClick);
         });
         document.getElementById('edit-highlights-btn')?.addEventListener('click', () => {
             isEditing.highlights = true;
             renderHighlights();
+        });
+        document.getElementById('edit-log-btn')?.addEventListener('click', () => {
+            isEditing.readingLog = true;
+            renderReadingLog();
         });
     };
     
@@ -135,14 +189,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         isEditing[field] = true;
         const originalValue = field === 'authors' ? book.authors.join(', ') : book[field] || '';
-        const inputType = (field === 'pageCount') ? 'number' : 'text';
+        
+        let inputEl;
+        if (field === 'bookDescription') {
+            inputEl = document.createElement('textarea');
+            inputEl.className = 'w-full p-2 border rounded-md h-32';
+            inputEl.value = originalValue;
+        } else {
+            inputEl = document.createElement('input');
+            inputEl.type = (field === 'pageCount') ? 'number' : 'text';
+            inputEl.className = 'w-full p-1 border rounded-md';
+            inputEl.value = originalValue;
+        }
 
-        el.innerHTML = `<input type="${inputType}" class="w-full p-1 border rounded-md" value="${originalValue}">`;
-        const input = el.querySelector('input');
-        input.focus();
+        el.innerHTML = '';
+        el.appendChild(inputEl);
+        inputEl.focus();
 
         const saveChanges = () => {
-            const newValue = input.value.trim();
+            const newValue = inputEl.value.trim();
             const updatedBook = { ...book };
 
             if (field === 'authors') {
@@ -155,13 +220,13 @@ document.addEventListener('DOMContentLoaded', () => {
             isEditing[field] = false; 
         };
 
-        input.addEventListener('blur', saveChanges);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') input.blur();
+        inputEl.addEventListener('blur', saveChanges);
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && field !== 'bookDescription') inputEl.blur();
             if (e.key === 'Escape') {
                 isEditing[field] = false;
                 renderPage();
-                attachAllEditableListeners();
+                attachEditableListeners();
             }
         });
     };
@@ -181,6 +246,18 @@ document.addEventListener('DOMContentLoaded', () => {
             performAuthenticatedUpdate(updatedBook);
             isEditing.highlights = false;
         }
+        if (e.target.id === 'cancel-log-btn') {
+            isEditing.readingLog = false;
+            renderReadingLog();
+        }
+        if (e.target.id === 'save-log-btn') {
+            const updatedBook = { ...book };
+            updatedBook.readingMedium = document.getElementById('reading-medium').value;
+            updatedBook.startedOn = document.getElementById('started-on').value || null;
+            updatedBook.finishedOn = document.getElementById('finished-on').value || null;
+            performAuthenticatedUpdate(updatedBook);
+            isEditing.readingLog = false;
+        }
     });
     
     // --- INITIALIZATION ---
@@ -197,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const rawBook = await response.json();
             book = parseBook(rawBook);
             renderPage();
-            attachAllEditableListeners();
+            attachEditableListeners();
         } catch (error) {
             contentContainer.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
         }
@@ -213,9 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = passwordInput.value;
             if (!password) { showToast("Password cannot be empty.", "error"); return; }
             if (rememberMeCheckbox.checked) { setCookie(PWD_COOKIE, password, 30); }
-            
-            passwordModal.classList.add('opacity-0');
-            setTimeout(() => passwordModal.classList.add('hidden'), 300);
+            closeModal(passwordModal);
 
             if (afterPasswordCallback) { afterPasswordCallback(password); }
             passwordInput.value = '';
@@ -227,8 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSubmit(); });
         
         passwordModal.querySelector('#password-cancel-btn').addEventListener('click', () => {
-            passwordModal.classList.add('opacity-0');
-            setTimeout(() => passwordModal.classList.add('hidden'), 300);
+            closeModal(passwordModal);
             afterPasswordCallback = null;
         });
     }
