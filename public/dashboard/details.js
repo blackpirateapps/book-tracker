@@ -82,17 +82,26 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         if(loader) loader.style.display = 'inline-block';
 
-        // ** MODIFIED SEARCH TERM **
-        const searchTerm = `${book.title} (book)`;
-        const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(searchTerm)}&limit=1&namespace=0&format=json&origin=*`;
+        const searchTerms = [
+            `${book.title} (book)`,
+            `${book.title} book`,
+            `${book.title}`
+        ];
+        let pageTitle = null;
 
         try {
-            const searchResponse = await fetch(searchUrl);
-            const searchData = await searchResponse.json();
-            const pageTitle = searchData[1][0];
+            for (const term of searchTerms) {
+                const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(term)}&limit=1&namespace=0&format=json&origin=*`;
+                const searchResponse = await fetch(searchUrl);
+                const searchData = await searchResponse.json();
+                if (searchData[1] && searchData[1].length > 0) {
+                    pageTitle = searchData[1][0];
+                    break; 
+                }
+            }
 
             if (!pageTitle) {
-                throw new Error("Could not find a matching Wikipedia article for that book.");
+                throw new Error("Could not find a matching Wikipedia article.");
             }
 
             const contentUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=wikitext|text&format=json&origin=*`;
@@ -111,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const pubDateMatch = wikitext.match(/\|\s*pub_date\s*=\s*([^\n|]+)/);
                 if (pubDateMatch && pubDateMatch[1]) {
-                    mainInfoForm.querySelector('#edit-fullPublishDate').value = pubDateMatch[1].replace(/\[\[|\]\]/g, ''); // Clean links
+                    mainInfoForm.querySelector('#edit-fullPublishDate').value = pubDateMatch[1].replace(/\[\[|\]\]/g, '');
                 }
             }
             
@@ -119,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tempDiv.innerHTML = htmltext;
             const firstParagraph = tempDiv.querySelector('p');
             if (firstParagraph) {
-                document.getElementById('edit-description-textarea').value = firstParagraph.textContent.replace(/\[\d+\]/g, '').trim(); // Clean citations
+                document.getElementById('edit-description-textarea').value = firstParagraph.textContent.replace(/\[\d+\]/g, '').trim();
             }
             
             showToast("Data fetched from Wikipedia! Review and save.", "success");
@@ -252,9 +261,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="bg-white rounded-xl border p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold text-gray-900">Edit Description</h2>
-                        <!-- ** WIKIPEDIA BUTTON MOVED HERE ** -->
                         <button id="fetch-wikipedia-btn" class="bg-gray-800 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-black flex items-center gap-2">
-                           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 448 512"><path d="M0 32C0 14.3 14.3 0 32 0H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 64 0 49.7 0 32zM0 128c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 352c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32zM0 448c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32z"></path></svg>
+                           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 512 512"><path d="M352 256c0 22.2-1.2 43.6-3.3 64H163.3c-2.2-20.4-3.3-41.8-3.3-64s1.2-43.6 3.3-64H348.7c2.2 20.4 3.3 41.8 3.3 64zM256 32C132.3 32 32 132.3 32 256s100.3 224 224 224 224-100.3 224-224S379.7 32 256 32zM128 256c0-70.7 57.3-128 128-128s128 57.3 128 128-57.3 128-128 128-128-57.3-128-128z"></path></svg>
                            Fetch from Wikipedia
                            <div class="loader-spinner" style="display: none;"></div>
                         </button>
