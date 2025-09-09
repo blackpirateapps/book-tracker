@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="add-book-btn p-2 rounded-full hover:bg-blue-100" title="Add to Currently Reading" data-shelf="currentlyReading">
                         <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>
                     </button>
-                    <button class="add-book-btn p-2 rounded-full hover:bg-gray-200" title="Add to Watchlist" data-shelf="watchlist">
+                    <button class="add-book-btn p-2 rounded-full hover:bg-gray-200" title="Add to To Read" data-shelf="watchlist">
                         <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path></svg>
                     </button>
                 </div>
@@ -374,8 +374,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (target.closest('.shelf-header')) {
             const header = target.closest('.shelf-header');
-            header.classList.toggle('collapsed');
             const content = header.nextElementSibling;
+            header.classList.toggle('collapsed');
             content.classList.toggle('collapsed');
         }
 
@@ -540,8 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    initializePage();
-
     document.body.addEventListener('click', (e) => {
         const target = e.target;
         if (target.closest('.shelf-change-btn')) {
@@ -562,5 +560,47 @@ document.addEventListener('DOMContentLoaded', () => {
              document.querySelectorAll('.shelf-change-menu, .options-menu').forEach(m => m.classList.add('hidden'));
         }
     });
+    
+    // --- ** PASSWORD MODAL LOGIC (CORRECTED) ** ---
+    const passwordModal = document.getElementById('password-modal');
+    if (passwordModal) {
+        const passwordInput = document.getElementById('password-input');
+        const rememberMeCheckbox = document.getElementById('remember-me');
+        const submitBtn = document.getElementById('password-submit-btn');
+        const cancelBtn = document.getElementById('password-cancel-btn');
+
+        const handleSubmit = () => {
+            const password = passwordInput.value;
+            if (!password) {
+                showToast("Password cannot be empty.", "error");
+                return;
+            }
+            if (rememberMeCheckbox.checked) {
+                setCookie(PWD_COOKIE, password, 30);
+            }
+            closeModal(passwordModal);
+
+            if (afterPasswordCallback) {
+                afterPasswordCallback(password);
+            }
+            passwordInput.value = '';
+            rememberMeCheckbox.checked = false;
+            afterPasswordCallback = null;
+        };
+        
+        const handleCancel = () => {
+            closeModal(passwordModal);
+            afterPasswordCallback = null;
+        };
+
+        submitBtn.addEventListener('click', handleSubmit);
+        cancelBtn.addEventListener('click', handleCancel);
+        passwordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleSubmit();
+            if (e.key === 'Escape') handleCancel();
+        });
+    }
+
+    initializePage();
 });
 
