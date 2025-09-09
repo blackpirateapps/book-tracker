@@ -26,9 +26,9 @@ async function initializeDatabase() {
             publisher: 'TEXT',
             fullPublishDate: 'TEXT',
             bookDescription: 'TEXT',
-            subjects: 'TEXT',
-            readingProgress: 'INTEGER DEFAULT 0'
+            subjects: 'TEXT'
         };
+
         for (const col in newColumns) {
             if (!columns.includes(col)) {
                 await client.execute(`ALTER TABLE books ADD COLUMN ${col} ${newColumns[col]}`);
@@ -47,7 +47,6 @@ export default async function handler(req, res) {
     
     await initializeDatabase();
 
-    // --- GET Request Handler (FOR DASHBOARD) ---
     if (req.method === 'GET') {
         try {
             const result = await client.execute("SELECT * FROM books");
@@ -58,7 +57,6 @@ export default async function handler(req, res) {
         }
     }
 
-    // --- POST Request Handler (FOR ACTIONS) ---
     if (req.method === 'POST') {
         const { password, action, data } = req.body;
         if (password !== process.env.ADMIN_PASSWORD) {
@@ -71,17 +69,19 @@ export default async function handler(req, res) {
                     let bookData = data;
 
                     if (bookData.olid) {
-                        const detailsUrl = `https://openlibrary.org/api/books?bibkeys=OLID:${bookData.olid}&format=json&jscmd=data`;
+                        const olid = bookData.olid;
+                        const detailsUrl = `https://openlibrary.org/api/books?bibkeys=OLID:${olid}&format=json&jscmd=data`;
                         const olResponse = await fetch(detailsUrl);
                         if (olResponse.ok) {
                             const olData = await olResponse.json();
-                            const details = olData[`OLID:${bookData.olid}`];
+                            const details = olData[`OLID:${olid}`];
                             if (details) {
                                 bookData.pageCount = details.number_of_pages || bookData.pageCount;
                                 bookData.publisher = details.publishers?.[0]?.name || null;
                                 bookData.fullPublishDate = details.publish_date || bookData.publishedDate;
-                                bookData.subjects = JSON.stringify(details.subjects?.map(s => s.name).slice(0, 5) || []);
+                                bookData.subjects = details.subjects?.map(s => s.name) || [];
                                 bookData.industryIdentifiers = details.identifiers || bookData.industryIdentifiers;
+                                bookData.bookDescription = details.notes || null;
                             }
                         }
                     }
@@ -102,16 +102,35 @@ export default async function handler(req, res) {
                     }
                     
                     const args = [
-                        bookData.id, bookData.title, JSON.stringify(bookData.authors || []), JSON.stringify(bookData.imageLinks || {}),
-                        bookData.pageCount, bookData.publishedDate, JSON.stringify(bookData.industryIdentifiers || []),
-                        JSON.stringify(bookData.highlights || []), bookData.startedOn, bookData.finishedOn,
-                        bookData.readingMedium, bookData.shelf, 0, 0, bookData.publisher, bookData.fullPublishDate,
-                        bookData.bookDescription, bookData.subjects
+                        bookData.id,
+                        bookData.title ?? null,
+                        JSON.stringify(bookData.authors || []),
+                        JSON.stringify(bookData.imageLinks || {}),
+                        bookData.pageCount ?? null,
+                        bookData.publishedDate ?? null,
+                        JSON.stringify(bookData.industryIdentifiers || []),
+                        JSON.stringify(bookData.highlights || []),
+                        bookData.startedOn ?? null,
+                        bookData.finishedOn ?? null,
+                        bookData.readingMedium ?? null,
+                        bookData.shelf ?? 'watchlist',
+                        (bookData.highlights && bookData.highlights.length > 0) ? 1 : 0,
+                        bookData.readingProgress || 0,
+                        bookData.publisher ?? null,
+                        bookData.fullPublishDate ?? null,
+                        bookData.bookDescription ?? null,
+                        JSON.stringify(bookData.subjects || [])
                     ];
 
                     const sql = `
                         INSERT INTO books (id, title, authors, imageLinks, pageCount, publishedDate, industryIdentifiers, highlights, startedOn, finishedOn, readingMedium, shelf, hasHighlights, readingProgress, publisher, fullPublishDate, bookDescription, subjects)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET
+                            title=excluded.title, authors=excluded.authors, imageLinks=excluded.imageLinks, pageCount=excluded.pageCount,
+                            publishedDate=excluded.publishedDate, industryIdentifiers=excluded.industryIdentifiers, highlights=excluded.highlights,
+                            startedOn=excluded.startedOn, finishedOn=excluded.finishedOn, readingMedium=excluded.readingMedium, shelf=excluded.shelf,
+                            hasHighlights=excluded.hasHighlights, readingProgress=excluded.readingProgress, publisher=excluded.publisher,
+                            fullPublishDate=excluded.fullPublishDate, bookDescription=excluded.bookDescription, subjects=excluded.subjects;
                     `;
 
                     await client.execute({ sql, args });
@@ -122,20 +141,31 @@ export default async function handler(req, res) {
                     const bookData = data;
                     const highlightsStr = JSON.stringify(bookData.highlights || []);
                     const hasHighlights = (bookData.highlights && bookData.highlights.length > 0) ? 1 : 0;
-                    if (bookData.shelf === 'read') bookData.readingProgress = 100;
                     
                     const sql = `
                         UPDATE books SET 
                             title = ?, authors = ?, highlights = ?, hasHighlights = ?, readingProgress = ?,
                             startedOn = ?, finishedOn = ?, readingMedium = ?, shelf = ?,
-                            publisher = ?, fullPublishDate = ?, bookDescription = ?, pageCount = ?
+                            publisher = ?, fullPublishDate = ?, bookDescription = ?, pageCount = ?,
+                            subjects = ?
                         WHERE id = ?`;
                     
                     const args = [
-                        bookData.title, JSON.stringify(bookData.authors || []), highlightsStr, hasHighlights,
-                        bookData.readingProgress || 0, bookData.startedOn, bookData.finishedOn, bookData.readingMedium,
-                        bookData.shelf, bookData.publisher, bookData.fullPublishDate, bookData.bookDescription,
-                        bookData.pageCount, bookData.id
+                        bookData.title ?? null,
+                        JSON.stringify(bookData.authors || []),
+                        highlightsStr,
+                        hasHighlights,
+                        bookData.readingProgress || 0,
+                        bookData.startedOn ?? null,
+                        bookData.finishedOn ?? null,
+                        bookData.readingMedium ?? null,
+                        bookData.shelf ?? 'watchlist',
+                        bookData.publisher ?? null,
+                        bookData.fullPublishDate ?? null,
+                        bookData.bookDescription ?? null,
+                        bookData.pageCount ?? null,
+                        JSON.stringify(bookData.subjects || []),
+                        bookData.id
                     ];
 
                     await client.execute({ sql, args });
