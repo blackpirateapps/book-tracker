@@ -82,7 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
         if(loader) loader.style.display = 'inline-block';
 
-        const searchTerm = `${book.title} ${book.authors[0]}`;
+        // ** MODIFIED SEARCH TERM **
+        const searchTerm = `${book.title} (book)`;
         const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(searchTerm)}&limit=1&namespace=0&format=json&origin=*`;
 
         try {
@@ -91,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const pageTitle = searchData[1][0];
 
             if (!pageTitle) {
-                throw new Error("Could not find a matching Wikipedia article.");
+                throw new Error("Could not find a matching Wikipedia article for that book.");
             }
 
             const contentUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=wikitext|text&format=json&origin=*`;
@@ -101,18 +102,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const wikitext = contentData.parse.wikitext['*'];
             const htmltext = contentData.parse.text['*'];
 
-            // Parse infobox from wikitext
-            const pageMatch = wikitext.match(/\|\s*pages\s*=\s*(\d+)/);
-            if (pageMatch && pageMatch[1]) {
-                document.getElementById('edit-pageCount').value = pageMatch[1];
-            }
+            const mainInfoForm = document.getElementById('main-info-edit-form');
+            if (mainInfoForm) {
+                const pageMatch = wikitext.match(/\|\s*pages\s*=\s*(\d+)/);
+                if (pageMatch && pageMatch[1]) {
+                    mainInfoForm.querySelector('#edit-pageCount').value = pageMatch[1];
+                }
 
-            const pubDateMatch = wikitext.match(/\|\s*pub_date\s*=\s*([^\n|]+)/);
-            if (pubDateMatch && pubDateMatch[1]) {
-                document.getElementById('edit-fullPublishDate').value = pubDateMatch[1].replace(/\[\[|\]\]/g, ''); // Clean links
+                const pubDateMatch = wikitext.match(/\|\s*pub_date\s*=\s*([^\n|]+)/);
+                if (pubDateMatch && pubDateMatch[1]) {
+                    mainInfoForm.querySelector('#edit-fullPublishDate').value = pubDateMatch[1].replace(/\[\[|\]\]/g, ''); // Clean links
+                }
             }
-
-            // Parse description from HTML text
+            
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmltext;
             const firstParagraph = tempDiv.querySelector('p');
@@ -155,14 +157,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isEditing.mainInfo) {
             container.innerHTML = `
-                <div class="bg-white rounded-xl border p-6">
-                     <div class="flex justify-between items-center mb-6">
+                <div id="main-info-edit-form" class="bg-white rounded-xl border p-6">
+                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-xl font-semibold text-gray-900">Edit Details</h2>
-                        <button id="fetch-wikipedia-btn" class="bg-gray-800 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-black flex items-center gap-2">
-                           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"></path></svg>
-                           Fetch from Wikipedia
-                           <div class="loader-spinner" style="display: none;"></div>
-                        </button>
                     </div>
                     <div class="space-y-4 text-sm">
                         <div><label class="font-semibold block mb-1 text-gray-600">Title</label><input type="text" id="edit-title" class="w-full p-2 border rounded-lg bg-gray-50" value="${book.title}"></div>
@@ -253,7 +250,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isEditing.description) {
             container.innerHTML = `
                 <div class="bg-white rounded-xl border p-6">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Edit Description</h2>
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Edit Description</h2>
+                        <!-- ** WIKIPEDIA BUTTON MOVED HERE ** -->
+                        <button id="fetch-wikipedia-btn" class="bg-gray-800 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-black flex items-center gap-2">
+                           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 448 512"><path d="M0 32C0 14.3 14.3 0 32 0H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 64 0 49.7 0 32zM0 128c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 352c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H416c17.7 0 32 14.3 32 32zM0 448c0-17.7 14.3-32 32-32H416c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32z"></path></svg>
+                           Fetch from Wikipedia
+                           <div class="loader-spinner" style="display: none;"></div>
+                        </button>
+                    </div>
                     <textarea id="edit-description-textarea" class="w-full h-48 p-3 border rounded-lg bg-gray-50 text-sm">${book.bookDescription || ''}</textarea>
                     <div class="flex justify-end gap-2 mt-4">
                         <button id="cancel-description-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
@@ -295,7 +300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button id="edit-highlights-btn" class="text-sm font-semibold text-blue-600 hover:underline">Edit</button>
                     </div>
                     ${book.highlights.length > 0 ? 
-                        '<ul class="space-y-4">' + book.highlights.map(h => `<li class="highlight-item pl-4">${h}</li>`).join('') + '</ul>' : 
+                        '<ul class="space-y-4">' + book.highlights.map(h => `<li class="highlight-item pl-4 border-l-2 border-blue-500">${h}</li>`).join('') + '</ul>' : 
                         '<p class="text-gray-500">No highlights yet. Click "Edit" to add some.</p>'
                     }
                 </div>`;
@@ -305,7 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const attachActionListeners = () => {
         document.getElementById('edit-main-info-btn')?.addEventListener('click', () => { isEditing.mainInfo = true; renderMainInfo(); attachActionListeners(); });
         document.getElementById('cancel-main-info-btn')?.addEventListener('click', () => { isEditing.mainInfo = false; renderMainInfo(); attachActionListeners(); });
-        document.getElementById('fetch-wikipedia-btn')?.addEventListener('click', handleWikipediaFetch);
         document.getElementById('save-main-info-btn')?.addEventListener('click', (e) => {
             const updatedBook = { ...book };
             updatedBook.title = document.getElementById('edit-title').value;
@@ -328,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('edit-description-btn')?.addEventListener('click', () => { isEditing.description = true; renderDescription(); attachActionListeners(); });
         document.getElementById('cancel-description-btn')?.addEventListener('click', () => { isEditing.description = false; renderDescription(); attachActionListeners(); });
+        document.getElementById('fetch-wikipedia-btn')?.addEventListener('click', handleWikipediaFetch);
         document.getElementById('save-description-btn')?.addEventListener('click', e => {
             const updatedBook = { ...book };
             updatedBook.bookDescription = document.getElementById('edit-description-textarea').value;
