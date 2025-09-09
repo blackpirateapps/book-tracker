@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Library - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+       <link href="/styles/output.css" rel="stylesheet">
     <link rel="preconnect" href="https://rsms.me/">
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <style>
@@ -16,6 +16,28 @@
         .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
         .modal-content { transition: transform 0.2s ease-out, opacity 0.2s ease-out; }
         .modal-backdrop { transition: opacity 0.2s ease-out; }
+        .loader-overlay {
+            position: absolute;
+            inset: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.2s ease-out;
+        }
+        .loader-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -49,19 +71,19 @@
 
         <main class="space-y-10">
             <section>
-                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Watchlist</h4>
-                <div id="shelf-watchlist" class="bg-white rounded-xl border border-gray-200/75">
-                    <p id="shelf-watchlist-message" class="p-8 text-center text-gray-500">Loading...</p>
-                </div>
-            </section>
-             <section>
-                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Currently Reading</h4>
+                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Currently Reading</h2>
                 <div id="shelf-currentlyReading" class="bg-white rounded-xl border border-gray-200/75">
                      <p id="shelf-currentlyReading-message" class="p-8 text-center text-gray-500">Loading...</p>
                 </div>
             </section>
             <section>
-                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Read</h4>
+                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Watchlist</h2>
+                <div id="shelf-watchlist" class="bg-white rounded-xl border border-gray-200/75">
+                    <p id="shelf-watchlist-message" class="p-8 text-center text-gray-500">Loading...</p>
+                </div>
+            </section>
+            <section>
+                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Read</h2>
                 <div id="shelf-read" class="bg-white rounded-xl border border-gray-200/75">
                     <p id="shelf-read-message" class="p-8 text-center text-gray-500">Loading...</p>
                 </div>
@@ -116,6 +138,10 @@
                         <label for="edit-book-cover" class="font-semibold block mb-1 text-gray-600">Cover Image URL</label>
                         <input type="text" id="edit-book-cover" class="w-full p-2 border rounded-lg bg-gray-50">
                     </div>
+                    <div id="reading-progress-container" class="hidden">
+                        <label for="edit-book-progress" class="font-semibold block mb-1 text-gray-600">Reading Progress (<span id="progress-percentage">0%</span>)</label>
+                        <input type="range" id="edit-book-progress" min="0" max="100" value="0" class="w-full">
+                    </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                              <label for="edit-book-medium" class="font-semibold block mb-1 text-gray-600">Medium</label>
@@ -142,7 +168,10 @@
                 <button id="edit-book-remove-btn" class="text-sm text-red-600 font-semibold hover:underline">Remove Book</button>
                 <div class="flex gap-2">
                     <button id="edit-book-cancel-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
-                    <button id="edit-book-save-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Save Changes</button>
+                    <button id="edit-book-save-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">
+                        Save Changes
+                        <div class="loader-spinner hidden" style="width: 16px; height: 16px; border-width: 2px; display: none; margin-left: 8px;"></div>
+                    </button>
                 </div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
     const API_ENDPOINT = '/api/books';
+    const MIGRATE_API_ENDPOINT = '/api/migrate-images';
     const PARSE_API_ENDPOINT = '/api/parse-highlights';
     const PWD_COOKIE = 'book-tracker-admin-pwd';
     
@@ -18,47 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const showToast = (message, type = 'success') => { if(!toast || !toastMessage) return; toastMessage.textContent = message; toast.className = `fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${type === 'success' ? 'bg-slate-900' : 'bg-red-600'}`; toast.classList.remove('opacity-0'); setTimeout(() => toast.classList.add('opacity-0'), 3000);};
     const openModal = (modal) => { modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); modal.querySelector('.modal-content').classList.remove('scale-95', 'opacity-0'); }, 10);};
     const closeModal = (modal) => { modal.classList.add('opacity-0'); modal.querySelector('.modal-content').classList.add('scale-95', 'opacity-0'); setTimeout(() => modal.classList.add('hidden'), 300);};
+    const groupBooksIntoLibrary = (books) => { const newLibrary = { watchlist: [], currentlyReading: [], read: [] }; books.forEach(book => { try { book.authors = JSON.parse(book.authors); } catch (e) { book.authors = []; } try { book.imageLinks = JSON.parse(book.imageLinks); } catch (e) { book.imageLinks = {}; } try { book.industryIdentifiers = JSON.parse(book.industryIdentifiers); } catch (e) { book.industryIdentifiers = []; } try { book.highlights = JSON.parse(book.highlights); } catch (e) { book.highlights = []; } if (newLibrary[book.shelf]) { newLibrary[book.shelf].push(book); }}); return newLibrary;};
     
-    const parseBook = (book) => {
-        try { book.authors = JSON.parse(book.authors); } catch (e) { book.authors = Array.isArray(book.authors) ? book.authors : []; }
-        try { book.imageLinks = JSON.parse(book.imageLinks); } catch (e) { book.imageLinks = typeof book.imageLinks === 'object' && book.imageLinks ? book.imageLinks : {}; }
-        try { book.industryIdentifiers = JSON.parse(book.industryIdentifiers); } catch (e) { book.industryIdentifiers = []; }
-        try { book.highlights = JSON.parse(book.highlights); } catch (e) { book.highlights = []; }
-        return book;
-    };
-    
-    const groupBooksIntoLibrary = (books) => { 
-        const newLibrary = { watchlist: [], currentlyReading: [], read: [] }; 
-        books.forEach(book => { 
-            const parsedBook = parseBook(book);
-            if (newLibrary[parsedBook.shelf]) { 
-                newLibrary[parsedBook.shelf].push(parsedBook); 
-            }
-        }); 
-        return newLibrary;
-    };
-    
-    const showLoaderOnBook = (bookId) => {
-        const bookEl = document.querySelector(`[data-book-id="${bookId}"]`);
-        if (bookEl) {
-            const overlay = document.createElement('div');
-            overlay.className = 'loader-overlay';
-            overlay.innerHTML = '<div class="loader-spinner"></div>';
-            bookEl.style.position = 'relative';
-            bookEl.appendChild(overlay);
-        }
-    };
-
-    const hideLoaderOnBook = (bookId) => {
-        const bookEl = document.querySelector(`[data-book-id="${bookId}"]`);
-        if (bookEl) {
-            const overlay = bookEl.querySelector('.loader-overlay');
-            if (overlay) {
-                overlay.remove();
-            }
-        }
-    };
-
     const fetchAndSetLibrary = async () => {
         try {
             const response = await fetch(API_ENDPOINT);
@@ -107,34 +69,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    const createBookListItemHTML = (book) => {
+    const createBookListItemHTML = (book, shelf) => {
         const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
         const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
-        
-        let progressHTML = '';
-        if (book.shelf === 'currentlyReading') {
-            const progress = book.readingProgress || 0;
-            progressHTML = `
-                <div class="mt-2">
-                    <div class="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>Reading Progress</span>
-                        <span>${progress}%</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-1.5">
-                        <div class="bg-blue-600 h-1.5 rounded-full" style="width: ${progress}%"></div>
-                    </div>
-                </div>
-            `;
-        }
-
         return `
-            <div class="book-list-item flex items-center p-4 space-x-4 relative group" data-book-id="${book.id}">
-                <a href="/dashboard/details.html?id=${book.id}" class="flex items-start space-x-4 flex-grow min-w-0">
+            <div class="book-list-item flex items-center p-4 space-x-4 relative group">
+                <a href="/dashboard/details.html?id=${book.id}" class="flex items-center space-x-4 flex-grow min-w-0">
                     <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
                     <div class="flex-grow min-w-0">
                         <p class="font-semibold text-gray-800 truncate group-hover:underline">${book.title}</p>
                         <p class="text-sm text-gray-500 truncate">${authors}</p>
-                        ${progressHTML}
                     </div>
                 </a>
                 <div class="flex-shrink-0">
@@ -143,12 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
                      </button>
                      <div class="absolute right-4 top-14 mt-2 w-48 bg-white rounded-xl shadow-lg border text-sm z-10 hidden">
                         <p class="px-4 pt-2 pb-1 text-xs text-gray-400 font-semibold">Move to</p>
-                        ${book.shelf !== 'currentlyReading' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100 move-btn" data-target-shelf="currentlyReading">Currently Reading</button>` : ''}
-                        ${book.shelf !== 'watchlist' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100 move-btn" data-target-shelf="watchlist">Watchlist</button>` : ''}
-                        ${book.shelf !== 'read' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100 move-btn" data-target-shelf="read">Read</button>` : ''}
+                        ${shelf !== 'currentlyReading' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="currentlyReading">Currently Reading</button>` : ''}
+                        ${shelf !== 'watchlist' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="watchlist">Watchlist</button>` : ''}
+                        ${shelf !== 'read' ? `<button class="w-full text-left px-4 py-2 hover:bg-gray-100" data-book-id="${book.id}" data-current-shelf="${shelf}" data-target-shelf="read">Read</button>` : ''}
                         <div class="border-t my-1"></div>
-                        <button class="edit-btn w-full text-left px-4 py-2 hover:bg-gray-100">Edit Details</button>
-                        <button class="remove-btn w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">Remove Book</button>
+                        <button data-book-id="${book.id}" data-shelf="${shelf}" class="edit-btn w-full text-left px-4 py-2 hover:bg-gray-100">Edit Details</button>
+                        <button data-book-id="${book.id}" class="remove-btn w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">Remove Book</button>
                     </div>
                 </div>
             </div>`;
@@ -167,15 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const renderHomepageSummaries = () => { 
             const crBooks = library.currentlyReading; homepageContainers.currentlyReading.innerHTML = ''; 
-            if (homepageMessages.currentlyReading) homepageMessages.currentlyReading.classList.toggle('hidden', crBooks.length > 0); 
+            homepageMessages.currentlyReading.classList.toggle('hidden', crBooks.length > 0); 
             if (crBooks.length > 0) crBooks.forEach(book => homepageContainers.currentlyReading.innerHTML += createBookListItemHTML(book, 'currentlyReading')); 
-            else if (homepageMessages.currentlyReading) homepageMessages.currentlyReading.textContent = "You're not reading anything."; 
+            else homepageMessages.currentlyReading.textContent = "You're not reading anything."; 
             
             const rrBooks = [...library.read].sort((a,b) => new Date(b.finishedOn) - new Date(a.finishedOn)).slice(0, 4); 
             homepageContainers.recentReads.innerHTML = ''; 
-            if (homepageMessages.recentReads) homepageMessages.recentReads.classList.toggle('hidden', rrBooks.length > 0); 
+            homepageMessages.recentReads.classList.toggle('hidden', rrBooks.length > 0); 
             if(rrBooks.length > 0) rrBooks.forEach(book => homepageContainers.recentReads.innerHTML += createBookListItemHTML(book, 'read')); 
-            else if (homepageMessages.recentReads) homepageMessages.recentReads.textContent = "You haven't finished any books yet.";
+            else homepageMessages.recentReads.textContent = "You haven't finished any books yet.";
         };
 
         const createSearchResultItemHTML = (book) => {
@@ -214,24 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderSearchResults(formattedBooks);
             } catch (error) { console.error('Fetch error:', error); searchMessage.textContent = 'Failed to fetch books.'; }
         };
-        
-        document.body.addEventListener('click', (e) => {
-             const addBtn = e.target.closest('.add-btn');
-             if (addBtn) {
-                 const bookData = JSON.parse(addBtn.dataset.bookInfo.replace(/&apos;/g, "'"));
-                 const targetShelf = addBtn.dataset.targetShelf;
-                 const bookWithShelf = { ...bookData, shelf: targetShelf }; 
-                 if (targetShelf === 'currentlyReading') bookWithShelf.startedOn = new Date().toISOString().split('T')[0];
-                 if (targetShelf === 'read') bookWithShelf.finishedOn = new Date().toISOString().split('T')[0];
-                 requestPassword(async (password) => {
-                     const { success } = await performAuthenticatedAction({ action: 'add', data: bookWithShelf }, password);
-                     if (success) {
-                         await fetchAndSetLibrary();
-                         renderHomepageSummaries();
-                     }
-                 });
-             }
-        });
 
         searchForm.addEventListener('submit', handleSearch);
         clearSearchBtn.addEventListener('click', () => { searchSection.classList.add('hidden'); searchInput.value = ''; });
@@ -250,6 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const importHighlightsBtn = document.getElementById('import-highlights-btn');
         const highlightsFileInput = document.getElementById('highlights-file-input');
         const highlightImportModal = document.getElementById('highlight-import-modal');
+        const highlightBookTitle = document.getElementById('highlight-book-title');
+        const highlightBookSelect = document.getElementById('highlight-book-select');
         const confirmImportBtn = document.getElementById('confirm-import-btn');
         const exportDataBtn = document.getElementById('export-data-btn');
         const importDataBtn = document.getElementById('import-data-btn');
@@ -260,36 +188,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const messageEl = shelfMessages[shelfName];
             const books = library[shelfName]; 
             container.innerHTML = ''; 
-            if (messageEl) messageEl.classList.toggle('hidden', books.length > 0); 
-
+            messageEl.classList.toggle('hidden', books.length > 0); 
             if (books.length > 0) {
-                const sortedBooks = shelfName === 'read' 
-                    ? [...books].sort((a,b) => new Date(b.finishedOn) - new Date(a.finishedOn)) 
-                    : books;
-                sortedBooks.forEach(book => {
-                    const bookEl = document.createElement('div');
-                    bookEl.innerHTML = createBookListItemHTML(book);
-                    container.appendChild(bookEl.firstChild);
-                });
-            } else if (messageEl) {
+                const sortedBooks = shelfName === 'read' ? [...books].sort((a,b) => new Date(b.finishedOn) - new Date(a.finishedOn)) : books;
+                sortedBooks.forEach(book => container.innerHTML += createBookListItemHTML(book, shelfName));
+            } else {
                 messageEl.textContent = `This shelf is empty.`;
             }
         };
 
         const renderAllLibraryShelves = () => Object.keys(shelfContainers).forEach(renderShelf);
         
-        const updateBookInState = (updatedBook) => {
-            const parsedBook = parseBook(updatedBook);
-            // Remove from old shelf
-            Object.keys(library).forEach(shelf => {
-                library[shelf] = library[shelf].filter(b => b.id !== parsedBook.id);
-            });
-            // Add to new shelf
-            if (library[parsedBook.shelf]) {
-                library[parsedBook.shelf].push(parsedBook);
-            }
-        };
-
         importHighlightsBtn.addEventListener('click', () => requestPassword(() => highlightsFileInput.click()));
         highlightsFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -303,14 +212,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const parsed = await response.json();
                     if (parsed.highlights.length === 0) return showToast('No highlights found in the file.', 'error');
                     tempHighlights = parsed.highlights;
-                    document.getElementById('highlight-book-title').textContent = parsed.title || 'Unknown Title';
-                    const selectEl = document.getElementById('highlight-book-select');
-                    selectEl.innerHTML = '<option value="">Select a book...</option>';
+                    highlightBookTitle.textContent = parsed.title || 'Unknown Title';
+                    highlightBookSelect.innerHTML = '<option value="">Select a book...</option>';
                     Object.values(library).flat().forEach(book => {
                         const option = document.createElement('option');
                         option.value = `${book.shelf}:${book.id}`;
                         option.textContent = book.title;
-                        selectEl.appendChild(option);
+                        highlightBookSelect.appendChild(option);
                     });
                     openModal(highlightImportModal);
                 } catch (error) { showToast(error.message, 'error'); }
@@ -320,24 +228,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         confirmImportBtn.addEventListener('click', () => { 
-            const selected = document.getElementById('highlight-book-select').value; if (!selected) return showToast('Please select a book.', 'error'); 
+            const selected = highlightBookSelect.value; if (!selected) return showToast('Please select a book.', 'error'); 
             const [shelf, bookId] = selected.split(':'); const book = library[shelf]?.find(b => b.id === bookId); if (!book) return showToast('Could not find selected book.', 'error'); 
             book.highlights = [...(book.highlights || []), ...tempHighlights]; 
-            requestPassword(async (password) => { 
-                showLoaderOnBook(bookId);
-                const {success, data} = await performAuthenticatedAction({ action: 'update', data: book }, password); 
-                if (success) { 
-                    updateBookInState(data.book);
-                    renderAllLibraryShelves();
-                    tempHighlights = []; 
-                    closeModal(highlightImportModal); 
-                }
-                hideLoaderOnBook(bookId);
-            }); 
+            requestPassword(async (password) => { const {success} = await performAuthenticatedAction({ action: 'update', data: book }, password); if (success) { tempHighlights = []; closeModal(highlightImportModal); window.location.reload(); }}); 
         });
 
         exportDataBtn.addEventListener('click', () => { requestPassword(async (password) => { const {success, data} = await performAuthenticatedAction({ action: 'export' }, password); if (success) { const booksToExport = groupBooksIntoLibrary(data); const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([JSON.stringify(booksToExport, null, 2)], { type: 'application/json' })); link.download = `book-tracker-backup-${new Date().toISOString().split('T')[0]}.json`; link.click(); URL.revokeObjectURL(link.href); showToast('Data exported successfully!'); }}); });
-        importDataBtn.addEventListener('click', () => requestPassword(() => importFileInput.click()));
+        importDataBtn.addEventListener('click', () => requestPassword((password) => importFileInput.click()));
         importFileInput.addEventListener('change', (e) => { 
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); 
             reader.onload = (event) => { try { 
@@ -346,9 +244,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 requestPassword(async (password) => { 
                     showToast(`Importing ${allBooks.length} books...`, 'success'); 
                     for (const book of allBooks) { await performAuthenticatedAction({ action: 'add', data: book }, password); } 
-                    await fetchAndSetLibrary();
-                    renderAllLibraryShelves();
-                    showToast('Import complete!', 'success'); 
+                    showToast('Import complete! Refreshing...', 'success'); 
+                    setTimeout(() => window.location.reload(), 1000); 
                 }); 
             } catch (error) { showToast('Failed to import data. Invalid file.', 'error'); }}; 
             reader.readAsText(file); e.target.value = null; 
@@ -356,19 +253,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (editBookModal) {
             const saveBtn = document.getElementById('edit-book-save-btn');
-            const saveBtnLoader = saveBtn.querySelector('.loader-spinner');
+            const cancelBtn = document.getElementById('edit-book-cancel-btn');
+            const cancelBtnTop = document.getElementById('edit-book-cancel-btn-top');
             const removeBtn = document.getElementById('edit-book-remove-btn');
-            const progressContainer = document.getElementById('reading-progress-container');
-            const progressSlider = document.getElementById('edit-book-progress');
-            const progressPercentage = document.getElementById('progress-percentage');
-            
-            progressSlider.addEventListener('input', (e) => {
-                progressPercentage.textContent = `${e.target.value}%`;
-            });
+            const idInput = document.getElementById('edit-book-id');
+            const shelfInput = document.getElementById('edit-book-shelf');
 
             saveBtn.addEventListener('click', () => {
-                const bookId = document.getElementById('edit-book-id').value;
-                const shelf = document.getElementById('edit-book-shelf').value;
+                const bookId = idInput.value;
+                const shelf = shelfInput.value;
                 const originalBook = library[shelf]?.find(b => b.id === bookId);
                 if (!originalBook) return showToast('Could not find book to update.', 'error');
                 
@@ -380,113 +273,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     readingMedium: document.getElementById('edit-book-medium').value,
                     startedOn: document.getElementById('edit-book-started').value || null,
                     finishedOn: document.getElementById('edit-book-finished').value || null,
-                    readingProgress: parseInt(progressSlider.value, 10),
                 };
                 
                 requestPassword(async (password) => {
-                    saveBtn.disabled = true;
-                    if(saveBtnLoader) saveBtnLoader.style.display = 'inline-block';
-                    const { success, data } = await performAuthenticatedAction({ action: 'update', data: updatedBook }, password);
-                    saveBtn.disabled = false;
-                    if(saveBtnLoader) saveBtnLoader.style.display = 'none';
-                    if (success) { 
-                        updateBookInState(data.book);
-                        renderAllLibraryShelves();
-                        closeModal(editBookModal);
-                    }
+                    const { success } = await performAuthenticatedAction({ action: 'update', data: updatedBook }, password);
+                    if (success) { closeModal(editBookModal); window.location.reload(); }
                 });
             });
             
             const closeEditModal = () => closeModal(editBookModal);
-            document.getElementById('edit-book-cancel-btn').addEventListener('click', closeEditModal);
-            document.getElementById('edit-book-cancel-btn-top').addEventListener('click', closeEditModal);
+            cancelBtn.addEventListener('click', closeEditModal);
+            cancelBtnTop.addEventListener('click', closeEditModal);
 
             removeBtn.addEventListener('click', () => {
-                const bookId = document.getElementById('edit-book-id').value;
                 if (confirm('Are you sure you want to permanently remove this book?')) {
+                    const bookId = idInput.value;
                     requestPassword(async (password) => {
-                        showLoaderOnBook(bookId);
                         const { success } = await performAuthenticatedAction({ action: 'delete', data: { id: bookId } }, password);
-                        if (success) { 
-                            library[document.getElementById('edit-book-shelf').value] = library[document.getElementById('edit-book-shelf').value].filter(b => b.id !== bookId);
-                            renderAllLibraryShelves();
-                            closeModal(editBookModal);
-                        } else {
-                            hideLoaderOnBook(bookId);
-                        }
+                        if (success) { closeModal(editBookModal); window.location.reload(); }
                     });
                 }
             });
         }
         
-        document.body.addEventListener('click', (e) => {
-            const target = e.target;
-            const bookItem = target.closest('.book-list-item');
-            if (!bookItem) return;
-
-            const bookId = bookItem.dataset.bookId;
-            const book = Object.values(library).flat().find(b => b.id === bookId);
-
-            if (target.closest('.edit-btn')) {
-                const modal = document.getElementById('edit-book-modal');
-                document.getElementById('edit-book-id').value = book.id;
-                document.getElementById('edit-book-shelf').value = book.shelf;
-                document.getElementById('edit-book-title').value = book.title || '';
-                document.getElementById('edit-book-authors').value = book.authors?.join(', ') || '';
-                document.getElementById('edit-book-cover').value = book.imageLinks?.thumbnail || '';
-                document.getElementById('edit-book-medium').value = book.readingMedium || '';
-                document.getElementById('edit-book-started').value = book.startedOn || '';
-                document.getElementById('edit-book-finished').value = book.finishedOn || '';
-                
-                const progressContainer = document.getElementById('reading-progress-container');
-                const progressSlider = document.getElementById('edit-book-progress');
-                const progressPercentage = document.getElementById('progress-percentage');
-                if (book.shelf === 'currentlyReading') {
-                    progressContainer.classList.remove('hidden');
-                    progressSlider.value = book.readingProgress || 0;
-                    progressPercentage.textContent = `${book.readingProgress || 0}%`;
-                } else {
-                    progressContainer.classList.add('hidden');
-                }
-
-                openModal(modal);
-            }
-
-            if (target.closest('.move-btn')) {
-                const targetShelf = target.dataset.targetShelf;
-                const bookToMove = { ...book, shelf: targetShelf };
-                if (targetShelf === 'currentlyReading' && !bookToMove.startedOn) bookToMove.startedOn = new Date().toISOString().split('T')[0]; 
-                if (targetShelf === 'read' && !bookToMove.finishedOn) { 
-                    bookToMove.finishedOn = new Date().toISOString().split('T')[0]; 
-                    if (!bookToMove.startedOn) bookToMove.startedOn = bookToMove.finishedOn; 
-                }
-                requestPassword(async (password) => {
-                    showLoaderOnBook(bookId);
-                    const { success, data } = await performAuthenticatedAction({ action: 'update', data: bookToMove }, password);
-                    if (success) {
-                        updateBookInState(data.book);
-                        renderAllLibraryShelves();
-                    } else {
-                        hideLoaderOnBook(bookId);
-                    }
-                });
-            }
-             if (target.closest('.remove-btn')) {
-                if (confirm('Are you sure you want to permanently remove this book?')) {
-                    requestPassword(async (password) => {
-                        showLoaderOnBook(bookId);
-                        const { success } = await performAuthenticatedAction({ action: 'delete', data: { id: bookId } }, password);
-                        if (success) {
-                            library[book.shelf] = library[book.shelf].filter(b => b.id !== bookId);
-                            renderAllLibraryShelves();
-                        } else {
-                            hideLoaderOnBook(bookId);
-                        }
-                    });
-                }
-            }
-        });
-
         (async () => {
             const success = await fetchAndSetLibrary();
             if (success) renderAllLibraryShelves();
@@ -646,10 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (finishedOnInput) book.finishedOn = finishedOnInput.value;
                         requestPassword(async (password) => {
                             const { success } = await performAuthenticatedAction({ action: 'update', data: book }, password);
-                            if (success) { 
-                                await fetchAndSetLibrary();
-                                renderDetailsPage(library[shelf].find(b => b.id === bookId));
-                             }
+                            if (success) { window.location.reload(); }
                         });
                     }
                 }
@@ -667,10 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         book.highlights = parseMarkdownHighlights(textarea.value);
                         requestPassword(async (password) => {
                              const { success } = await performAuthenticatedAction({ action: 'update', data: book }, password);
-                             if (success) { 
-                                 await fetchAndSetLibrary();
-                                 renderDetailsPage(library[shelf].find(b => b.id === bookId));
-                              }
+                             if (success) { window.location.reload(); }
                         });
                     }
                 }
@@ -686,6 +489,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderDetailsPage(book);
             }
         })();
+    }
+
+    // --- MIGRATION PAGE LOGIC ---
+    if (document.getElementById('migration-page')) {
+        const startBtn = document.getElementById('start-migration-btn');
+        const statusEl = document.getElementById('migration-status');
+        const logEl = document.getElementById('migration-log');
+
+        const runMigrationBatch = async (password) => {
+            startBtn.disabled = true;
+            startBtn.textContent = 'Migrating...';
+            logEl.classList.remove('hidden');
+
+            const { success, data } = await performAuthenticatedAction({}, password, MIGRATE_API_ENDPOINT);
+
+            if (success) {
+                if (data.logs) data.logs.forEach(log => logEl.innerHTML += `${log}\n`);
+                logEl.scrollTop = logEl.scrollHeight;
+
+                if (data.remainingCount > 0) {
+                    statusEl.textContent = `Batch complete. ${data.remainingCount} images remaining. Starting next batch...`;
+                    setTimeout(() => runMigrationBatch(password), 1000);
+                } else {
+                    statusEl.textContent = 'Migration Complete! All images have been processed.';
+                    startBtn.textContent = 'Migration Complete';
+                    startBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    startBtn.classList.add('bg-green-600');
+                }
+            } else {
+                statusEl.textContent = 'An error occurred. Check the console for details.';
+                startBtn.disabled = false;
+                startBtn.textContent = 'Retry Migration';
+            }
+        };
+
+        startBtn.addEventListener('click', () => {
+            requestPassword((password) => {
+                logEl.innerHTML = 'Starting migration...\n';
+                statusEl.textContent = 'Beginning migration process...';
+                runMigrationBatch(password);
+            });
+        });
     }
 
     // --- SHARED INITIALIZATION & EVENT LISTENERS ---
@@ -725,11 +570,38 @@ document.addEventListener('DOMContentLoaded', () => {
     
     document.body.addEventListener('click', (e) => {
         const target = e.target; 
+        const closest = (selector) => target.closest(selector); 
         
         if (target.classList.contains('close-highlight-modal-btn')) closeModal(document.getElementById('highlight-import-modal')); 
         if (target.matches('.modal-backdrop:not(#password-modal)')) closeModal(target);
 
-        const optionsToggle = target.closest('.options-btn-toggle');
+        const handleBookAction = (callback) => requestPassword(async (password) => { const {success} = await callback(password); if (success) { window.location.reload(); } });
+        const handleAddBook = (bookData, targetShelf) => { const bookWithShelf = { ...bookData, shelf: targetShelf }; if (targetShelf === 'currentlyReading') bookWithShelf.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read') bookWithShelf.finishedOn = new Date().toISOString().split('T')[0]; handleBookAction((password) => performAuthenticatedAction({ action: 'add', data: bookWithShelf }, password)); };
+        const handleRemoveBook = (bookId) => handleBookAction((password) => performAuthenticatedAction({ action: 'delete', data: { id: bookId } }, password));
+        const handleMoveBook = (bookId, currentShelf, targetShelf) => { const bookToMove = { ...library[currentShelf].find(b => b.id === bookId) }; if (!bookToMove) return; bookToMove.shelf = targetShelf; if (targetShelf === 'currentlyReading' && !bookToMove.startedOn) bookToMove.startedOn = new Date().toISOString().split('T')[0]; if (targetShelf === 'read' && !bookToMove.finishedOn) { bookToMove.finishedOn = new Date().toISOString().split('T')[0]; if (!bookToMove.startedOn) bookToMove.startedOn = bookToMove.finishedOn; } handleBookAction((password) => performAuthenticatedAction({ action: 'update', data: bookToMove }, password));};
+
+        const addBtn = closest('.add-btn');
+        if (addBtn) handleAddBook(JSON.parse(addBtn.dataset.bookInfo.replace(/&apos;/g, "'")), addBtn.dataset.targetShelf);
+
+        const editBtn = closest('.edit-btn');
+        if (editBtn) {
+            const { bookId, shelf } = editBtn.dataset;
+            const book = library[shelf]?.find(b => b.id === bookId);
+            if (book) {
+                const modal = document.getElementById('edit-book-modal');
+                document.getElementById('edit-book-id').value = book.id;
+                document.getElementById('edit-book-shelf').value = shelf;
+                document.getElementById('edit-book-title').value = book.title || '';
+                document.getElementById('edit-book-authors').value = book.authors?.join(', ') || '';
+                document.getElementById('edit-book-cover').value = book.imageLinks?.thumbnail || '';
+                document.getElementById('edit-book-medium').value = book.readingMedium || '';
+                document.getElementById('edit-book-started').value = book.startedOn || '';
+                document.getElementById('edit-book-finished').value = book.finishedOn || '';
+                openModal(modal);
+            }
+        }
+
+        const optionsToggle = closest('.options-btn-toggle');
         if (optionsToggle) {
             e.stopPropagation();
             document.querySelectorAll('.options-btn-toggle').forEach(btn => {
@@ -740,6 +612,27 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             document.querySelectorAll('.options-btn-toggle').forEach(btn => btn.nextElementSibling.classList.add('hidden'));
         }
-    });
-});
 
+        const removeBtn = closest('.remove-btn');
+        if (removeBtn) handleRemoveBook(removeBtn.dataset.bookId);
+        
+        if (target.dataset.targetShelf && closest('button[data-target-shelf]')) handleMoveBook(target.dataset.bookId, target.dataset.currentShelf, target.dataset.targetShelf);
+
+        const menuButton = document.getElementById('menu-button');
+        const menu = document.getElementById('menu');
+        if (menuButton && menu && !menuButton.contains(target) && !menu.contains(target) && !closest('#menu')) {
+            menu.classList.add('hidden');
+        }
+    });
+
+    const forceRefreshBtn = document.getElementById('force-refresh-btn');
+    if(forceRefreshBtn) {
+         forceRefreshBtn.addEventListener('click', () => { 
+            showToast('Refreshing from database...');
+            window.location.reload(); 
+        });
+    }
+     const menuButton = document.getElementById('menu-button');
+     const menu = document.getElementById('menu');
+     if(menuButton) menuButton.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+});

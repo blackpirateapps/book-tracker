@@ -11,9 +11,9 @@ const client = createClient({
 // --- API HANDLER ---
 export default async function handler(req, res) {
     // Set CORS headers for all responses
-    res.setHeader('Access-control-Allow-Origin', '*');
-    res.setHeader('Access-control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -74,17 +74,14 @@ export default async function handler(req, res) {
                     const identifiersStr = JSON.stringify(bookData.industryIdentifiers || []);
                     const highlightsStr = JSON.stringify(bookData.highlights || []);
                     
+                    // NEW: Automatically determine the value for the hasHighlights flag.
                     const hasHighlights = (bookData.highlights && bookData.highlights.length > 0) ? 1 : 0;
 
-                    // If a book is moved to 'read', set its progress to 100.
-                    if (bookData.shelf === 'read') {
-                        bookData.readingProgress = 100;
-                    }
-
+                    // MODIFIED: The SQL query now includes the 'hasHighlights' column.
                     await client.execute({
                         sql: `
-                            INSERT INTO books (id, title, authors, imageLinks, pageCount, publishedDate, industryIdentifiers, highlights, startedOn, finishedOn, readingMedium, shelf, hasHighlights, readingProgress) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            INSERT INTO books (id, title, authors, imageLinks, pageCount, publishedDate, industryIdentifiers, highlights, startedOn, finishedOn, readingMedium, shelf, hasHighlights) 
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             ON CONFLICT(id) DO UPDATE SET
                                 title = excluded.title,
                                 authors = excluded.authors,
@@ -97,17 +94,12 @@ export default async function handler(req, res) {
                                 finishedOn = excluded.finishedOn,
                                 readingMedium = excluded.readingMedium,
                                 shelf = excluded.shelf,
-                                hasHighlights = excluded.hasHighlights,
-                                readingProgress = excluded.readingProgress;
+                                hasHighlights = excluded.hasHighlights;
                         `,
-                        args: [bookData.id, bookData.title, authorsStr, imageLinksStr, bookData.pageCount, bookData.publishedDate, identifiersStr, highlightsStr, bookData.startedOn, bookData.finishedOn, bookData.readingMedium, bookData.shelf, hasHighlights, bookData.readingProgress || 0]
+                        // MODIFIED: Added the 'hasHighlights' variable to the arguments array.
+                        args: [bookData.id, bookData.title, authorsStr, imageLinksStr, bookData.pageCount, bookData.publishedDate, identifiersStr, highlightsStr, bookData.startedOn, bookData.finishedOn, bookData.readingMedium, bookData.shelf, hasHighlights]
                     });
-
-                    // After a successful update, fetch and return the updated book data.
-                    const updatedBookResult = await client.execute({ sql: "SELECT * FROM books WHERE id = ?", args: [bookData.id] });
-                    const updatedBook = updatedBookResult.rows[0];
-
-                    return res.status(200).json({ message: action === 'add' ? 'Book added!' : 'Book updated!', book: updatedBook });
+                    return res.status(200).json({ message: action === 'add' ? 'Book added successfully!' : 'Book updated successfully!' });
 
                 case 'delete':
                     await client.execute({ sql: "DELETE FROM books WHERE id = ?", args: [data.id] });
@@ -133,6 +125,7 @@ export default async function handler(req, res) {
 async function initializeDatabase() {
     try {
         await client.batch([
+            // MODIFIED: Added the 'hasHighlights' column with a default value of 0.
             `CREATE TABLE IF NOT EXISTS books (
                 id TEXT PRIMARY KEY,
                 title TEXT,
@@ -146,17 +139,10 @@ async function initializeDatabase() {
                 finishedOn TEXT,
                 readingMedium TEXT,
                 shelf TEXT,
-                hasHighlights INTEGER DEFAULT 0,
-                readingProgress INTEGER DEFAULT 0
+                hasHighlights INTEGER DEFAULT 0
             );`,
             `CREATE INDEX IF NOT EXISTS idx_shelf ON books(shelf);`
         ], 'write');
-        // Add readingProgress column if it doesn't exist for backward compatibility
-        try {
-            await client.execute('ALTER TABLE books ADD COLUMN readingProgress INTEGER DEFAULT 0');
-        } catch (e) {
-            // Ignore error if column already exists
-        }
     } catch (e) {
         console.error("Database initialization failed:", e);
     }
