@@ -13,7 +13,7 @@
         body { background-color: #f8f8ff; }
         .highlight-item { list-style-position: inside; }
         .highlight-item::marker { color: #3b82f6; }
-        .loader-spinner { border: 2px solid #f3f3f3; border-top: 2px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        .loader-spinner { border: 2px solid #f3f3f3; border-top: 2px solid #3498db; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 50% { opacity: .5; } }
@@ -22,26 +22,28 @@
 <body>
     <main id="details-page-content" class="max-w-3xl mx-auto py-8 px-4">
         <!-- Skeleton Loader -->
-        <div id="skeleton-loader" class="animate-pulse">
-            <div class="h-6 bg-gray-200 rounded w-1/4 mb-8"></div>
-            <div class="flex flex-col sm:flex-row gap-8">
-                <div class="sm:w-1/3">
-                    <div class="w-full max-w-[200px] h-[300px] bg-gray-200 rounded-lg mx-auto"></div>
-                </div>
-                <div class="sm:w-2/3 space-y-4">
-                    <div class="h-8 bg-gray-200 rounded w-3/4"></div>
-                    <div class="h-6 bg-gray-200 rounded w-1/2"></div>
-                    <div class="pt-4 space-y-2">
-                        <div class="h-4 bg-gray-200 rounded w-5/6"></div>
-                        <div class="h-4 bg-gray-200 rounded w-full"></div>
-                        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div id="skeleton-loader">
+            <div class="animate-pulse">
+                <div class="h-6 bg-gray-200 rounded w-1/4 mb-8"></div>
+                <div class="flex flex-col sm:flex-row gap-8">
+                    <div class="sm:w-1/3">
+                        <div class="w-full max-w-[200px] h-[300px] bg-gray-200 rounded-lg mx-auto"></div>
+                    </div>
+                    <div class="sm:w-2/3 space-y-4">
+                        <div class="h-8 bg-gray-200 rounded w-3/4"></div>
+                        <div class="h-6 bg-gray-200 rounded w-1/2"></div>
+                        <div class="pt-4 space-y-2">
+                            <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                            <div class="h-4 bg-gray-200 rounded w-full"></div>
+                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="mt-12 space-y-4">
-                <div class="h-6 bg-gray-200 rounded w-1/3"></div>
-                <div class="h-4 bg-gray-200 rounded"></div>
-                <div class="h-4 bg-gray-200 rounded"></div>
+                <div class="mt-12 space-y-4">
+                    <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                    <div class="h-4 bg-gray-200 rounded"></div>
+                    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+                </div>
             </div>
         </div>
     </main>

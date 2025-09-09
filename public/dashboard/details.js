@@ -35,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
         requestPassword(async (password) => {
             if(saveBtn) {
                 saveBtn.disabled = true;
-                saveBtn.querySelector('.loader-spinner')?.style.display = 'inline-block';
+                const loader = saveBtn.querySelector('.loader-spinner');
+                if(loader) loader.style.display = 'inline-block';
             }
             try {
                 const response = await fetch(UPDATE_API_ENDPOINT, {
@@ -49,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 showToast(result.message);
                 book = parseBook(result.book);
-                isEditing = {}; // Reset all editing states
+                isEditing = {}; 
                 renderPage();
                 attachActionListeners();
 
@@ -58,7 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 if(saveBtn) {
                     saveBtn.disabled = false;
-                    saveBtn.querySelector('.loader-spinner')?.style.display = 'none';
+                    const loader = saveBtn.querySelector('.loader-spinner');
+                    if(loader) loader.style.display = 'none';
                 }
             }
         });
@@ -66,13 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const parseBook = (rawBook) => {
         const parsed = { ...rawBook };
-        try { parsed.authors = JSON.parse(rawBook.authors || '[]'); } catch (e) { parsed.authors = []; }
-        try { parsed.imageLinks = JSON.parse(rawBook.imageLinks || '{}'); } catch (e) { parsed.imageLinks = {}; }
+        try { parsed.authors = JSON.parse(rawBook.authors || '[]'); } catch (e) { parsed.authors = Array.isArray(rawBook.authors) ? rawBook.authors : []; }
+        try { parsed.imageLinks = JSON.parse(rawBook.imageLinks || '{}'); } catch (e) { parsed.imageLinks = typeof rawBook.imageLinks === 'object' ? rawBook.imageLinks : {}; }
         try { parsed.highlights = JSON.parse(rawBook.highlights || '[]'); } catch (e) { parsed.highlights = []; }
         try { parsed.subjects = JSON.parse(rawBook.subjects || '[]'); } catch (e) { parsed.subjects = []; }
         return parsed;
     };
     
+    // --- RENDERING ---
     const renderPage = () => {
         contentContainer.innerHTML = `
             <a href="/dashboard/dashboard.html" class="text-blue-600 text-sm font-semibold mb-8 inline-block">&larr; Back to Dashboard</a>
@@ -86,10 +89,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDescription();
         renderHighlights();
     };
-    
+
     const renderMainInfo = () => {
         const container = document.getElementById('main-info-section');
+        if (!container) return;
         const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/200x300/e2e8f0/475569?text=N/A`;
+
         if (isEditing.mainInfo) {
             container.innerHTML = `
                 <div class="bg-white rounded-xl border p-6">
@@ -132,14 +137,111 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const renderReadingLog = () => { /* ... same as before ... */ };
-    const renderDescription = () => { /* similar implementation to main info */ };
-    const renderHighlights = () => { /* ... same as before ... */ };
+    const renderReadingLog = () => {
+        const container = document.getElementById('reading-log-section');
+        if (!container) return;
+
+        if (isEditing.readingLog) {
+            const mediums = ["Paperback", "Kindle Paperwhite", "Mobile", "Tablet", "Audiobook"];
+            const mediumOptions = mediums.map(m => `<option value="${m}" ${book.readingMedium === m ? 'selected' : ''}>${m}</option>`).join('');
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Edit Reading Log</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                        <div><label for="reading-medium" class="font-semibold block mb-1 text-gray-600">Medium</label><select id="reading-medium" class="w-full p-2 border rounded-lg bg-gray-50"><option value="">Not set</option>${mediumOptions}</select></div>
+                        <div><label for="started-on" class="font-semibold block mb-1 text-gray-600">Started On</label><input type="date" id="started-on" value="${book.startedOn || ''}" class="w-full p-2 border rounded-lg bg-gray-50"></div>
+                        <div><label for="finished-on" class="font-semibold block mb-1 text-gray-600">Finished On</label><input type="date" id="finished-on" value="${book.finishedOn || ''}" class="w-full p-2 border rounded-lg bg-gray-50"></div>
+                    </div>
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button id="cancel-log-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                        <button id="save-log-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2">Save <div class="loader-spinner" style="display: none;"></div></button>
+                    </div>
+                </div>
+            `;
+        } else {
+            let durationHTML = '';
+            if (book.startedOn && book.finishedOn) {
+                const diffTime = Math.abs(new Date(book.finishedOn) - new Date(book.startedOn));
+                const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                durationHTML = `<div class="flex justify-between"><strong class="text-gray-600">Time to Finish:</strong><span>${diffDays} day${diffDays !== 1 ? 's' : ''}</span></div>`;
+            }
+
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Reading Log</h2>
+                        <button id="edit-log-btn" class="text-sm font-semibold text-blue-600 hover:underline">Edit</button>
+                    </div>
+                    <div class="space-y-2 text-sm text-gray-700">
+                        <div class="flex justify-between"><strong class="text-gray-600">Medium:</strong><span>${book.readingMedium || 'Not set'}</span></div>
+                        <div class="flex justify-between"><strong class="text-gray-600">Started On:</strong><span>${book.startedOn || 'Not set'}</span></div>
+                        <div class="flex justify-between"><strong class="text-gray-600">Finished On:</strong><span>${book.finishedOn || 'Not set'}</span></div>
+                        ${durationHTML}
+                    </div>
+                </div>
+            `;
+        }
+    };
+    
+    const renderDescription = () => {
+        const container = document.getElementById('description-section');
+        if (!container) return;
+
+        if (isEditing.description) {
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Edit Description</h2>
+                    <textarea id="edit-description-textarea" class="w-full h-48 p-3 border rounded-lg bg-gray-50 text-sm">${book.bookDescription || ''}</textarea>
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button id="cancel-description-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                        <button id="save-description-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2">Save <div class="loader-spinner" style="display: none;"></div></button>
+                    </div>
+                </div>`;
+        } else {
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Description</h2>
+                        <button id="edit-description-btn" class="text-sm font-semibold text-blue-600 hover:underline">Edit</button>
+                    </div>
+                    <p class="text-gray-700 leading-relaxed">${book.bookDescription || 'No description available. Click "Edit" to add one.'}</p>
+                </div>`;
+        }
+    };
+    
+    const renderHighlights = () => {
+        const container = document.getElementById('highlights-section');
+        if (!container) return;
+
+        if (isEditing.highlights) {
+            const markdownText = book.highlights.map(h => `- ${h}`).join('\n');
+            container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Edit Highlights</h2>
+                    <textarea id="highlights-textarea" class="w-full h-64 p-3 border rounded-lg bg-gray-50 text-sm font-mono">${markdownText}</textarea>
+                    <div class="flex justify-end gap-2 mt-4">
+                        <button id="cancel-highlights-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                        <button id="save-highlights-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2">Save <div class="loader-spinner" style="display: none;"></div></button>
+                    </div>
+                </div>`;
+        } else {
+             container.innerHTML = `
+                <div class="bg-white rounded-xl border p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold text-gray-900">Highlights</h2>
+                        <button id="edit-highlights-btn" class="text-sm font-semibold text-blue-600 hover:underline">Edit</button>
+                    </div>
+                    ${book.highlights.length > 0 ? 
+                        '<ul class="space-y-4">' + book.highlights.map(h => `<li class="highlight-item pl-4">${h}</li>`).join('') + '</ul>' : 
+                        '<p class="text-gray-500">No highlights yet. Click "Edit" to add some.</p>'
+                    }
+                </div>`;
+        }
+    };
 
     const attachActionListeners = () => {
-        // Main Info Section
-        document.getElementById('edit-main-info-btn')?.addEventListener('click', () => { isEditing.mainInfo = true; renderMainInfo(); });
-        document.getElementById('cancel-main-info-btn')?.addEventListener('click', () => { isEditing.mainInfo = false; renderMainInfo(); });
+        document.getElementById('edit-main-info-btn')?.addEventListener('click', () => { isEditing.mainInfo = true; renderMainInfo(); attachActionListeners(); });
+        document.getElementById('cancel-main-info-btn')?.addEventListener('click', () => { isEditing.mainInfo = false; renderMainInfo(); attachActionListeners(); });
         document.getElementById('save-main-info-btn')?.addEventListener('click', (e) => {
             const updatedBook = { ...book };
             updatedBook.title = document.getElementById('edit-title').value;
@@ -150,17 +252,56 @@ document.addEventListener('DOMContentLoaded', () => {
             performAuthenticatedUpdate(updatedBook, e.currentTarget);
         });
 
-        // Other sections
-        document.getElementById('edit-highlights-btn')?.addEventListener('click', () => { isEditing.highlights = true; renderHighlights(); });
-        document.getElementById('edit-log-btn')?.addEventListener('click', () => { isEditing.readingLog = true; renderReadingLog(); });
-        document.getElementById('edit-description-btn')?.addEventListener('click', () => { isEditing.description = true; renderDescription(); });
+        document.getElementById('edit-log-btn')?.addEventListener('click', () => { isEditing.readingLog = true; renderReadingLog(); attachActionListeners(); });
+        document.getElementById('cancel-log-btn')?.addEventListener('click', () => { isEditing.readingLog = false; renderReadingLog(); attachActionListeners(); });
+        document.getElementById('save-log-btn')?.addEventListener('click', e => {
+            const updatedBook = { ...book };
+            updatedBook.readingMedium = document.getElementById('reading-medium').value;
+            updatedBook.startedOn = document.getElementById('started-on').value || null;
+            updatedBook.finishedOn = document.getElementById('finished-on').value || null;
+            performAuthenticatedUpdate(updatedBook, e.currentTarget);
+        });
+
+        document.getElementById('edit-description-btn')?.addEventListener('click', () => { isEditing.description = true; renderDescription(); attachActionListeners(); });
+        document.getElementById('cancel-description-btn')?.addEventListener('click', () => { isEditing.description = false; renderDescription(); attachActionListeners(); });
+        document.getElementById('save-description-btn')?.addEventListener('click', e => {
+            const updatedBook = { ...book };
+            updatedBook.bookDescription = document.getElementById('edit-description-textarea').value;
+            performAuthenticatedUpdate(updatedBook, e.currentTarget);
+        });
+
+        document.getElementById('edit-highlights-btn')?.addEventListener('click', () => { isEditing.highlights = true; renderHighlights(); attachActionListeners(); });
+        document.getElementById('cancel-highlights-btn')?.addEventListener('click', () => { isEditing.highlights = false; renderHighlights(); attachActionListeners(); });
+        document.getElementById('save-highlights-btn')?.addEventListener('click', e => {
+            const textarea = document.getElementById('highlights-textarea');
+            const newHighlights = textarea.value.split('\n')
+                .map(line => line.trim().replace(/^- /, ''))
+                .filter(Boolean);
+            const updatedBook = { ...book, highlights: newHighlights };
+            performAuthenticatedUpdate(updatedBook, e.currentTarget);
+        });
     };
     
-    contentContainer.addEventListener('click', e => { /* ... event delegation for highlights, log, description save/cancel ... */});
-    
-    const initializePage = async () => { /* ... same as before, but calls attachActionListeners ... */ };
-    
-    // Password modal logic (CORRECTED)
+    // --- INITIALIZATION ---
+    const initializePage = async () => {
+        const bookId = new URLSearchParams(window.location.search).get('id');
+        if (!bookId) { 
+            contentContainer.innerHTML = `<p class="text-center text-red-500">No book ID provided.</p>`;
+            return;
+        }
+
+        try {
+            const response = await fetch(`${DETAILS_API_ENDPOINT}?id=${bookId}`);
+            if (!response.ok) throw new Error('Book not found.');
+            const rawBook = await response.json();
+            book = parseBook(rawBook);
+            renderPage();
+            attachActionListeners();
+        } catch (error) {
+            contentContainer.innerHTML = `<div id="skeleton-loader"><p class="text-center text-red-500">${error.message}</p></div>`;
+        }
+    };
+
     const passwordModal = document.getElementById('password-modal');
     if (passwordModal) {
         const passwordInput = document.getElementById('password-input');
