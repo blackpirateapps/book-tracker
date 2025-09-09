@@ -75,8 +75,66 @@ document.addEventListener('DOMContentLoaded', () => {
         return parsed;
     };
     
+    // --- WIKIPEDIA FETCH LOGIC ---
+    const handleWikipediaFetch = async (e) => {
+        const btn = e.currentTarget;
+        const loader = btn.querySelector('.loader-spinner');
+        btn.disabled = true;
+        if(loader) loader.style.display = 'inline-block';
+
+        const searchTerm = `${book.title} ${book.authors[0]}`;
+        const searchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(searchTerm)}&limit=1&namespace=0&format=json&origin=*`;
+
+        try {
+            const searchResponse = await fetch(searchUrl);
+            const searchData = await searchResponse.json();
+            const pageTitle = searchData[1][0];
+
+            if (!pageTitle) {
+                throw new Error("Could not find a matching Wikipedia article.");
+            }
+
+            const contentUrl = `https://en.wikipedia.org/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=wikitext|text&format=json&origin=*`;
+            const contentResponse = await fetch(contentUrl);
+            const contentData = await contentResponse.json();
+
+            const wikitext = contentData.parse.wikitext['*'];
+            const htmltext = contentData.parse.text['*'];
+
+            // Parse infobox from wikitext
+            const pageMatch = wikitext.match(/\|\s*pages\s*=\s*(\d+)/);
+            if (pageMatch && pageMatch[1]) {
+                document.getElementById('edit-pageCount').value = pageMatch[1];
+            }
+
+            const pubDateMatch = wikitext.match(/\|\s*pub_date\s*=\s*([^\n|]+)/);
+            if (pubDateMatch && pubDateMatch[1]) {
+                document.getElementById('edit-fullPublishDate').value = pubDateMatch[1].replace(/\[\[|\]\]/g, ''); // Clean links
+            }
+
+            // Parse description from HTML text
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmltext;
+            const firstParagraph = tempDiv.querySelector('p');
+            if (firstParagraph) {
+                document.getElementById('edit-description-textarea').value = firstParagraph.textContent.replace(/\[\d+\]/g, '').trim(); // Clean citations
+            }
+            
+            showToast("Data fetched from Wikipedia! Review and save.", "success");
+
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            if(loader) loader.style.display = 'none';
+        }
+    };
+
     // --- RENDERING ---
     const renderPage = () => {
+        const skeletonLoader = document.getElementById('skeleton-loader');
+        if (skeletonLoader) skeletonLoader.remove();
+        
         contentContainer.innerHTML = `
             <a href="/dashboard/dashboard.html" class="text-blue-600 text-sm font-semibold mb-8 inline-block">&larr; Back to Dashboard</a>
             <div id="main-info-section"></div>
@@ -98,8 +156,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isEditing.mainInfo) {
             container.innerHTML = `
                 <div class="bg-white rounded-xl border p-6">
-                     <div class="flex justify-between items-center mb-4">
+                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-semibold text-gray-900">Edit Details</h2>
+                        <button id="fetch-wikipedia-btn" class="bg-gray-800 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-black flex items-center gap-2">
+                           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 448 512"><path d="M224 256c70.7 0 128-57.3 128-128S294.7 0 224 0 96 57.3 96 128s57.3 128 128 128zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512H418.3c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304H178.3z"></path></svg>
+                           Fetch from Wikipedia
+                           <div class="loader-spinner" style="display: none;"></div>
+                        </button>
                     </div>
                     <div class="space-y-4 text-sm">
                         <div><label class="font-semibold block mb-1 text-gray-600">Title</label><input type="text" id="edit-title" class="w-full p-2 border rounded-lg bg-gray-50" value="${book.title}"></div>
@@ -242,6 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const attachActionListeners = () => {
         document.getElementById('edit-main-info-btn')?.addEventListener('click', () => { isEditing.mainInfo = true; renderMainInfo(); attachActionListeners(); });
         document.getElementById('cancel-main-info-btn')?.addEventListener('click', () => { isEditing.mainInfo = false; renderMainInfo(); attachActionListeners(); });
+        document.getElementById('fetch-wikipedia-btn')?.addEventListener('click', handleWikipediaFetch);
         document.getElementById('save-main-info-btn')?.addEventListener('click', (e) => {
             const updatedBook = { ...book };
             updatedBook.title = document.getElementById('edit-title').value;
@@ -282,11 +346,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
-    // --- INITIALIZATION ---
     const initializePage = async () => {
         const bookId = new URLSearchParams(window.location.search).get('id');
         if (!bookId) { 
             contentContainer.innerHTML = `<p class="text-center text-red-500">No book ID provided.</p>`;
+            document.getElementById('skeleton-loader').remove();
             return;
         }
 
@@ -306,8 +370,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (passwordModal) {
         const passwordInput = document.getElementById('password-input');
         const rememberMeCheckbox = document.getElementById('remember-me');
-        const submitBtn = document.getElementById('password-submit-btn');
-        const cancelBtn = document.getElementById('password-cancel-btn');
+        const submitBtn = passwordModal.querySelector('#password-submit-btn');
+        const cancelBtn = passwordModal.querySelector('#password-cancel-btn');
 
         const handleSubmit = () => {
             const password = passwordInput.value;
