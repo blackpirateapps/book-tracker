@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let library = { watchlist: [], currentlyReading: [], read: [] };
     let pagination = { watchlist: { currentPage: 1 }, currentlyReading: { currentPage: 1 }, read: { currentPage: 1 } };
     let afterPasswordCallback = null;
-    let searchTimeout;
 
     // --- DOM ELEMENTS ---
     const toast = document.getElementById('toast');
@@ -18,12 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const bookTemplate = document.getElementById('book-item-template');
     const shelvesContainer = document.getElementById('shelves-container');
     const editBookModal = document.getElementById('edit-book-modal');
-    const searchToggleBtn = document.getElementById('search-toggle-btn');
-    const searchInput = document.getElementById('search-input');
-    const searchResultsSection = document.getElementById('search-results-section');
-    const searchResultsContainer = document.getElementById('search-results-container');
-    const searchMessage = document.getElementById('search-message');
-    const skeletonBookTemplate = document.getElementById('skeleton-book-template');
     
     // --- HELPER FUNCTIONS ---
     const setCookie = (name, value, days) => { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/dashboard; SameSite=Lax; Secure"; };
@@ -54,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const bookEl = document.querySelector(`[data-book-id="${bookId}"]`);
         if (bookEl) {
             const overlay = document.createElement('div');
-            overlay.className = 'loader-overlay absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center';
+            overlay.className = 'loader-overlay';
             overlay.innerHTML = '<div class="loader-spinner"></div>';
             bookEl.style.position = 'relative';
             bookEl.appendChild(overlay);
@@ -109,110 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else { showToast("Could not open password prompt.", "error"); }
     };
 
-    // --- SEARCH LOGIC (NEW) ---
-    searchToggleBtn.addEventListener('click', () => {
-        searchInput.classList.toggle('expanded');
-        if (searchInput.classList.contains('expanded')) {
-            searchInput.focus();
-        } else {
-            searchResultsSection.classList.add('hidden');
-        }
-    });
-
-    searchInput.addEventListener('input', () => {
-        clearTimeout(searchTimeout);
-        const query = searchInput.value.trim();
-
-        if (query.length < 3) {
-            searchResultsSection.classList.add('hidden');
-            return;
-        }
-
-        searchResultsSection.classList.remove('hidden');
-        searchMessage.textContent = 'Searching...';
-        searchResultsContainer.innerHTML = '';
-        searchResultsContainer.appendChild(searchMessage);
-        
-        searchTimeout = setTimeout(async () => {
-            try {
-                const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=5&fields=key,title,author_name,cover_i,edition_key,first_publish_year`);
-                if (!response.ok) throw new Error('Network error');
-                const data = await response.json();
-                renderSearchResults(data.docs);
-            } catch (error) {
-                searchMessage.textContent = 'Error fetching results.';
-            }
-        }, 500);
-    });
-
-    const renderSearchResults = (docs) => {
-        searchResultsContainer.innerHTML = '';
-        if (docs.length === 0) {
-            searchMessage.textContent = 'No books found.';
-            searchResultsContainer.appendChild(searchMessage);
-            return;
-        }
-
-        docs.forEach(doc => {
-            const coverUrl = doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : `https://placehold.co/80x120/e2e8f0/475569?text=N/A`;
-            const resultEl = document.createElement('div');
-            resultEl.className = 'flex items-center p-2 space-x-3 hover:bg-gray-100 rounded-lg';
-            resultEl.innerHTML = `
-                <img src="${coverUrl}" class="w-10 h-14 object-cover rounded-md flex-shrink-0">
-                <div class="flex-grow min-w-0">
-                    <p class="font-semibold text-sm truncate">${doc.title}</p>
-                    <p class="text-xs text-gray-500 truncate">${(doc.author_name || []).join(', ')}</p>
-                </div>
-                <div class="flex-shrink-0 flex gap-1">
-                    <button class="add-book-btn p-2 rounded-full hover:bg-blue-100" title="Add to Currently Reading" data-shelf="currentlyReading">
-                        <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>
-                    </button>
-                    <button class="add-book-btn p-2 rounded-full hover:bg-gray-200" title="Add to Watchlist" data-shelf="watchlist">
-                        <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path></svg>
-                    </button>
-                </div>
-            `;
-            resultEl.querySelectorAll('.add-book-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    handleAddBook(doc, btn.dataset.shelf, btn);
-                });
-            });
-            searchResultsContainer.appendChild(resultEl);
-        });
-    };
-    
-    const handleAddBook = (doc, shelf, btn) => {
-        const bookData = {
-            id: doc.key.replace('/works/', ''),
-            olid: doc.edition_key?.[0],
-            title: doc.title,
-            authors: doc.author_name || [],
-            publishedDate: String(doc.first_publish_year || ''),
-            imageLinks: { thumbnail: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null },
-            shelf: shelf,
-        };
-        
-        requestPassword(async (password) => {
-            const originalContent = btn.innerHTML;
-            btn.innerHTML = '<div class="loader-spinner w-5 h-5"></div>';
-            btn.disabled = true;
-            
-            const { success, data } = await performAuthenticatedAction({ action: 'add', data: bookData }, password);
-            
-            if (success) {
-                updateBookInState(data.book);
-                renderAllShelves();
-                searchInput.value = '';
-                searchResultsSection.classList.add('hidden');
-            } else {
-                btn.innerHTML = originalContent;
-                btn.disabled = false;
-            }
-        });
-    };
-
-    // --- EXISTING LOGIC (UNCHANGED) ---
     const createBookListItemNode = (book) => {
         const clone = bookTemplate.content.cloneNode(true);
         const bookElement = clone.querySelector('.book-list-item');
@@ -490,27 +379,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const initializePage = async () => {
-        const skeletonLoader = document.getElementById('skeleton-loader');
-        const shelfOrder = ['currentlyReading', 'watchlist', 'read'];
-        
-        shelvesContainer.innerHTML = ''; // Clear existing content before adding skeletons
-        shelfOrder.forEach(shelfName => {
-            const shelfClone = shelfTemplate.content.cloneNode(true);
-            const shelfSection = shelfClone.querySelector('.shelf-section');
-            shelfSection.dataset.shelfName = shelfName;
-            const title = shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
-            shelfSection.querySelector('h2').textContent = title;
-            const booksContainer = shelfSection.querySelector('.shelf-books-container');
-            for(let i = 0; i < 3; i++) {
-                booksContainer.appendChild(skeletonBookTemplate.content.cloneNode(true));
-            }
-            shelvesContainer.appendChild(shelfSection);
-        });
-
         const success = await fetchAndSetLibrary();
-        
+        const skeletonLoader = document.getElementById('skeleton-loader');
+
         if (success) {
-            shelvesContainer.innerHTML = ''; // Clear skeletons
+            if(skeletonLoader) skeletonLoader.remove();
+            const shelfOrder = ['currentlyReading', 'watchlist', 'read'];
             shelfOrder.forEach(shelfName => {
                 const shelfClone = shelfTemplate.content.cloneNode(true);
                 const shelfSection = shelfClone.querySelector('.shelf-section');
