@@ -43,8 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const newLibrary = { watchlist: [], currentlyReading: [], read: [] }; 
         books.forEach(book => { 
             const parsedBook = parseBook(book);
+            // ** THE FIX IS HERE **
             if (newLibrary[parsedBook.shelf]) { 
                 newLibrary[parsedBook.shelf].push(parsedBook); 
+            } else {
+                // If shelf is invalid or missing, add it to the watchlist as a fallback.
+                newLibrary.watchlist.push(parsedBook);
             }
         }); 
         return newLibrary;
@@ -109,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
         else { showToast("Could not open password prompt.", "error"); }
     };
 
-    // --- SEARCH LOGIC (NEW) ---
     searchToggleBtn.addEventListener('click', () => {
         searchInput.classList.toggle('expanded');
         if (searchInput.classList.contains('expanded')) {
@@ -212,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // --- EXISTING LOGIC (UNCHANGED) ---
     const createBookListItemNode = (book) => {
         const clone = bookTemplate.content.cloneNode(true);
         const bookElement = clone.querySelector('.book-list-item');
