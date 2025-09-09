@@ -16,8 +16,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    res.setHeader('Cache-Control', 's-maxage=1, stale-while-revalidate=59');
-    
     const result = await client.execute({
       sql: "SELECT * FROM books WHERE id = ?",
       args: [id],
@@ -27,9 +25,14 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Book not found.' });
     }
 
+    // This header tells Vercel's CDN to cache the response.
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+    
     return res.status(200).json(result.rows[0]);
+    
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: 'Failed to fetch book details.' });
   }
 }
+
