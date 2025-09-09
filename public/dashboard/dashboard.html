@@ -12,19 +12,19 @@
         @supports (font-variation-settings: normal) { :root { font-family: 'Inter var', sans-serif; } }
         body { background-color: #f8f8ff; }
         .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
-        #search-input { transition: all 0.3s ease-out; }
+        .shelf-books-container, #search-input { transition: all 0.3s ease-out; }
         #search-input.expanded { width: 256px; opacity: 1; pointer-events: auto; padding-left: 0.75rem; padding-right: 0.75rem; }
-        .shelf-books-container { transition: all 0.3s ease-out; }
-        .shelf-books-container.collapsed { max-height: 0; opacity: 0; overflow: hidden; margin-top: 0 !important; }
+        .shelf-books-container.collapsed, .shelf-section .pagination-controls.collapsed { display: none; }
         .shelf-toggle-icon { transition: transform 0.3s ease-out; }
         .shelf-header.collapsed .shelf-toggle-icon { transform: rotate(-90deg); }
-        .loader-spinner { border: 2px solid #f3f3f3; border-top: 2px solid #3498db; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        .loader-spinner { border: 2px solid #f3f3f3; border-top: 2px solid #3498db; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
         @keyframes pulse { 50% { opacity: .5; } }
     </style>
 </head>
 <body>
+    <!-- Templates for dynamic content -->
     <template id="shelf-template">
         <section class="shelf-section" data-shelf-name="{{shelfName}}">
             <div class="shelf-header flex justify-between items-center mb-2 px-4 py-2 cursor-pointer rounded-lg hover:bg-gray-100">
@@ -44,7 +44,6 @@
             </div>
         </section>
     </template>
-
     <template id="book-item-template">
         <div class="book-list-item flex items-center p-4 space-x-4 relative group" data-book-id="{{id}}">
             <a href="#" class="flex items-center space-x-4 flex-grow min-w-0">
@@ -53,14 +52,17 @@
                     <p class="font-semibold text-gray-800 truncate group-hover:underline">Book Title</p>
                     <p class="text-sm text-gray-500 truncate">Author Name</p>
                     <div class="progress-container mt-2" style="display: none;">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="progress-percentage text-xs font-medium text-blue-700">0%</span>
+                        <div class="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>Progress</span>
+                            <span class="progress-percentage">0%</span>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-1.5"><div class="progress-bar bg-blue-600 h-1.5 rounded-full"></div></div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="progress-bar bg-blue-600 h-1.5 rounded-full" style="width: 0%;"></div>
+                        </div>
                     </div>
                 </div>
             </a>
-            <div class="flex-shrink-0 flex items-center space-x-1">
+            <div class="flex-shrink-0 flex items-center gap-1">
                 <div class="relative">
                     <button class="shelf-change-btn p-2 rounded-full hover:bg-gray-200" title="Change Shelf">
                         <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
@@ -68,11 +70,11 @@
                     <div class="shelf-change-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border text-sm z-10"></div>
                 </div>
                 <button class="edit-btn p-2 rounded-full hover:bg-gray-200" title="Edit Details">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L16.732 3.732z"></path></svg>
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z"></path></svg>
                 </button>
                 <div class="relative">
-                    <button class="options-btn-toggle p-2 rounded-full hover:bg-gray-200">
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"></path></svg>
+                    <button class="options-btn-toggle p-2 rounded-full hover:bg-gray-200" title="More Options">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"></path></svg>
                     </button>
                     <div class="options-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border text-sm z-10">
                         <button class="import-highlights-single-btn w-full text-left px-4 py-2 hover:bg-gray-100">Import Highlights</button>
@@ -83,7 +85,6 @@
             </div>
         </div>
     </template>
-    
     <template id="skeleton-book-template">
          <div class="book-list-item flex items-center p-4 space-x-4"><div class="w-12 h-16 bg-gray-200 rounded-md flex-shrink-0"></div><div class="flex-grow min-w-0 space-y-2"><div class="h-4 bg-gray-200 rounded w-3/4"></div><div class="h-3 bg-gray-200 rounded w-1/2"></div></div></div>
     </template>
@@ -113,29 +114,7 @@
         </main>
     </div>
     
-    <div id="edit-book-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40 opacity-0 transition-opacity">
-        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-lg scale-95 opacity-0">
-            <input type="hidden" id="edit-book-id"><input type="hidden" id="edit-book-shelf">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-semibold">Edit Book</h3><button id="edit-book-cancel-btn-top" class="p-2 rounded-full hover:bg-gray-200">&times;</button></div>
-                <div class="space-y-4 text-sm">
-                    <div><label for="edit-book-title" class="font-semibold block mb-1 text-gray-600">Title</label><input type="text" id="edit-book-title" class="w-full p-2 border rounded-lg bg-gray-50"></div>
-                    <div><label for="edit-book-authors" class="font-semibold block mb-1 text-gray-600">Authors (comma-separated)</label><input type="text" id="edit-book-authors" class="w-full p-2 border rounded-lg bg-gray-50"></div>
-                    <div><label for="edit-book-cover" class="font-semibold block mb-1 text-gray-600">Cover Image URL</label><input type="text" id="edit-book-cover" class="w-full p-2 border rounded-lg bg-gray-50"></div>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div><label for="edit-book-medium" class="font-semibold block mb-1 text-gray-600">Medium</label><select id="edit-book-medium" class="w-full p-2 border rounded-lg bg-gray-50"><option value="">Not set</option><option value="Paperback">Paperback</option><option value="Kindle Paperwhite">Kindle Paperwhite</option><option value="Mobile">Mobile</option><option value="Tablet">Tablet</option></select></div>
-                        <div><label for="edit-book-started" class="font-semibold block mb-1 text-gray-600">Started On</label><input type="date" id="edit-book-started" class="w-full p-2 border rounded-lg bg-gray-50"></div>
-                        <div><label for="edit-book-finished" class="font-semibold block mb-1 text-gray-600">Finished On</label><input type="date" id="edit-book-finished" class="w-full p-2 border rounded-lg bg-gray-50"></div>
-                    </div>
-                    <div id="reading-progress-container" class="hidden"><label for="edit-book-progress" class="font-semibold block mb-1 text-gray-600">Reading Progress</label><div class="flex items-center gap-4"><input type="range" id="edit-book-progress" min="0" max="100" class="w-full"><span id="progress-percentage" class="font-semibold text-gray-700 w-12 text-right">0%</span></div></div>
-                </div>
-            </div>
-            <div class="bg-gray-50 p-4 flex justify-end items-center rounded-b-xl">
-                <div class="flex gap-2"><button id="edit-book-cancel-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button><button id="edit-book-save-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2">Save Changes <div class="loader-spinner" style="display: none; width: 16px; height: 16px;"></div></button></div>
-            </div>
-        </div>
-    </div>
-    
+    <!-- Modals and other hidden elements -->
     <div id="password-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 opacity-0 transition-opacity">
         <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-sm scale-95 opacity-0 p-6 text-center">
             <h3 class="text-xl font-semibold mb-2">Enter Admin Password</h3>
@@ -149,8 +128,66 @@
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity z-50"><p id="toast-message"></p></div>
+    <div id="edit-book-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-40 opacity-0 transition-opacity">
+        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-lg scale-95 opacity-0">
+            <input type="hidden" id="edit-book-id">
+            <input type="hidden" id="edit-book-shelf">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold">Edit Book</h3>
+                    <button id="edit-book-cancel-btn-top" class="p-2 rounded-full hover:bg-gray-200">&times;</button>
+                </div>
+                <div class="space-y-4 text-sm">
+                    <div>
+                        <label for="edit-book-title" class="font-semibold block mb-1 text-gray-600">Title</label>
+                        <input type="text" id="edit-book-title" class="w-full p-2 border rounded-lg bg-gray-50">
+                    </div>
+                    <div>
+                        <label for="edit-book-authors" class="font-semibold block mb-1 text-gray-600">Authors (comma-separated)</label>
+                        <input type="text" id="edit-book-authors" class="w-full p-2 border rounded-lg bg-gray-50">
+                    </div>
+                    <div>
+                        <label for="edit-book-cover" class="font-semibold block mb-1 text-gray-600">Cover Image URL</label>
+                        <input type="text" id="edit-book-cover" class="w-full p-2 border rounded-lg bg-gray-50">
+                    </div>
+                    <div id="reading-progress-container" class="hidden">
+                        <label for="edit-book-progress" class="font-semibold block mb-1 text-gray-600">Reading Progress: <span id="progress-percentage">0%</span></label>
+                        <input type="range" id="edit-book-progress" min="0" max="100" class="w-full">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                             <label for="edit-book-medium" class="font-semibold block mb-1 text-gray-600">Medium</label>
+                             <select id="edit-book-medium" class="w-full p-2 border rounded-lg bg-gray-50">
+                                <option value="">Not set</option>
+                                <option value="Paperback">Paperback</option>
+                                <option value="Kindle Paperwhite">Kindle Paperwhite</option>
+                                <option value="Mobile">Mobile</option>
+                                <option value="Tablet">Tablet</option>
+                                <option value="Audiobook">Audiobook</option>
+                             </select>
+                        </div>
+                        <div>
+                            <label for="edit-book-started" class="font-semibold block mb-1 text-gray-600">Started On</label>
+                            <input type="date" id="edit-book-started" class="w-full p-2 border rounded-lg bg-gray-50">
+                        </div>
+                        <div>
+                            <label for="edit-book-finished" class="font-semibold block mb-1 text-gray-600">Finished On</label>
+                            <input type="date" id="edit-book-finished" class="w-full p-2 border rounded-lg bg-gray-50">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 p-4 flex justify-end items-center rounded-b-xl">
+                <div class="flex gap-2">
+                    <button id="edit-book-cancel-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button id="edit-book-save-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center gap-2">Save <div class="loader-spinner" style="display: none;"></div></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <input type="file" id="highlights-file-input" class="hidden" accept=".html,.md">
+    <div id="toast" class="fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity z-50"><p id="toast-message"></p></div>
     
     <script src="/dashboard/dashboard.js" defer></script>
 </body>

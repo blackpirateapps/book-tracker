@@ -49,6 +49,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 newLibrary.watchlist.push(parsedBook);
             }
         }); 
+        newLibrary.watchlist.sort((a, b) => (a.title > b.title) ? 1 : -1);
+        newLibrary.currentlyReading.sort((a, b) => (a.title > b.title) ? 1 : -1);
+        newLibrary.read.sort((a, b) => new Date(b.finishedOn) - new Date(a.finishedOn));
         return newLibrary;
     };
     
@@ -81,7 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Failed to fetch books:", error);
             showToast("Could not connect to the database.", "error");
-            document.getElementById('shelves-container').innerHTML = `<p class="text-center text-red-500">Could not load library data. Please check your connection or database credentials.</p>`;
+            const skeletonLoader = document.getElementById('skeleton-loader');
+            if(skeletonLoader) skeletonLoader.innerHTML = `<p class="text-center text-red-500">Could not load library data. Please check your connection or database credentials.</p>`;
             return false;
         }
     };
@@ -167,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="add-book-btn p-2 rounded-full hover:bg-blue-100" title="Add to Currently Reading" data-shelf="currentlyReading">
                         <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path></svg>
                     </button>
-                    <button class="add-book-btn p-2 rounded-full hover:bg-gray-200" title="Add to To Read" data-shelf="watchlist">
+                    <button class="add-book-btn p-2 rounded-full hover:bg-gray-200" title="Add to Watchlist" data-shelf="watchlist">
                         <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path></svg>
                     </button>
                 </div>
@@ -232,21 +236,19 @@ document.addEventListener('DOMContentLoaded', () => {
             progressContainer.style.display = 'block';
             bookElement.querySelector('.progress-percentage').textContent = `${progress}%`;
             bookElement.querySelector('.progress-bar').style.width = `${progress}%`;
+        } else {
+            progressContainer.style.display = 'none';
         }
 
         const shelfChangeMenu = bookElement.querySelector('.shelf-change-menu');
-        const shelves = {
-            currentlyReading: "Currently Reading",
-            watchlist: "To Read",
-            read: "Read"
-        };
-
-        Object.keys(shelves).forEach(shelfKey => {
-            if (book.shelf !== shelfKey) {
+        shelfChangeMenu.innerHTML = ''; // Clear previous
+        const shelves = ['currentlyReading', 'watchlist', 'read'];
+        shelves.forEach(shelf => {
+            if (book.shelf !== shelf) {
                 const button = document.createElement('button');
                 button.className = 'w-full text-left px-4 py-2 hover:bg-gray-100 move-btn';
-                button.dataset.targetShelf = shelfKey;
-                button.textContent = shelves[shelfKey];
+                button.dataset.targetShelf = shelf;
+                button.textContent = shelf.charAt(0).toUpperCase() + shelf.slice(1).replace(/([A-Z])/g, ' $1').trim();
                 shelfChangeMenu.appendChild(button);
             }
         });
@@ -266,10 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const shelfCount = shelfSection.querySelector('.shelf-count');
         
         const books = library[shelfName];
-        if (shelfName === 'read') {
-            books.sort((a, b) => new Date(b.finishedOn) - new Date(a.finishedOn));
-        }
-
         const totalBooks = books.length;
         shelfCount.textContent = totalBooks;
         const totalPages = Math.ceil(totalBooks / BOOKS_PER_PAGE);
@@ -298,12 +296,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (totalPages > 1) {
-            paginationControls.style.display = 'flex';
+            paginationControls.classList.remove('hidden');
             pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
             prevBtn.disabled = currentPage === 1;
             nextBtn.disabled = currentPage === totalPages;
         } else {
-            paginationControls.style.display = 'none';
+            paginationControls.classList.add('hidden');
         }
     };
 
@@ -374,9 +372,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (target.closest('.shelf-header')) {
             const header = target.closest('.shelf-header');
-            const content = header.nextElementSibling;
+            const contentContainer = header.nextElementSibling.querySelector('.shelf-books-container');
+            const paginationControls = header.nextElementSibling.querySelector('.pagination-controls');
             header.classList.toggle('collapsed');
-            content.classList.toggle('collapsed');
+            contentContainer.classList.toggle('collapsed');
+            paginationControls.classList.toggle('collapsed');
         }
 
         if (shelfSection) {
@@ -494,6 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const initializePage = async () => {
+        const skeletonLoader = document.getElementById('skeleton-loader');
         const shelfOrder = ['currentlyReading', 'watchlist', 'read'];
         
         shelvesContainer.innerHTML = '';
@@ -501,15 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const shelfClone = shelfTemplate.content.cloneNode(true);
             const shelfSection = shelfClone.querySelector('.shelf-section');
             shelfSection.dataset.shelfName = shelfName;
-
-            let title;
-            if (shelfName === 'watchlist') {
-                title = 'To Read';
-            } else {
-                title = shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
-            }
+            const title = shelfName === 'watchlist' ? 'To Read' : shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
             shelfSection.querySelector('h2').textContent = title;
-
             const booksContainer = shelfSection.querySelector('.shelf-books-container');
             for(let i = 0; i < 3; i++) {
                 booksContainer.appendChild(skeletonBookTemplate.content.cloneNode(true));
@@ -525,20 +519,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 const shelfClone = shelfTemplate.content.cloneNode(true);
                 const shelfSection = shelfClone.querySelector('.shelf-section');
                 shelfSection.dataset.shelfName = shelfName;
-                
-                let title;
-                if (shelfName === 'watchlist') {
-                    title = 'To Read';
-                } else {
-                    title = shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
-                }
+                const title = shelfName === 'watchlist' ? 'To Read' : shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
                 shelfSection.querySelector('h2').textContent = title;
-                
                 shelvesContainer.appendChild(shelfSection);
             });
             renderAllShelves();
         }
     };
+
+    const passwordModal = document.getElementById('password-modal');
+    if (passwordModal) {
+        const passwordInput = document.getElementById('password-input');
+        const rememberMeCheckbox = document.getElementById('remember-me');
+        const submitBtn = passwordModal.querySelector('#password-submit-btn');
+        const cancelBtn = passwordModal.querySelector('#password-cancel-btn');
+
+        const handleSubmit = () => {
+            const password = passwordInput.value;
+            if (!password) { showToast("Password cannot be empty.", "error"); return; }
+            if (rememberMeCheckbox.checked) { setCookie(PWD_COOKIE, password, 30); }
+            closeModal(passwordModal);
+
+            if (afterPasswordCallback) { afterPasswordCallback(password); }
+            passwordInput.value = '';
+            rememberMeCheckbox.checked = false;
+            afterPasswordCallback = null;
+        };
+        
+        const handleCancel = () => {
+            closeModal(passwordModal);
+            afterPasswordCallback = null;
+        };
+
+        submitBtn.addEventListener('click', handleSubmit);
+        cancelBtn.addEventListener('click', handleCancel);
+        passwordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleSubmit();
+            if (e.key === 'Escape') handleCancel();
+        });
+    }
+
+    initializePage();
 
     document.body.addEventListener('click', (e) => {
         const target = e.target;
@@ -560,47 +581,5 @@ document.addEventListener('DOMContentLoaded', () => {
              document.querySelectorAll('.shelf-change-menu, .options-menu').forEach(m => m.classList.add('hidden'));
         }
     });
-    
-    // --- ** PASSWORD MODAL LOGIC (CORRECTED) ** ---
-    const passwordModal = document.getElementById('password-modal');
-    if (passwordModal) {
-        const passwordInput = document.getElementById('password-input');
-        const rememberMeCheckbox = document.getElementById('remember-me');
-        const submitBtn = document.getElementById('password-submit-btn');
-        const cancelBtn = document.getElementById('password-cancel-btn');
-
-        const handleSubmit = () => {
-            const password = passwordInput.value;
-            if (!password) {
-                showToast("Password cannot be empty.", "error");
-                return;
-            }
-            if (rememberMeCheckbox.checked) {
-                setCookie(PWD_COOKIE, password, 30);
-            }
-            closeModal(passwordModal);
-
-            if (afterPasswordCallback) {
-                afterPasswordCallback(password);
-            }
-            passwordInput.value = '';
-            rememberMeCheckbox.checked = false;
-            afterPasswordCallback = null;
-        };
-        
-        const handleCancel = () => {
-            closeModal(passwordModal);
-            afterPasswordCallback = null;
-        };
-
-        submitBtn.addEventListener('click', handleSubmit);
-        cancelBtn.addEventListener('click', handleCancel);
-        passwordInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') handleSubmit();
-            if (e.key === 'Escape') handleCancel();
-        });
-    }
-
-    initializePage();
 });
 
