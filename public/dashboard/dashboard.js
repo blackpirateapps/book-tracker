@@ -43,11 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const newLibrary = { watchlist: [], currentlyReading: [], read: [] }; 
         books.forEach(book => { 
             const parsedBook = parseBook(book);
-            // ** THE FIX IS HERE **
             if (newLibrary[parsedBook.shelf]) { 
                 newLibrary[parsedBook.shelf].push(parsedBook); 
             } else {
-                // If shelf is invalid or missing, add it to the watchlist as a fallback.
                 newLibrary.watchlist.push(parsedBook);
             }
         }); 
@@ -83,8 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Failed to fetch books:", error);
             showToast("Could not connect to the database.", "error");
-            const skeletonLoader = document.getElementById('skeleton-loader');
-            if(skeletonLoader) skeletonLoader.innerHTML = `<p class="text-center text-red-500">Could not load library data. Please check your connection or database credentials.</p>`;
+            document.getElementById('shelves-container').innerHTML = `<p class="text-center text-red-500">Could not load library data. Please check your connection or database credentials.</p>`;
             return false;
         }
     };
@@ -372,8 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (target.closest('.shelf-header')) {
             const header = target.closest('.shelf-header');
-            const content = header.nextElementSibling.querySelector('.shelf-books-container');
             header.classList.toggle('collapsed');
+            const content = header.nextElementSibling;
             content.classList.toggle('collapsed');
         }
 
@@ -495,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const skeletonLoader = document.getElementById('skeleton-loader');
         const shelfOrder = ['currentlyReading', 'watchlist', 'read'];
         
-        shelvesContainer.innerHTML = ''; // Clear existing content before adding skeletons
+        shelvesContainer.innerHTML = '';
         shelfOrder.forEach(shelfName => {
             const shelfClone = shelfTemplate.content.cloneNode(true);
             const shelfSection = shelfClone.querySelector('.shelf-section');
@@ -512,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const success = await fetchAndSetLibrary();
         
         if (success) {
-            shelvesContainer.innerHTML = ''; // Clear skeletons
+            shelvesContainer.innerHTML = '';
             shelfOrder.forEach(shelfName => {
                 const shelfClone = shelfTemplate.content.cloneNode(true);
                 const shelfSection = shelfClone.querySelector('.shelf-section');
