@@ -41,6 +41,41 @@
     </style>
 </head>
 <body>
+    <!-- This template holds the structure for a single book item. JS will clone this. -->
+    <template id="book-item-template">
+        <div class="book-list-item flex items-center p-4 space-x-4 relative group" data-book-id="{{id}}">
+            <a href="/dashboard/details.html?id={{id}}" class="flex items-start space-x-4 flex-grow min-w-0">
+                <img src="{{coverUrl}}" alt="Cover of {{title}}" class="w-12 h-16 object-cover rounded-md shadow-sm flex-shrink-0">
+                <div class="flex-grow min-w-0">
+                    <p class="font-semibold text-gray-800 truncate group-hover:underline">{{title}}</p>
+                    <p class="text-sm text-gray-500 truncate">{{authors}}</p>
+                    <div class="progress-container mt-2" style="display: none;">
+                        <div class="flex justify-between text-xs text-gray-500 mb-1">
+                            <span>Reading Progress</span>
+                            <span class="progress-percentage">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="progress-bar bg-blue-600 h-1.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+            <div class="flex-shrink-0">
+                 <button class="options-btn-toggle p-2 rounded-full hover:bg-gray-200">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path></svg>
+                 </button>
+                 <div class="options-menu absolute right-4 top-14 mt-2 w-48 bg-white rounded-xl shadow-lg border text-sm z-10 hidden">
+                    <p class="px-4 pt-2 pb-1 text-xs text-gray-400 font-semibold">Move to</p>
+                    <div class="move-options"></div>
+                    <div class="border-t my-1"></div>
+                    <button class="edit-btn w-full text-left px-4 py-2 hover:bg-gray-100">Edit Details</button>
+                    <button class="remove-btn w-full text-left px-4 py-2 text-red-600 hover:bg-red-50">Remove Book</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+
     <div id="view-only-banner" class="fixed top-0 left-0 right-0 bg-amber-100 border-b border-amber-200 z-20 hidden">
         <div class="max-w-2xl mx-auto flex items-center justify-between p-3">
             <p class="text-sm text-amber-800">
@@ -168,9 +203,9 @@
                 <button id="edit-book-remove-btn" class="text-sm text-red-600 font-semibold hover:underline">Remove Book</button>
                 <div class="flex gap-2">
                     <button id="edit-book-cancel-btn" class="bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
-                    <button id="edit-book-save-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">
+                    <button id="edit-book-save-btn" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center">
                         Save Changes
-                        <div class="loader-spinner hidden" style="width: 16px; height: 16px; border-width: 2px; display: none; margin-left: 8px;"></div>
+                        <div class="loader-spinner" style="width: 16px; height: 16px; border-width: 2px; display: none; margin-left: 8px;"></div>
                     </button>
                 </div>
             </div>
@@ -180,6 +215,7 @@
     <input type="file" id="highlights-file-input" class="hidden" accept=".html,.md">
     <input type="file" id="import-file-input" class="hidden" accept=".json">
     <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity duration-300 z-50"><p id="toast-message"></p></div>
-    <script src="/dashboard/admin.js" defer></script>
+    <script src="/dashboard/library.js" defer></script>
 </body>
 </html>
+
