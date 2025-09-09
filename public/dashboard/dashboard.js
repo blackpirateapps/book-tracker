@@ -10,13 +10,15 @@ document.addEventListener('DOMContentLoaded', () => {
     let pagination = { watchlist: { currentPage: 1 }, currentlyReading: { currentPage: 1 }, read: { currentPage: 1 } };
     let afterPasswordCallback = null;
 
-    // --- SHARED DOM ELEMENTS & HELPERS ---
+    // --- DOM ELEMENTS ---
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toast-message');
     const shelfTemplate = document.getElementById('shelf-template');
     const bookTemplate = document.getElementById('book-item-template');
     const shelvesContainer = document.getElementById('shelves-container');
+    const editBookModal = document.getElementById('edit-book-modal');
     
+    // --- HELPER FUNCTIONS ---
     const setCookie = (name, value, days) => { let expires = ""; if (days) { const date = new Date(); date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); expires = "; expires=" + date.toUTCString(); } document.cookie = name + "=" + (value || "") + expires + "; path=/dashboard; SameSite=Lax; Secure"; };
     const getCookie = (name) => { const nameEQ = name + "="; const ca = document.cookie.split(';'); for (let i = 0; i < ca.length; i++) { let c = ca[i]; while (c.charAt(0) === ' ') c = c.substring(1, c.length); if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length); } return null; };
     const showToast = (message, type = 'success') => { if(!toast || !toastMessage) return; toastMessage.textContent = message; toast.className = `fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${type === 'success' ? 'bg-slate-900' : 'bg-red-600'}`; toast.classList.remove('opacity-0'); setTimeout(() => toast.classList.add('opacity-0'), 3000);};
@@ -70,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Failed to fetch books:", error);
             showToast("Could not connect to the database.", "error");
+            // Clear the skeleton loader and show an error message
+            shelvesContainer.innerHTML = `<p class="text-center text-red-500">Could not load library data. Please check your connection or database credentials.</p>`;
             return false;
         }
     };
@@ -202,7 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    const editBookModal = document.getElementById('edit-book-modal');
     if (editBookModal) {
         const saveBtn = document.getElementById('edit-book-save-btn');
         const saveBtnLoader = saveBtn.querySelector('.loader-spinner');
@@ -233,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
             requestPassword(async (password) => {
                 saveBtn.disabled = true;
                 if(saveBtnLoader) saveBtnLoader.style.display = 'inline-block';
-                const { success, data } = await performAuthenticatedAction({ action: 'update', data: updatedBook });
+                const { success, data } = await performAuthenticatedAction({ action: 'update', data: updatedBook }, password);
                 saveBtn.disabled = false;
                 if(saveBtnLoader) saveBtnLoader.style.display = 'none';
                 if (success) { 
@@ -319,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             requestPassword(async (password) => {
                 showLoaderOnBook(bookId);
-                const { success, data } = await performAuthenticatedAction({ action: 'update', data: bookToMove });
+                const { success, data } = await performAuthenticatedAction({ action: 'update', data: bookToMove }, password);
                 if (success) {
                     updateBookInState(data.book);
                     renderAllShelves();
@@ -332,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm('Are you sure you want to permanently remove this book?')) {
                 requestPassword(async (password) => {
                     showLoaderOnBook(bookId);
-                    const { success } = await performAuthenticatedAction({ action: 'delete', data: { id: bookId } });
+                    const { success } = await performAuthenticatedAction({ action: 'delete', data: { id: bookId } }, password);
                     if (success) {
                         library[book.shelf] = library[book.shelf].filter(b => b.id !== bookId);
                         renderAllShelves();
@@ -361,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         requestPassword(async (password) => {
                             showLoaderOnBook(bookId);
-                            const { success, data } = await performAuthenticatedAction({ action: 'update', data: bookToUpdate });
+                            const { success, data } = await performAuthenticatedAction({ action: 'update', data: bookToUpdate }, password);
                             if (success) {
                                 updateBookInState(data.book);
                                 renderAllShelves();
@@ -380,6 +383,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const initializePage = async () => {
         const success = await fetchAndSetLibrary();
+
+        // Clear skeleton loader
+        shelvesContainer.innerHTML = '';
+
         if (success) {
             const shelfOrder = ['currentlyReading', 'watchlist', 'read'];
             shelfOrder.forEach(shelfName => {
@@ -400,17 +407,22 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('click', (e) => {
         const target = e.target;
         if (target.closest('.shelf-change-btn')) {
+            e.stopPropagation();
             const menu = target.closest('.shelf-change-btn').nextElementSibling;
+            document.querySelectorAll('.shelf-change-menu, .options-menu').forEach(m => {
+                if (m !== menu) m.classList.add('hidden');
+            });
             menu.classList.toggle('hidden');
-        } else if (!target.closest('.shelf-change-menu')) {
-            document.querySelectorAll('.shelf-change-menu').forEach(m => m.classList.add('hidden'));
-        }
-        
-        if (target.closest('.options-btn-toggle')) {
+        } else if (target.closest('.options-btn-toggle')) {
+            e.stopPropagation();
             const menu = target.closest('.options-btn-toggle').nextElementSibling;
+            document.querySelectorAll('.shelf-change-menu, .options-menu').forEach(m => {
+                if (m !== menu) m.classList.add('hidden');
+            });
             menu.classList.toggle('hidden');
-        } else if (!target.closest('.options-menu')) {
-            document.querySelectorAll('.options-menu').forEach(m => m.classList.add('hidden'));
+        } else {
+             document.querySelectorAll('.shelf-change-menu, .options-menu').forEach(m => m.classList.add('hidden'));
         }
     });
 });
+
