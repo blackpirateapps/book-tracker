@@ -63,7 +63,7 @@
             <div class="flex-shrink-0 flex items-center space-x-1">
                 <div class="relative">
                     <button class="shelf-change-btn p-2 rounded-full hover:bg-gray-200" title="Change Shelf">
-                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h4M8 7a2 2 0 012-2h4a2 2 0 012 2v2.5"></path></svg>
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                     </button>
                     <div class="shelf-change-menu hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border text-sm z-10"></div>
                 </div>
@@ -135,7 +135,20 @@
             </div>
         </div>
     </div>
-    <div id="password-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 opacity-0 transition-opacity"></div>
+    
+    <div id="password-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 opacity-0 transition-opacity">
+        <div class="modal-content bg-white rounded-xl shadow-xl w-full max-w-sm scale-95 opacity-0 p-6 text-center">
+            <h3 class="text-xl font-semibold mb-2">Enter Admin Password</h3>
+            <p class="text-gray-500 mb-4 text-sm">This action requires authentication.</p>
+            <input id="password-input" type="password" class="w-full px-3 py-2 border rounded-lg mb-4">
+            <div class="flex items-center justify-center mb-4"><input id="remember-me" type="checkbox" class="h-4 w-4 rounded"><label for="remember-me" class="ml-2 text-sm text-gray-600">Remember for 30 days</label></div>
+            <div class="flex gap-2">
+                <button id="password-cancel-btn" class="flex-1 bg-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button id="password-submit-btn" class="flex-1 bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="fixed bottom-5 right-5 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity z-50"><p id="toast-message"></p></div>
     <input type="file" id="highlights-file-input" class="hidden" accept=".html,.md">
     
