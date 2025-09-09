@@ -72,8 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Failed to fetch books:", error);
             showToast("Could not connect to the database.", "error");
-            // Clear the skeleton loader and show an error message
-            shelvesContainer.innerHTML = `<p class="text-center text-red-500">Could not load library data. Please check your connection or database credentials.</p>`;
+            const skeletonLoader = document.getElementById('skeleton-loader');
+            if(skeletonLoader) skeletonLoader.innerHTML = `<p class="text-center text-red-500">Could not load library data. Please check your connection or database credentials.</p>`;
             return false;
         }
     };
@@ -144,11 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!shelfSection) return;
 
         const container = shelfSection.querySelector('.shelf-books-container');
-        const messageEl = shelfSection.querySelector('.shelf-message');
         const paginationControls = shelfSection.querySelector('.pagination-controls');
         const pageInfo = shelfSection.querySelector('.page-info');
         const prevBtn = shelfSection.querySelector('.prev-page-btn');
         const nextBtn = shelfSection.querySelector('.next-page-btn');
+        const shelfCount = shelfSection.querySelector('.shelf-count');
         
         const books = library[shelfName];
         if (shelfName === 'read') {
@@ -156,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const totalBooks = books.length;
+        shelfCount.textContent = totalBooks;
         const totalPages = Math.ceil(totalBooks / BOOKS_PER_PAGE);
         pagination[shelfName].totalPages = totalPages;
 
@@ -169,17 +170,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const paginatedBooks = books.slice(start, end);
 
         container.innerHTML = '';
-        if (messageEl) {
-            messageEl.classList.toggle('hidden', totalBooks > 0);
-            if (totalBooks === 0) container.appendChild(messageEl);
-        }
-
+        
         if (paginatedBooks.length > 0) {
             paginatedBooks.forEach(book => {
                 container.appendChild(createBookListItemNode(book));
             });
-        } else if (messageEl) {
-            messageEl.textContent = `This shelf is empty.`;
+        } else {
+            const p = document.createElement('p');
+            p.className = 'p-8 text-center text-gray-500';
+            p.textContent = `This shelf is empty.`;
+            container.appendChild(p);
         }
 
         if (totalPages > 1) {
@@ -257,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const bookItem = target.closest('.book-list-item');
         const shelfSection = target.closest('.shelf-section');
 
-        // Shelf collapse/expand
         if (target.closest('.shelf-header')) {
             const header = target.closest('.shelf-header');
             const content = header.nextElementSibling.querySelector('.shelf-books-container');
@@ -265,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
             content.classList.toggle('collapsed');
         }
 
-        // Pagination
         if (shelfSection) {
             const shelfName = shelfSection.dataset.shelfName;
             if (target.closest('.next-page-btn')) {
@@ -289,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!book) return;
 
         if (target.closest('.edit-btn')) {
-            const modal = document.getElementById('edit-book-modal');
             document.getElementById('edit-book-id').value = book.id;
             document.getElementById('edit-book-shelf').value = book.shelf;
             document.getElementById('edit-book-title').value = book.title || '';
@@ -309,11 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 progressContainer.classList.add('hidden');
             }
-            openModal(modal);
+            openModal(editBookModal);
         }
 
         if (target.closest('.move-btn')) {
-            const targetShelf = target.dataset.targetShelf;
+            const targetShelf = target.closest('.move-btn').dataset.targetShelf;
             const bookToMove = { ...book, shelf: targetShelf };
             if (targetShelf === 'currentlyReading' && !bookToMove.startedOn) bookToMove.startedOn = new Date().toISOString().split('T')[0]; 
             if (targetShelf === 'read' && !bookToMove.finishedOn) { 
@@ -335,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirm('Are you sure you want to permanently remove this book?')) {
                 requestPassword(async (password) => {
                     showLoaderOnBook(bookId);
-                    const { success } = await performAuthenticatedAction({ action: 'delete', data: { id: bookId } }, password);
+                    const { success } = await performAuthenticatedAction({ action: 'delete', data: { id: bookId } });
                     if (success) {
                         library[book.shelf] = library[book.shelf].filter(b => b.id !== bookId);
                         renderAllShelves();
@@ -375,7 +372,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } catch (error) { showToast(error.message, 'error'); }
                 };
                 reader.readAsText(file);
-                e.target.value = null; // Reset file input
+                e.target.value = null; 
             };
             fileInput.click();
         }
@@ -383,11 +380,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const initializePage = async () => {
         const success = await fetchAndSetLibrary();
-
-        // Clear skeleton loader
-        shelvesContainer.innerHTML = '';
+        const skeletonLoader = document.getElementById('skeleton-loader');
 
         if (success) {
+            if(skeletonLoader) skeletonLoader.remove();
             const shelfOrder = ['currentlyReading', 'watchlist', 'read'];
             shelfOrder.forEach(shelfName => {
                 const shelfClone = shelfTemplate.content.cloneNode(true);
@@ -395,7 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 shelfSection.dataset.shelfName = shelfName;
                 const title = shelfName.charAt(0).toUpperCase() + shelfName.slice(1).replace(/([A-Z])/g, ' $1').trim();
                 shelfSection.querySelector('h2').textContent = title;
-                shelfSection.querySelector('.shelf-count').textContent = library[shelfName].length;
                 shelvesContainer.appendChild(shelfSection);
             });
             renderAllShelves();
