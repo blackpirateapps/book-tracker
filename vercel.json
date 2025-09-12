@@ -6,7 +6,7 @@
     },
     {
       "source": "/dashboard/library",
-      "destination": "/dashboard/dashboard.html"
+      "destination": "/dashboard/library.html"
     },
     {
       "source": "/dashboard/library.html",
