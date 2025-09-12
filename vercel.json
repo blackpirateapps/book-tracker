@@ -3,14 +3,6 @@
     {
       "source": "/dashboard",
       "destination": "/dashboard/dashboard.html"
-    },
-    {
-      "source": "/dashboard/library",
-      "destination": "/dashboard/library.html"
-    },
-    {
-      "source": "/dashboard/library.html",
-      "destination": "/dashboard/dashboard.html"
     }
   ]
 }
