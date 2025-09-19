@@ -2,43 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const PUBLIC_API_ENDPOINT = '/api/public';
     const DETAILS_API_ENDPOINT = '/api/highlights';
     const RANDOM_HIGHLIGHT_ENDPOINT = '/api/random-highlight';
-    const STATS_API_ENDPOINT = '/api/stats';
     const PUBLIC_CACHE_KEY = 'public-book-library-cache';
-
-    const fetchAndDisplayStats = async () => {
-        const container = document.getElementById('reading-stats-container');
-        if (!container) return;
-
-        const skeleton = document.getElementById('stats-skeleton');
-        const contentContainer = document.getElementById('stats-content');
-        const grid = document.getElementById('stats-grid');
-
-        try {
-            const response = await fetch(STATS_API_ENDPOINT);
-            if (!response.ok) throw new Error('Could not fetch stats.');
-            
-            const stats = await response.json();
-            
-            if (Object.keys(stats).length === 0) {
-                container.style.display = 'none';
-                return;
-            }
-
-            grid.innerHTML = Object.entries(stats).map(([year, pages]) => `
-                <div class="bg-gray-50 p-4 rounded-lg text-center">
-                    <p class="font-bold text-2xl text-gray-800">${pages.toLocaleString()}</p>
-                    <p class="text-sm text-gray-500">${year}</p>
-                </div>
-            `).join('');
-            
-            if(skeleton) skeleton.style.display = 'none';
-            contentContainer.classList.remove('hidden');
-
-        } catch (error) {
-            console.error(error);
-            container.style.display = 'none';
-        }
-    };
 
     const fetchAndDisplayRandomHighlight = async () => {
         const container = document.getElementById('random-highlight-container');
@@ -131,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (document.getElementById('public-library')) {
         fetchAndDisplayRandomHighlight();
-        fetchAndDisplayStats();
 
         const currentlyReadingContainer = document.getElementById('public-currentlyReading');
         const readContainer = document.getElementById('public-read');
@@ -219,3 +182,4 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBookDetails();
     }
 });
+
