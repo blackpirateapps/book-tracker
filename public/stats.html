@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reading Stats - Book Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <style>
+        :root { font-family: 'Inter', sans-serif; }
+        @supports (font-variation-settings: normal) {
+            :root { font-family: 'Inter var', sans-serif; }
+        }
+        body { background-color: #f8f8ff; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 50% { opacity: .5; } }
+    </style>
+</head>
+<body>
+    <div id="stats-page" class="max-w-4xl mx-auto py-8 px-4">
+        <header class="pb-4 mb-10">
+            <a href="/" class="text-blue-600 text-sm font-semibold mb-2 inline-block">&larr; Back to Home</a>
+            <h1 class="text-3xl font-bold tracking-tight text-gray-900">Reading Statistics</h1>
+            <p class="text-gray-500 mt-1">A detailed breakdown of your reading history.</p>
+        </header>
+
+        <main class="space-y-12">
+            <!-- Books Per Year Section -->
+            <section id="yearly-stats-section">
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-4">
+                    <h2 class="text-xl font-semibold text-gray-900">Books Read Per Year</h2>
+                    <div class="flex items-center gap-2 mt-2 sm:mt-0">
+                        <span class="text-sm text-gray-600">Select Year:</span>
+                        <select id="year-select" class="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></select>
+                    </div>
+                </div>
+                
+                <div id="yearly-summary" class="bg-white rounded-xl border p-6">
+                    <!-- Skeleton Loader -->
+                    <div id="yearly-skeleton">
+                        <div class="animate-pulse flex items-center gap-6">
+                            <div class="w-24 h-10 bg-gray-200 rounded-md"></div>
+                            <div class="w-24 h-10 bg-gray-200 rounded-md"></div>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4 mt-6">
+                            <div class="space-y-2"><div class="aspect-[2/3] bg-gray-200 rounded"></div><div class="h-3 bg-gray-200 rounded w-full"></div><div class="h-3 bg-gray-200 rounded w-3/4"></div></div>
+                            <div class="space-y-2"><div class="aspect-[2/3] bg-gray-200 rounded"></div><div class="h-3 bg-gray-200 rounded w-full"></div><div class="h-3 bg-gray-200 rounded w-3/4"></div></div>
+                            <div class="space-y-2"><div class="aspect-[2/3] bg-gray-200 rounded"></div><div class="h-3 bg-gray-200 rounded w-full"></div><div class="h-3 bg-gray-200 rounded w-3/4"></div></div>
+                            <div class="space-y-2"><div class="aspect-[2/3] bg-gray-200 rounded"></div><div class="h-3 bg-gray-200 rounded w-full"></div><div class="h-3 bg-gray-200 rounded w-3/4"></div></div>
+                        </div>
+                    </div>
+                     <!-- Content Area -->
+                    <div id="yearly-content" class="hidden">
+                        <div id="yearly-summary-stats" class="flex items-center gap-6 mb-6"></div>
+                        <div id="yearly-books-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-x-4 gap-y-6"></div>
+                        <p id="no-books-message" class="text-center py-10 text-gray-500 hidden">No books finished in this year.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Most Read Authors Section -->
+            <section id="author-stats-section">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Most Read Authors</h2>
+                <div id="authors-list" class="bg-white rounded-xl border">
+                    <!-- Skeleton Loader -->
+                    <div id="authors-skeleton" class="p-4">
+                        <div class="animate-pulse space-y-4">
+                            <div class="h-8 bg-gray-200 rounded w-1/2"></div>
+                            <div class="h-8 bg-gray-200 rounded w-3/4"></div>
+                            <div class="h-8 bg-gray-200 rounded w-2/3"></div>
+                        </div>
+                    </div>
+                    <!-- Content will be injected here -->
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="/stats.js" defer></script>
+</body>
+</html>
