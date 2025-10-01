@@ -7,7 +7,6 @@ import { showGlobalToast } from '../hooks/useToast';
 import StatCard from '../components/StatCard';
 import BookCard from '../components/BookCard';
 import SearchBar from '../components/SearchBar';
-import EditBookModal from '../components/EditBookModal';
 import PasswordModal from '../components/PasswordModal';
 import SkeletonLoader from '../components/SkeletonLoader';
 
@@ -16,8 +15,6 @@ const Dashboard = () => {
   const [library, setLibrary] = useState({ watchlist: [], currentlyReading: [], read: [] });
   const [tags, setTags] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedBook, setSelectedBook] = useState(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   
@@ -89,18 +86,12 @@ const Dashboard = () => {
     });
   };
   
-  const handleEditBook = (book) => {
-    setSelectedBook(book);
-    setShowEditModal(true);
-  };
-  
-  const handleSaveBook = (updatedBook) => {
+  const handleEditBook = async (updatedBook) => {
     requireAuth(async (pwd) => {
       try {
         await updateBook(updatedBook, pwd);
         await loadData();
         showGlobalToast('Book updated successfully', 'success');
-        setShowEditModal(false);
       } catch (error) {
         showGlobalToast(error.message, 'error');
       }
@@ -210,7 +201,7 @@ const Dashboard = () => {
               />
             </div>
             
-            {/* Currently Reading */}
+            {/* Currently Reading - Always show all */}
             {library.currentlyReading.length > 0 && (
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-6">
@@ -234,7 +225,7 @@ const Dashboard = () => {
               </section>
             )}
             
-            {/* Recently Finished */}
+            {/* Recently Finished - Show preview */}
             {library.read.length > 0 && (
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-6">
@@ -266,7 +257,7 @@ const Dashboard = () => {
               </section>
             )}
             
-            {/* Watchlist */}
+            {/* Watchlist - Show preview */}
             {library.watchlist.length > 0 && (
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-6">
@@ -300,14 +291,6 @@ const Dashboard = () => {
           </>
         )}
       </main>
-      
-      <EditBookModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        book={selectedBook}
-        tags={tags}
-        onSave={handleSaveBook}
-      />
       
       <PasswordModal
         isOpen={showPasswordModal}
