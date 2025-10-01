@@ -13,7 +13,8 @@ export const fetchBookDetails = async (bookId) => {
   return response.json();
 };
 
-export const performAuthenticatedAction = async (payload, password, endpoint = API_ENDPOINT) => {
+// Fixed: Backend expects { password, action, data }
+export const performAuthenticatedAction = async (action, data, password, endpoint = API_ENDPOINT) => {
   if (!password) {
     throw new Error('Password cannot be empty');
   }
@@ -21,7 +22,7 @@ export const performAuthenticatedAction = async (payload, password, endpoint = A
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ...payload, password })
+    body: JSON.stringify({ password, action, data }) // Fixed payload structure
   });
   
   const result = await response.json();
@@ -34,23 +35,25 @@ export const performAuthenticatedAction = async (payload, password, endpoint = A
 };
 
 export const addBook = async (bookData, password) => {
-  return performAuthenticatedAction({ action: 'add', ...bookData }, password);
+  return performAuthenticatedAction('add', bookData, password);
 };
 
 export const updateBook = async (bookData, password) => {
-  return performAuthenticatedAction({ action: 'update', ...bookData }, password);
+  return performAuthenticatedAction('update', bookData, password);
 };
 
 export const deleteBook = async (bookId, password) => {
-  return performAuthenticatedAction({ action: 'delete', id: bookId }, password);
+  return performAuthenticatedAction('delete', { id: bookId }, password);
 };
 
 export const exportData = async (password) => {
-  return performAuthenticatedAction({ action: 'export' }, password);
+  const response = await fetch(API_ENDPOINT);
+  if (!response.ok) throw new Error('Failed to export data');
+  return response.json();
 };
 
 export const parseHighlights = async (markdownText, password) => {
-  return performAuthenticatedAction({ markdownText }, password, PARSE_API_ENDPOINT);
+  return performAuthenticatedAction('parse', { markdownText }, password, PARSE_API_ENDPOINT);
 };
 
 export const searchOpenLibrary = async (query) => {
@@ -64,9 +67,9 @@ export const searchOpenLibrary = async (query) => {
 export const getPassword = () => Cookies.get(PWD_COOKIE);
 
 export const setPassword = (password, days = 30) => {
-  Cookies.set(PWD_COOKIE, password, { expires: days, path: '/dashboard', sameSite: 'Lax', secure: true });
+  Cookies.set(PWD_COOKIE, password, { expires: days, path: '/', sameSite: 'Lax', secure: true });
 };
 
 export const clearPassword = () => {
-  Cookies.remove(PWD_COOKIE, { path: '/dashboard' });
+  Cookies.remove(PWD_COOKIE, { path: '/' });
 };

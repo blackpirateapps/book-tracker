@@ -2,25 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light mode defaults */
 body {
-  @apply bg-gray-900 text-gray-100;
+  @apply bg-gray-50 text-gray-900 min-h-screen;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.expanded {
-  width: 16rem;
+#root {
+  @apply min-h-screen;
 }
 
+/* Custom components */
 @layer components {
   .book-card {
-    @apply bg-gray-800 rounded-lg p-4 hover:bg-gray-750 transition-colors;
+    @apply bg-white rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200;
   }
   
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .btn-secondary {
-    @apply bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .btn-danger {
@@ -28,10 +31,59 @@ body {
   }
   
   .modal-overlay {
-    @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
+    @apply fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4;
   }
   
   .modal-content {
-    @apply bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto;
+    @apply bg-white rounded-lg p-6 max-w-2xl w-full mx-auto max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200;
   }
+  
+  .input-field {
+    @apply w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50;
+  }
+  
+  .skeleton-loader {
+    @apply animate-pulse bg-gray-200 rounded;
+  }
+  
+  .nav-bar {
+    @apply bg-white shadow-sm border-b border-gray-200;
+  }
+  
+  .shelf-section {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-lg;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
 }

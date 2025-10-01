@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { fetchBooks, updateBook, deleteBook } from '../services/bookService';
+import { fetchBooks, updateBook, deleteBook, addBook } from '../services/bookService';
 import { groupBooksIntoLibrary } from '../utils/bookParser';
 import { showGlobalToast } from '../hooks/useToast';
 import Shelf from '../components/Shelf';
@@ -51,17 +51,24 @@ const Dashboard = () => {
       pendingAction(pwd);
       setPendingAction(null);
     }
+    setShowPasswordModal(false);
   };
   
   const handleSelectBook = (openLibraryBook) => {
     requireAuth(async (pwd) => {
       try {
         const bookData = {
+          id: openLibraryBook.key.replace('/works/', ''),
           olid: openLibraryBook.key.replace('/works/', ''),
+          title: openLibraryBook.title,
+          authors: openLibraryBook.author_name || [],
+          imageLinks: openLibraryBook.cover_i ? {
+            thumbnail: `https://covers.openlibrary.org/b/id/${openLibraryBook.cover_i}-M.jpg`
+          } : {},
           shelf: 'watchlist'
         };
         
-        await updateBook(bookData, pwd);
+        await addBook(bookData, pwd);
         await loadBooks();
         showGlobalToast('Book added successfully', 'success');
       } catch (error) {
@@ -78,20 +85,10 @@ const Dashboard = () => {
   const handleSaveBook = (updatedBook) => {
     requireAuth(async (pwd) => {
       try {
-        await updateBook({
-          id: updatedBook.id,
-          title: updatedBook.title,
-          authors: JSON.stringify(updatedBook.authors),
-          imageLinks: JSON.stringify(updatedBook.imageLinks),
-          readingProgress: updatedBook.readingProgress,
-          readingMedium: updatedBook.readingMedium,
-          startedOn: updatedBook.startedOn,
-          finishedOn: updatedBook.finishedOn,
-          shelf: updatedBook.shelf
-        }, pwd);
-        
+        await updateBook(updatedBook, pwd);
         await loadBooks();
         showGlobalToast('Book updated successfully', 'success');
+        setShowEditModal(false);
       } catch (error) {
         showGlobalToast(error.message, 'error');
       }
@@ -101,9 +98,14 @@ const Dashboard = () => {
   const handleMoveBook = (bookId, newShelf) => {
     requireAuth(async (pwd) => {
       try {
-        await updateBook({ id: bookId, shelf: newShelf }, pwd);
-        await loadBooks();
-        showGlobalToast('Book moved successfully', 'success');
+        const book = [...library.watchlist, ...library.currentlyReading, ...library.read]
+          .find(b => b.id === bookId);
+        
+        if (book) {
+          await updateBook({ ...book, shelf: newShelf }, pwd);
+          await loadBooks();
+          showGlobalToast('Book moved successfully', 'success');
+        }
       } catch (error) {
         showGlobalToast(error.message, 'error');
       }
@@ -130,10 +132,11 @@ const Dashboard = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-gray-100">Book Tracker Dashboard</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Navigation matching public pages */}
+      <nav className="nav-bar">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900">Book Tracker Dashboard</h1>
           <div className="flex items-center space-x-4">
             <SearchBar onSelectBook={handleSelectBook} />
             <Link to="/admin" className="btn-secondary">
@@ -141,10 +144,12 @@ const Dashboard = () => {
             </Link>
           </div>
         </div>
-        
+      </nav>
+      
+      <main className="max-w-6xl mx-auto px-4 py-8">
         {!isAuthenticated && (
-          <div className="bg-yellow-600 text-white px-4 py-3 rounded-lg mb-6">
-            <p>You are in view-only mode. Authenticate to make changes.</p>
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded-lg mb-6">
+            <p>You are in view-only mode. Changes will require authentication.</p>
           </div>
         )}
         
@@ -178,7 +183,7 @@ const Dashboard = () => {
             />
           </>
         )}
-      </div>
+      </main>
       
       <EditBookModal
         isOpen={showEditModal}
