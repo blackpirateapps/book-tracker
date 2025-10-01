@@ -17,11 +17,11 @@ const BookDetailsPage = () => {
   const [editValue, setEditValue] = useState('');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
-  
+
   useEffect(() => {
     loadData();
   }, [bookId]);
-  
+
   const loadData = async () => {
     try {
       const [booksData, tagsData] = await Promise.all([fetchBooks(), fetchTags()]);
@@ -39,7 +39,7 @@ const BookDetailsPage = () => {
       setIsLoading(false);
     }
   };
-  
+
   const requireAuth = (action) => {
     if (password) {
       action(password);
@@ -48,7 +48,7 @@ const BookDetailsPage = () => {
       setShowPasswordModal(true);
     }
   };
-  
+
   const handlePasswordConfirm = (pwd, remember) => {
     authenticate(pwd, remember);
     if (pendingAction) {
@@ -57,29 +57,28 @@ const BookDetailsPage = () => {
     }
     setShowPasswordModal(false);
   };
-  
+
   const startEdit = (section, currentValue) => {
     setEditingSection(section);
     setEditValue(currentValue || '');
   };
-  
+
   const cancelEdit = () => {
     setEditingSection(null);
     setEditValue('');
   };
-  
+
   const saveEdit = async (section) => {
     requireAuth(async (pwd) => {
       try {
         let updatedData = { ...book };
-        
+
         if (section === 'highlights') {
           // Parse markdown list into array
           const highlightsArray = editValue
-            .split('
-')
+            .split('\n')
             .filter(line => line.trim().startsWith('-') || line.trim().startsWith('*'))
-            .map(line => line.replace(/^[-*]s*/, '').trim())
+            .map(line => line.replace(/^[-*]\s*/, '').trim())
             .filter(Boolean);
           updatedData.highlights = highlightsArray;
         } else if (section === 'authors') {
@@ -91,7 +90,7 @@ const BookDetailsPage = () => {
         } else {
           updatedData[section] = editValue;
         }
-        
+
         await updateBook(updatedData, pwd);
         await loadData();
         setEditingSection(null);
@@ -102,7 +101,7 @@ const BookDetailsPage = () => {
       }
     });
   };
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -110,13 +109,13 @@ const BookDetailsPage = () => {
       </div>
     );
   }
-  
+
   if (!book) return null;
-  
+
   const coverUrl = book.imageLinks?.thumbnail || 'https://placehold.co/400x600/e2e8f0/475569?text=No+Cover';
   const bookTags = tags.filter(tag => (book.tags || []).includes(tag.id));
   const highlights = book.highlights || [];
-  
+
   return (
     <div className="min-h-screen">
       {/* Navigation */}
@@ -130,7 +129,7 @@ const BookDetailsPage = () => {
           </div>
         </div>
       </nav>
-      
+
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Cover Image */}
@@ -141,7 +140,7 @@ const BookDetailsPage = () => {
                 alt={book.title}
                 className="w-full rounded-lg shadow-lg mb-4"
               />
-              
+
               {/* Quick Stats */}
               {book.shelf === 'currentlyReading' && (
                 <div className="mb-4">
@@ -157,7 +156,7 @@ const BookDetailsPage = () => {
                   </div>
                 </div>
               )}
-              
+
               {book.shelf === 'read' && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
                   <svg className="w-8 h-8 text-green-600 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
@@ -168,7 +167,7 @@ const BookDetailsPage = () => {
               )}
             </div>
           </div>
-          
+
           {/* Book Details */}
           <div className="md:col-span-2 space-y-6">
             {/* Title */}
@@ -201,7 +200,7 @@ const BookDetailsPage = () => {
                 <p className="text-2xl font-bold text-gray-900">{book.title || 'N/A'}</p>
               )}
             </div>
-            
+
             {/* Authors */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between mb-2">
@@ -233,7 +232,7 @@ const BookDetailsPage = () => {
                 <p className="text-lg text-gray-700">{book.authors?.join(', ') || 'N/A'}</p>
               )}
             </div>
-            
+
             {/* Book Info Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Publisher */}
@@ -266,7 +265,7 @@ const BookDetailsPage = () => {
                   <p className="text-sm text-gray-700">{book.publisher || 'N/A'}</p>
                 )}
               </div>
-              
+
               {/* Published Date */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-start justify-between mb-2">
@@ -297,7 +296,7 @@ const BookDetailsPage = () => {
                   <p className="text-sm text-gray-700">{book.publishedDate || 'N/A'}</p>
                 )}
               </div>
-              
+
               {/* Page Count */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-start justify-between mb-2">
@@ -328,7 +327,7 @@ const BookDetailsPage = () => {
                   <p className="text-sm text-gray-700">{book.pageCount || 'N/A'}</p>
                 )}
               </div>
-              
+
               {/* Reading Medium */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-start justify-between mb-2">
@@ -363,7 +362,7 @@ const BookDetailsPage = () => {
                 )}
               </div>
             </div>
-            
+
             {/* Reading Dates */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -397,7 +396,7 @@ const BookDetailsPage = () => {
                   </p>
                 )}
               </div>
-              
+
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="text-xs font-medium text-gray-500 uppercase">Finished On</h3>
@@ -430,7 +429,7 @@ const BookDetailsPage = () => {
                 )}
               </div>
             </div>
-            
+
             {/* Description */}
             {book.bookDescription && (
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -438,7 +437,7 @@ const BookDetailsPage = () => {
                 <p className="text-sm text-gray-700 leading-relaxed">{book.bookDescription}</p>
               </div>
             )}
-            
+
             {/* Tags */}
             {bookTags.length > 0 && (
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -456,14 +455,13 @@ const BookDetailsPage = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Highlights */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-sm font-medium text-gray-500 uppercase">Highlights</h3>
                 <button
-                  onClick={() => startEdit('highlights', highlights.map(h => `- ${h}`).join('
-'))}
+                  onClick={() => startEdit('highlights', highlights.map(h => `- ${h}`).join('\n'))}
                   className="p-1 hover:bg-gray-100 rounded transition-colors"
                 >
                   <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -471,7 +469,7 @@ const BookDetailsPage = () => {
                   </svg>
                 </button>
               </div>
-              
+
               {editingSection === 'highlights' ? (
                 <div className="space-y-2">
                   <textarea
@@ -501,7 +499,7 @@ const BookDetailsPage = () => {
           </div>
         </div>
       </main>
-      
+
       <PasswordModal
         isOpen={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
