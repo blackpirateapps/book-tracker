@@ -65,8 +65,7 @@ const BookDetailsPage = () => {
     setEditedBook({
       ...book,
       authors: authorsArray.join(', '),
-      highlights: (book.highlights || []).map(h => `- ${h}`).join('
-')
+      highlights: (book.highlights || []).map(h => `- ${h}`).join('\n')
     });
   };
 
