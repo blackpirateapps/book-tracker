@@ -23,26 +23,26 @@ const PasswordModal = ({ isOpen, onClose, onConfirm, message = 'This action requ
   
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-2xl font-bold mb-4 text-gray-100">Enter Admin Password</h2>
-        <p className="text-gray-400 mb-4">{message}</p>
+      <div className="modal-content max-w-md" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-2xl font-bold mb-4 text-gray-900">Enter Admin Password</h2>
+        <p className="text-gray-600 mb-4">{message}</p>
         
         <form onSubmit={handleSubmit}>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 focus:outline-none focus:border-blue-500 mb-4"
+            className="input-field mb-4"
             placeholder="Enter password"
             autoFocus
           />
           
-          <label className="flex items-center space-x-2 mb-4 text-gray-300">
+          <label className="flex items-center space-x-2 mb-4 text-gray-700 cursor-pointer">
             <input
               type="checkbox"
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
-              className="rounded"
+              className="rounded text-purple-600"
             />
             <span>Remember for 30 days</span>
           </label>

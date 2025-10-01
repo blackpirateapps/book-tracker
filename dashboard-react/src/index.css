@@ -2,9 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light mode defaults */
 body {
-  @apply bg-gray-50 text-gray-900 min-h-screen;
+  @apply bg-gradient-to-br from-gray-50 via-purple-50 to-blue-50 min-h-screen;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -12,22 +11,32 @@ body {
   @apply min-h-screen;
 }
 
-/* Custom components */
 @layer components {
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+  }
+  
   .book-card {
-    @apply bg-white rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-200;
+    @apply bg-white rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-300;
+  }
+  
+  .book-card:hover {
+    @apply shadow-md;
+    transform: translateY(-4px);
+  }
+  
+  .gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
   
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2.5 text-white rounded-xl hover:shadow-lg transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
   
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-  
-  .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    @apply px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }
   
   .modal-overlay {
@@ -35,43 +44,46 @@ body {
   }
   
   .modal-content {
-    @apply bg-white rounded-lg p-6 max-w-2xl w-full mx-auto max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200;
+    @apply bg-white rounded-2xl p-6 max-w-2xl w-full mx-auto max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200;
   }
   
   .input-field {
-    @apply w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50;
+    @apply w-full px-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition-all;
   }
   
   .skeleton-loader {
     @apply animate-pulse bg-gray-200 rounded;
   }
   
-  .nav-bar {
-    @apply bg-white shadow-sm border-b border-gray-200;
+  .stat-card {
+    @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow;
   }
   
-  .shelf-section {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6;
+  .progress-bar {
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
-/* Animations */
-@keyframes fadeIn {
+@keyframes slideInUp {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: translateY(30px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(0);
   }
 }
 
-.fade-in {
-  animation: fadeIn 0.2s ease-out;
+.animate-slide-in {
+  animation: slideInUp 0.5s ease-out forwards;
 }
 
-/* Scrollbar styling */
+.stagger-1 { animation-delay: 0.1s; opacity: 0; }
+.stagger-2 { animation-delay: 0.2s; opacity: 0; }
+.stagger-3 { animation-delay: 0.3s; opacity: 0; }
+.stagger-4 { animation-delay: 0.4s; opacity: 0; }
+
 ::-webkit-scrollbar {
   width: 12px;
 }

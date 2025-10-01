@@ -1,5 +1,5 @@
 import Cookies from 'js-cookie';
-import { API_ENDPOINT, PARSE_API_ENDPOINT, DETAILS_API_ENDPOINT, PWD_COOKIE } from '../utils/constants';
+import { API_ENDPOINT, TAGS_API_ENDPOINT, PARSE_API_ENDPOINT, DETAILS_API_ENDPOINT, PWD_COOKIE } from '../utils/constants';
 
 export const fetchBooks = async () => {
   const response = await fetch(API_ENDPOINT);
@@ -13,7 +13,12 @@ export const fetchBookDetails = async (bookId) => {
   return response.json();
 };
 
-// Fixed: Backend expects { password, action, data }
+export const fetchTags = async () => {
+  const response = await fetch(TAGS_API_ENDPOINT);
+  if (!response.ok) throw new Error('Failed to fetch tags');
+  return response.json();
+};
+
 export const performAuthenticatedAction = async (action, data, password, endpoint = API_ENDPOINT) => {
   if (!password) {
     throw new Error('Password cannot be empty');
@@ -22,7 +27,7 @@ export const performAuthenticatedAction = async (action, data, password, endpoin
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password, action, data }) // Fixed payload structure
+    body: JSON.stringify({ password, action, data })
   });
   
   const result = await response.json();
@@ -32,6 +37,22 @@ export const performAuthenticatedAction = async (action, data, password, endpoin
   }
   
   return result;
+};
+
+export const createTag = async (tagData, password) => {
+  return performAuthenticatedAction('create', tagData, password, TAGS_API_ENDPOINT);
+};
+
+export const updateTag = async (tagData, password) => {
+  return performAuthenticatedAction('update', tagData, password, TAGS_API_ENDPOINT);
+};
+
+export const deleteTag = async (tagId, password) => {
+  return performAuthenticatedAction('delete', { id: tagId }, password, TAGS_API_ENDPOINT);
+};
+
+export const bulkAddTagToBooks = async (tagId, bookIds, password) => {
+  return performAuthenticatedAction('bulkAddToBooks', { tagId, bookIds }, password, TAGS_API_ENDPOINT);
 };
 
 export const addBook = async (bookData, password) => {

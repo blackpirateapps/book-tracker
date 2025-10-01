@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import BookCard from './BookCard';
 import { BOOKS_PER_PAGE, SHELF_LABELS } from '../utils/constants';
 
-const Shelf = ({ shelf, books, onEdit, onDelete, onMove, onImportHighlights }) => {
+const Shelf = ({ shelf, books, tags, onEdit, onDelete, onMove }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isCollapsed, setIsCollapsed] = useState(false);
   
@@ -23,16 +23,23 @@ const Shelf = ({ shelf, books, onEdit, onDelete, onMove, onImportHighlights }) =
   };
   
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+    <section className="mb-8">
       <div
-        className="flex items-center justify-between mb-4 cursor-pointer"
+        className="flex items-center justify-between mb-6 cursor-pointer"
         onClick={() => setIsCollapsed(!isCollapsed)}
       >
-        <div className="flex items-center space-x-3">
-          <h2 className="text-2xl font-bold text-gray-900">{SHELF_LABELS[shelf]}</h2>
-          <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
-            {books.length}
-          </span>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+            {SHELF_LABELS[shelf]}
+            <span className="ml-3 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+              {books.length}
+            </span>
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {shelf === 'currentlyReading' && "Books you're actively reading"}
+            {shelf === 'read' && "Books you've completed"}
+            {shelf === 'watchlist' && "Books you want to read"}
+          </p>
         </div>
         <svg
           className={`w-6 h-6 text-gray-600 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
@@ -47,28 +54,33 @@ const Shelf = ({ shelf, books, onEdit, onDelete, onMove, onImportHighlights }) =
       {!isCollapsed && (
         <>
           {books.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">Nothing here yet.</p>
+            <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+              </svg>
+              <p className="text-gray-500 text-lg">No books here yet</p>
+            </div>
           ) : (
             <>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {paginatedBooks.map(book => (
                   <BookCard
                     key={book.id}
                     book={book}
+                    tags={tags}
                     onEdit={onEdit}
                     onDelete={onDelete}
                     onMove={onMove}
-                    onImportHighlights={onImportHighlights}
                   />
                 ))}
               </div>
               
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between mt-6 pt-4">
                   <button
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Previous
                   </button>
@@ -78,7 +90,7 @@ const Shelf = ({ shelf, books, onEdit, onDelete, onMove, onImportHighlights }) =
                   <button
                     onClick={handleNextPage}
                     disabled={currentPage === totalPages}
-                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-900 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                   </button>
@@ -88,7 +100,7 @@ const Shelf = ({ shelf, books, onEdit, onDelete, onMove, onImportHighlights }) =
           )}
         </>
       )}
-    </div>
+    </section>
   );
 };
 

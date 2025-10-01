@@ -3,187 +3,238 @@ import { put } from '@vercel/blob';
 import sharp from 'sharp';
 
 const client = createClient({
-    url: process.env.TURSO_DATABASE_URL,
-    authToken: process.env.TURSO_AUTH_TOKEN,
+  url: process.env.TURSO_DATABASE_URL,
+  authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
 async function initializeDatabase() {
-    try {
-        await client.batch([
-            `CREATE TABLE IF NOT EXISTS books (
-                id TEXT PRIMARY KEY, title TEXT, authors TEXT, imageLinks TEXT, 
-                pageCount INTEGER, publishedDate TEXT, industryIdentifiers TEXT, 
-                highlights TEXT, startedOn TEXT, finishedOn TEXT, readingMedium TEXT, shelf TEXT,
-                hasHighlights INTEGER DEFAULT 0, readingProgress INTEGER DEFAULT 0,
-                publisher TEXT, fullPublishDate TEXT, bookDescription TEXT, subjects TEXT
-            );`,
-            `CREATE INDEX IF NOT EXISTS idx_shelf ON books(shelf);`
-        ], 'write');
-        
-        const tableInfo = await client.execute(`PRAGMA table_info(books)`);
-        const columns = tableInfo.rows.map(row => row.name);
-        const newColumns = {
-            publisher: 'TEXT',
-            fullPublishDate: 'TEXT',
-            bookDescription: 'TEXT',
-            subjects: 'TEXT'
-        };
-
-        for (const col in newColumns) {
-            if (!columns.includes(col)) {
-                await client.execute(`ALTER TABLE books ADD COLUMN ${col} ${newColumns[col]}`);
-            }
-        }
-    } catch (e) {
-        console.error("Database initialization failed:", e);
+  try {
+    await client.batch([
+      `CREATE TABLE IF NOT EXISTS books (
+        id TEXT PRIMARY KEY, title TEXT, authors TEXT, imageLinks TEXT,
+        pageCount INTEGER, publishedDate TEXT, industryIdentifiers TEXT,
+        highlights TEXT, startedOn TEXT, finishedOn TEXT, readingMedium TEXT, shelf TEXT,
+        hasHighlights INTEGER DEFAULT 0, readingProgress INTEGER DEFAULT 0,
+        publisher TEXT, fullPublishDate TEXT, bookDescription TEXT, subjects TEXT,
+        tags TEXT
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_shelf ON books(shelf);`,
+      `CREATE TABLE IF NOT EXISTS tags (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        color TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      );`
+    ], 'write');
+    
+    const tableInfo = await client.execute(`PRAGMA table_info(books)`);
+    const columns = tableInfo.rows.map(row => row.name);
+    
+    const newColumns = {
+      publisher: 'TEXT',
+      fullPublishDate: 'TEXT',
+      bookDescription: 'TEXT',
+      subjects: 'TEXT',
+      tags: 'TEXT'
+    };
+    
+    for (const [col, type] of Object.entries(newColumns)) {
+      if (!columns.includes(col)) {
+        await client.execute(`ALTER TABLE books ADD COLUMN ${col} ${type}`);
+      }
     }
+  } catch (error) {
+    console.error('Database initialization error:', error);
+  }
 }
 
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-    if (req.method === 'OPTIONS') return res.status(200).end();
+  await initializeDatabase();
+  
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  if (req.method === 'GET') {
+    try {
+      const result = await client.execute('SELECT * FROM books');
+      return res.status(200).json(result.rows);
+    } catch (error) {
+      console.error('Error fetching books:', error);
+      return res.status(500).json({ error: 'Failed to fetch books' });
+    }
+  }
+  
+  if (req.method === 'POST') {
+    const { password, action, data } = req.body;
     
-    await initializeDatabase();
-
-    if (req.method === 'GET') {
-        try {
-            const result = await client.execute("SELECT * FROM books");
-            return res.status(200).json(result.rows);
-        } catch (e) {
-            console.error(e);
-            return res.status(500).json({ error: "Failed to fetch books." });
-        }
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.status(401).json({ error: 'Invalid password' });
     }
-
-    if (req.method === 'POST') {
-        const { password, action, data } = req.body;
-        if (password !== process.env.ADMIN_PASSWORD) {
-            return res.status(401).json({ error: "Unauthorized: Invalid password." });
-        }
-
-        try {
-            switch (action) {
-                case 'add': {
-                    let bookData = data;
-
-                    if (bookData.olid) {
-                        const olid = bookData.olid;
-                        const detailsUrl = `https://openlibrary.org/api/books?bibkeys=OLID:${olid}&format=json&jscmd=data`;
-                        const olResponse = await fetch(detailsUrl);
-                        if (olResponse.ok) {
-                            const olData = await olResponse.json();
-                            const details = olData[`OLID:${olid}`];
-                            if (details) {
-                                bookData.pageCount = details.number_of_pages || bookData.pageCount;
-                                bookData.publisher = details.publishers?.[0]?.name || null;
-                                bookData.fullPublishDate = details.publish_date || bookData.publishedDate;
-                                bookData.subjects = details.subjects?.map(s => s.name) || [];
-                                bookData.industryIdentifiers = details.identifiers || bookData.industryIdentifiers;
-                                bookData.bookDescription = details.notes || null;
-                            }
-                        }
-                    }
-
-                    if (bookData.imageLinks?.thumbnail && bookData.imageLinks.thumbnail.startsWith('http')) {
-                        try {
-                            const response = await fetch(bookData.imageLinks.thumbnail);
-                            if (response.ok) {
-                                const imageBuffer = await response.arrayBuffer();
-                                const webpBuffer = await sharp(Buffer.from(imageBuffer)).webp({ quality: 80 }).toBuffer();
-                                const blob = await put(`${bookData.id}.webp`, webpBuffer, { access: 'public', contentType: 'image/webp' });
-                                bookData.imageLinks.thumbnail = blob.url;
-                            }
-                        } catch (imgError) {
-                            console.error("Image processing failed:", imgError);
-                            bookData.imageLinks.thumbnail = null;
-                        }
-                    }
-                    
-                    const args = [
-                        bookData.id,
-                        bookData.title ?? null,
-                        JSON.stringify(bookData.authors || []),
-                        JSON.stringify(bookData.imageLinks || {}),
-                        bookData.pageCount ?? null,
-                        bookData.publishedDate ?? null,
-                        JSON.stringify(bookData.industryIdentifiers || []),
-                        JSON.stringify(bookData.highlights || []),
-                        bookData.startedOn ?? null,
-                        bookData.finishedOn ?? null,
-                        bookData.readingMedium ?? null,
-                        bookData.shelf ?? 'watchlist',
-                        (bookData.highlights && bookData.highlights.length > 0) ? 1 : 0,
-                        bookData.readingProgress || 0,
-                        bookData.publisher ?? null,
-                        bookData.fullPublishDate ?? null,
-                        bookData.bookDescription ?? null,
-                        JSON.stringify(bookData.subjects || [])
-                    ];
-
-                    const sql = `
-                        INSERT INTO books (id, title, authors, imageLinks, pageCount, publishedDate, industryIdentifiers, highlights, startedOn, finishedOn, readingMedium, shelf, hasHighlights, readingProgress, publisher, fullPublishDate, bookDescription, subjects)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON CONFLICT(id) DO UPDATE SET
-                            title=excluded.title, authors=excluded.authors, imageLinks=excluded.imageLinks, pageCount=excluded.pageCount,
-                            publishedDate=excluded.publishedDate, industryIdentifiers=excluded.industryIdentifiers, highlights=excluded.highlights,
-                            startedOn=excluded.startedOn, finishedOn=excluded.finishedOn, readingMedium=excluded.readingMedium, shelf=excluded.shelf,
-                            hasHighlights=excluded.hasHighlights, readingProgress=excluded.readingProgress, publisher=excluded.publisher,
-                            fullPublishDate=excluded.fullPublishDate, bookDescription=excluded.bookDescription, subjects=excluded.subjects;
-                    `;
-
-                    await client.execute({ sql, args });
-                    const result = await client.execute({ sql: "SELECT * FROM books WHERE id = ?", args: [bookData.id] });
-                    return res.status(200).json({ message: 'Book added successfully!', book: result.rows[0] });
-                }
-                case 'update': {
-                    const bookData = data;
-                    const highlightsStr = JSON.stringify(bookData.highlights || []);
-                    const hasHighlights = (bookData.highlights && bookData.highlights.length > 0) ? 1 : 0;
-                    
-                    const sql = `
-                        UPDATE books SET 
-                            title = ?, authors = ?, highlights = ?, hasHighlights = ?, readingProgress = ?,
-                            startedOn = ?, finishedOn = ?, readingMedium = ?, shelf = ?,
-                            publisher = ?, fullPublishDate = ?, bookDescription = ?, pageCount = ?,
-                            subjects = ?
-                        WHERE id = ?`;
-                    
-                    const args = [
-                        bookData.title ?? null,
-                        JSON.stringify(bookData.authors || []),
-                        highlightsStr,
-                        hasHighlights,
-                        bookData.readingProgress || 0,
-                        bookData.startedOn ?? null,
-                        bookData.finishedOn ?? null,
-                        bookData.readingMedium ?? null,
-                        bookData.shelf ?? 'watchlist',
-                        bookData.publisher ?? null,
-                        bookData.fullPublishDate ?? null,
-                        bookData.bookDescription ?? null,
-                        bookData.pageCount ?? null,
-                        JSON.stringify(bookData.subjects || []),
-                        bookData.id
-                    ];
-
-                    await client.execute({ sql, args });
-                    const result = await client.execute({ sql: "SELECT * FROM books WHERE id = ?", args: [bookData.id] });
-                    return res.status(200).json({ message: 'Book updated successfully!', book: result.rows[0] });
-                }
-                case 'delete':
-                    await client.execute({ sql: "DELETE FROM books WHERE id = ?", args: [data.id] });
-                    return res.status(200).json({ message: "Book removed successfully!" });
-                
-                default:
-                    return res.status(400).json({ error: "Invalid action." });
-            }
-        } catch (e) {
-            console.error(e);
-            return res.status(500).json({ error: `An error occurred during the '${action}' action.` });
-        }
+    
+    try {
+      switch (action) {
+        case 'add':
+          return await handleAdd(data, res);
+        case 'update':
+          return await handleUpdate(data, res);
+        case 'delete':
+          return await handleDelete(data, res);
+        case 'export':
+          return await handleExport(res);
+        default:
+          return res.status(400).json({ error: 'Invalid action' });
+      }
+    } catch (error) {
+      console.error(`Error during ${action}:`, error);
+      return res.status(500).json({ error: `Failed to ${action}` });
     }
-    return res.status(405).json({ error: "Method not allowed." });
+  }
+  
+  return res.status(405).json({ error: 'Method not allowed' });
 }
 
+async function handleAdd(data, res) {
+  const { olid, shelf = 'watchlist' } = data;
+  
+  if (!olid) {
+    return res.status(400).json({ error: 'OLID is required' });
+  }
+  
+  const openLibraryUrl = `https://openlibrary.org/works/${olid}.json`;
+  const response = await fetch(openLibraryUrl);
+  
+  if (!response.ok) {
+    return res.status(404).json({ error: 'Book not found on OpenLibrary' });
+  }
+  
+  const bookData = await response.json();
+  
+  let coverUrl = null;
+  if (bookData.covers && bookData.covers.length > 0) {
+    const originalCoverUrl = `https://covers.openlibrary.org/b/id/${bookData.covers[0]}-L.jpg`;
+    const coverResponse = await fetch(originalCoverUrl);
+    
+    if (coverResponse.ok) {
+      const arrayBuffer = await coverResponse.arrayBuffer();
+      const webpBuffer = await sharp(Buffer.from(arrayBuffer))
+        .resize(400, 600, { fit: 'inside' })
+        .webp({ quality: 85 })
+        .toBuffer();
+      
+      const blob = await put(`book-covers/${olid}.webp`, webpBuffer, {
+        access: 'public',
+        contentType: 'image/webp',
+      });
+      
+      coverUrl = blob.url;
+    }
+  }
+  
+  const authors = bookData.authors ? await Promise.all(
+    bookData.authors.map(async (author) => {
+      const authorKey = author.author?.key || author.key;
+      if (!authorKey) return 'Unknown Author';
+      const authorUrl = `https://openlibrary.org${authorKey}.json`;
+      const authorResponse = await fetch(authorUrl);
+      if (authorResponse.ok) {
+        const authorData = await authorResponse.json();
+        return authorData.name || 'Unknown Author';
+      }
+      return 'Unknown Author';
+    })
+  ) : ['Unknown Author'];
+  
+  const book = {
+    id: olid,
+    title: bookData.title || 'Untitled',
+    authors: JSON.stringify(authors),
+    imageLinks: JSON.stringify({ thumbnail: coverUrl }),
+    pageCount: bookData.number_of_pages || null,
+    publishedDate: bookData.first_publish_date || null,
+    fullPublishDate: bookData.first_publish_date || null,
+    publisher: bookData.publishers ? bookData.publishers[0] : null,
+    industryIdentifiers: JSON.stringify([]),
+    highlights: JSON.stringify([]),
+    startedOn: null,
+    finishedOn: null,
+    readingMedium: 'Not set',
+    shelf: shelf,
+    hasHighlights: 0,
+    readingProgress: 0,
+    bookDescription: bookData.description?.value || bookData.description || null,
+    subjects: JSON.stringify(bookData.subjects || []),
+    tags: JSON.stringify([])
+  };
+  
+  await client.execute({
+    sql: `INSERT OR REPLACE INTO books VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      book.id, book.title, book.authors, book.imageLinks, book.pageCount,
+      book.publishedDate, book.industryIdentifiers, book.highlights,
+      book.startedOn, book.finishedOn, book.readingMedium, book.shelf,
+      book.hasHighlights, book.readingProgress, book.publisher,
+      book.fullPublishDate, book.bookDescription, book.subjects, book.tags
+    ]
+  });
+  
+  return res.status(200).json({ message: 'Book added successfully', book });
+}
+
+async function handleUpdate(data, res) {
+  const { id, ...updates } = data;
+  
+  if (!id) {
+    return res.status(400).json({ error: 'Book ID is required' });
+  }
+  
+  const fields = [];
+  const values = [];
+  
+  for (const [key, value] of Object.entries(updates)) {
+    fields.push(`${key} = ?`);
+    
+    if (typeof value === 'object' && value !== null) {
+      values.push(JSON.stringify(value));
+    } else {
+      values.push(value);
+    }
+  }
+  
+  if (fields.length === 0) {
+    return res.status(400).json({ error: 'No fields to update' });
+  }
+  
+  values.push(id);
+  
+  await client.execute({
+    sql: `UPDATE books SET ${fields.join(', ')} WHERE id = ?`,
+    args: values
+  });
+  
+  return res.status(200).json({ message: 'Book updated successfully' });
+}
+
+async function handleDelete(data, res) {
+  const { id } = data;
+  
+  if (!id) {
+    return res.status(400).json({ error: 'Book ID is required' });
+  }
+  
+  await client.execute({
+    sql: 'DELETE FROM books WHERE id = ?',
+    args: [id]
+  });
+  
+  return res.status(200).json({ message: 'Book deleted successfully' });
+}
+
+async function handleExport(res) {
+  const result = await client.execute('SELECT * FROM books');
+  return res.status(200).json(result.rows);
+}
