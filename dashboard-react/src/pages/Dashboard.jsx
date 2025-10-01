@@ -256,12 +256,13 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {library.read.slice(0, PREVIEW_LIMIT).map(book => (
                     <BookCard
-                      key={book.id}
-                      book={book}
-                      tags={tags}
-                      onEdit={handleEditBook}
-                      onDelete={handleDeleteBook}
-                    />
+  key={book.id}
+  book={book}
+  tags={tags}
+  onEdit={handleEditBook}
+  onDelete={handleDeleteBook}
+  onShelfChange={handleShelfChange}
+/>
                   ))}
                 </div>
               </section>
@@ -288,12 +289,13 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {library.watchlist.slice(0, PREVIEW_LIMIT).map(book => (
                     <BookCard
-                      key={book.id}
-                      book={book}
-                      tags={tags}
-                      onEdit={handleEditBook}
-                      onDelete={handleDeleteBook}
-                    />
+  key={book.id}
+  book={book}
+  tags={tags}
+  onEdit={handleEditBook}
+  onDelete={handleDeleteBook}
+  onShelfChange={handleShelfChange}
+/>
                   ))}
                 </div>
               </section>
