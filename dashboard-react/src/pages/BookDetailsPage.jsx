@@ -106,8 +106,7 @@ const BookDetailsPage = () => {
   const removeHighlight = (index) => {
     if (confirm('Remove this highlight?')) {
       const highlightsArray = editedBook.highlights
-        .split('
-')
+        .split('\n')
         .filter(h => h.trim().startsWith('- '))
         .map(h => h.substring(2).trim());
       
