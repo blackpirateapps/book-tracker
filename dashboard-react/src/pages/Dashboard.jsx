@@ -5,7 +5,7 @@ import { fetchBooks, fetchTags, updateBook, deleteBook, addBook } from '../servi
 import { groupBooksIntoLibrary } from '../utils/bookParser';
 import { showGlobalToast } from '../hooks/useToast';
 import StatCard from '../components/StatCard';
-import Shelf from '../components/Shelf';
+import BookCard from '../components/BookCard';
 import SearchBar from '../components/SearchBar';
 import EditBookModal from '../components/EditBookModal';
 import PasswordModal from '../components/PasswordModal';
@@ -20,6 +20,8 @@ const Dashboard = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  
+  const PREVIEW_LIMIT = 6; // Show only 6 books
   
   useEffect(() => {
     loadData();
@@ -116,13 +118,13 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="gradient-primary p-2 rounded-xl shadow-lg hidden sm:block">
+              <div className="logo-badge hidden sm:block">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                 </svg>
               </div>
               <div>
-                <h1 className="text-base sm:text-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <h1 className="text-base sm:text-lg font-bold text-blue-600">
                   Book Tracker
                 </h1>
                 <p className="text-xs text-gray-500 hidden sm:block">Manage your reading journey</p>
@@ -155,7 +157,7 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
               <StatCard
                 title="Total Books"
                 value={allBooks.length}
@@ -169,8 +171,8 @@ const Dashboard = () => {
                 title="Reading"
                 value={library.currentlyReading.length}
                 subtitle={`Average ${avgProgress}% complete`}
-                icon={<svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
-                iconBg="bg-purple-50"
+                icon={<svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>}
+                iconBg="bg-blue-50"
                 index={2}
               />
               
@@ -193,29 +195,93 @@ const Dashboard = () => {
               />
             </div>
             
-            <Shelf
-              shelf="currentlyReading"
-              books={library.currentlyReading}
-              tags={tags}
-              onEdit={handleEditBook}
-              onDelete={handleDeleteBook}
-            />
+            {/* Currently Reading - Always show all */}
+            {library.currentlyReading.length > 0 && (
+              <section className="mb-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Currently Reading</h2>
+                    <p className="text-sm text-gray-600 mt-1">Books you're actively reading</p>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {library.currentlyReading.map(book => (
+                    <BookCard
+                      key={book.id}
+                      book={book}
+                      tags={tags}
+                      onEdit={handleEditBook}
+                      onDelete={handleDeleteBook}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
             
-            <Shelf
-              shelf="read"
-              books={library.read}
-              tags={tags}
-              onEdit={handleEditBook}
-              onDelete={handleDeleteBook}
-            />
+            {/* Recently Finished - Show preview */}
+            {library.read.length > 0 && (
+              <section className="mb-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Recently Finished</h2>
+                    <p className="text-sm text-gray-600 mt-1">Books you completed recently</p>
+                  </div>
+                  {library.read.length > PREVIEW_LIMIT && (
+                    <Link to="/all-read" className="text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                      <span>View All</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </Link>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {library.read.slice(0, PREVIEW_LIMIT).map(book => (
+                    <BookCard
+                      key={book.id}
+                      book={book}
+                      tags={tags}
+                      onEdit={handleEditBook}
+                      onDelete={handleDeleteBook}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
             
-            <Shelf
-              shelf="watchlist"
-              books={library.watchlist}
-              tags={tags}
-              onEdit={handleEditBook}
-              onDelete={handleDeleteBook}
-            />
+            {/* Watchlist - Show preview */}
+            {library.watchlist.length > 0 && (
+              <section className="mb-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Watchlist</h2>
+                    <p className="text-sm text-gray-600 mt-1">Books you want to read</p>
+                  </div>
+                  {library.watchlist.length > PREVIEW_LIMIT && (
+                    <Link to="/all-watchlist" className="text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                      <span>View All</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"></path>
+                      </svg>
+                    </Link>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {library.watchlist.slice(0, PREVIEW_LIMIT).map(book => (
+                    <BookCard
+                      key={book.id}
+                      book={book}
+                      tags={tags}
+                      onEdit={handleEditBook}
+                      onDelete={handleDeleteBook}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
           </>
         )}
       </main>

@@ -20,17 +20,17 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
     }
   };
   
-  const getGradientClass = (progress) => {
+  const getProgressBarClass = (progress) => {
     if (progress >= 75) return 'bg-gradient-to-r from-green-500 to-emerald-500';
-    if (progress >= 40) return 'bg-gradient-to-r from-blue-500 to-cyan-500';
-    return 'gradient-primary';
+    if (progress >= 40) return 'bg-blue-500';
+    return 'bg-blue-600';
   };
   
   return (
     <div className="book-card relative" data-book-id={book.id}>
       {isLoading && (
         <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-2xl z-10">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       )}
       
@@ -38,13 +38,13 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
         <img
           src={coverUrl}
           alt={book.title}
-          className="w-24 h-32 object-cover rounded-lg shadow-md cursor-pointer"
+          className="w-24 h-32 object-cover rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           onClick={() => navigate(`/details/${book.id}`)}
         />
         
         <div className="flex-1 min-w-0">
           <h3
-            className="font-bold text-gray-900 mb-1 line-clamp-2 cursor-pointer hover:text-purple-600 transition-colors"
+            className="font-bold text-gray-900 mb-1 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors"
             onClick={() => navigate(`/details/${book.id}`)}
           >
             {book.title}
@@ -82,11 +82,11 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-gray-600 font-medium">Progress</span>
-            <span className="text-purple-600 font-bold">{progress}%</span>
+            <span className="text-blue-600 font-bold">{progress}%</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2">
             <div
-              className={`progress-bar ${getGradientClass(progress)} h-2 rounded-full shadow-sm`}
+              className={`progress-bar ${getProgressBarClass(progress)} h-2 rounded-full shadow-sm`}
               style={{ width: `${progress}%` }}
             ></div>
           </div>
