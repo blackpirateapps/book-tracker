@@ -21,7 +21,7 @@ const Dashboard = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   
-  const PREVIEW_LIMIT = 6; // Show only 6 books
+  const PREVIEW_LIMIT = 6;
   
   useEffect(() => {
     loadData();
@@ -57,17 +57,32 @@ const Dashboard = () => {
     setShowPasswordModal(false);
   };
   
-  const handleSelectBook = (openLibraryBook) => {
+  const handleSelectBook = (openLibraryBook, shelf) => {
     requireAuth(async (pwd) => {
       try {
+        showGlobalToast('Adding book...', 'success');
+        
+        const olid = openLibraryBook.key.replace('/works/', '');
+        
         const bookData = {
-          olid: openLibraryBook.key.replace('/works/', ''),
-          shelf: 'watchlist'
+          id: olid,
+          olid: olid,
+          title: openLibraryBook.title,
+          authors: openLibraryBook.author_name || ['Unknown Author'],
+          publishedDate: openLibraryBook.first_publish_year?.toString() || null,
+          imageLinks: openLibraryBook.cover_i ? {
+            thumbnail: `https://covers.openlibrary.org/b/id/${openLibraryBook.cover_i}-L.jpg`
+          } : {},
+          shelf: shelf,
+          readingMedium: 'Not set',
+          readingProgress: 0,
+          highlights: [],
+          tags: []
         };
         
         await addBook(bookData, pwd);
         await loadData();
-        showGlobalToast('Book added successfully', 'success');
+        showGlobalToast(`Book added to ${shelf === 'currentlyReading' ? 'Currently Reading' : 'Watchlist'}!`, 'success');
       } catch (error) {
         showGlobalToast(error.message, 'error');
       }
@@ -116,14 +131,14 @@ const Dashboard = () => {
       {/* Navigation */}
       <nav className="glass-effect sticky top-0 z-50 shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-between h-16 gap-3">
+            <div className="flex items-center space-x-3 flex-shrink-0">
               <div className="logo-badge hidden sm:block">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
                 </svg>
               </div>
-              <div>
+              <div className="hidden md:block">
                 <h1 className="text-base sm:text-lg font-bold text-blue-600">
                   Book Tracker
                 </h1>
@@ -133,7 +148,7 @@ const Dashboard = () => {
             
             <SearchBar onSelectBook={handleSelectBook} />
             
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
               <Link to="/tags" className="hidden sm:block btn-secondary text-sm">
                 Tags
               </Link>
@@ -195,7 +210,7 @@ const Dashboard = () => {
               />
             </div>
             
-            {/* Currently Reading - Always show all */}
+            {/* Currently Reading */}
             {library.currentlyReading.length > 0 && (
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-6">
@@ -219,7 +234,7 @@ const Dashboard = () => {
               </section>
             )}
             
-            {/* Recently Finished - Show preview */}
+            {/* Recently Finished */}
             {library.read.length > 0 && (
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-6">
@@ -251,7 +266,7 @@ const Dashboard = () => {
               </section>
             )}
             
-            {/* Watchlist - Show preview */}
+            {/* Watchlist */}
             {library.watchlist.length > 0 && (
               <section className="mb-8">
                 <div className="flex items-center justify-between mb-6">

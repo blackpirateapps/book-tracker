@@ -79,7 +79,7 @@ export const parseHighlights = async (markdownText, password) => {
 
 export const searchOpenLibrary = async (query) => {
   const response = await fetch(
-    `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=5&fields=key,title,author_name,cover_i,edition_key,first_publish_year`
+    `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10&fields=key,title,author_name,cover_i,first_publish_year`
   );
   if (!response.ok) throw new Error('Search failed');
   return response.json();
