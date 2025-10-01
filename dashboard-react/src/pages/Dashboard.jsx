@@ -120,6 +120,47 @@ const Dashboard = () => {
       }
     });
   };
+
+  // ADD THIS MISSING FUNCTION
+  const handleShelfChange = (bookId, newShelf) => {
+    const allBooks = [...library.watchlist, ...library.currentlyReading, ...library.read];
+    
+    requireAuth(async (pwd) => {
+      try {
+        // Find the book from all shelves
+        const book = allBooks.find(b => b.id === bookId);
+        if (!book) return;
+        
+        // Create updated book object
+        const updatedBook = {
+          ...book,
+          shelf: newShelf,
+          // Set startedOn when moving to currentlyReading
+          startedOn: newShelf === 'currentlyReading' && !book.startedOn 
+            ? new Date().toISOString().split('T')[0] 
+            : book.startedOn,
+          // Set finishedOn and progress when moving to read
+          finishedOn: newShelf === 'read' && !book.finishedOn 
+            ? new Date().toISOString().split('T')[0] 
+            : book.finishedOn,
+          readingProgress: newShelf === 'read' ? 100 : book.readingProgress
+        };
+        
+        await updateBook(updatedBook, pwd);
+        await loadData();
+        
+        const shelfNames = {
+          watchlist: 'Watchlist',
+          currentlyReading: 'Currently Reading',
+          read: 'Finished'
+        };
+        
+        showGlobalToast(`Book moved to ${shelfNames[newShelf]}!`, 'success');
+      } catch (error) {
+        showGlobalToast(error.message, 'error');
+      }
+    });
+  };
   
   const allBooks = [...library.watchlist, ...library.currentlyReading, ...library.read];
   const avgProgress = library.currentlyReading.length > 0
@@ -223,13 +264,13 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {library.currentlyReading.map(book => (
                     <BookCard
-  key={book.id}
-  book={book}
-  tags={tags}
-  onEdit={handleEditBook}
-  onDelete={handleDeleteBook}
-  onShelfChange={handleShelfChange}
-/>
+                      key={book.id}
+                      book={book}
+                      tags={tags}
+                      onEdit={handleEditBook}
+                      onDelete={handleDeleteBook}
+                      onShelfChange={handleShelfChange}
+                    />
                   ))}
                 </div>
               </section>
@@ -256,13 +297,13 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {library.read.slice(0, PREVIEW_LIMIT).map(book => (
                     <BookCard
-  key={book.id}
-  book={book}
-  tags={tags}
-  onEdit={handleEditBook}
-  onDelete={handleDeleteBook}
-  onShelfChange={handleShelfChange}
-/>
+                      key={book.id}
+                      book={book}
+                      tags={tags}
+                      onEdit={handleEditBook}
+                      onDelete={handleDeleteBook}
+                      onShelfChange={handleShelfChange}
+                    />
                   ))}
                 </div>
               </section>
@@ -289,13 +330,13 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {library.watchlist.slice(0, PREVIEW_LIMIT).map(book => (
                     <BookCard
-  key={book.id}
-  book={book}
-  tags={tags}
-  onEdit={handleEditBook}
-  onDelete={handleDeleteBook}
-  onShelfChange={handleShelfChange}
-/>
+                      key={book.id}
+                      book={book}
+                      tags={tags}
+                      onEdit={handleEditBook}
+                      onDelete={handleDeleteBook}
+                      onShelfChange={handleShelfChange}
+                    />
                   ))}
                 </div>
               </section>
