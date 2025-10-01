@@ -7,8 +7,8 @@
     "build": "npm run build:dashboard && npm run copy:dashboard",
     "build:dashboard": "cd dashboard-react && npm run build",
     "copy:dashboard": "mkdir -p public/dashboard && cp -r dashboard-react/dist/* public/dashboard/",
-    "install:dashboard": "cd dashboard-react && npm install"
-    "build:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css
+    "install:dashboard": "cd dashboard-react && npm install", 
+    "build:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css"
   },
   "dependencies": {
     "@libsql/client": "latest",
