@@ -114,8 +114,7 @@ const BookDetailsPage = () => {
       
       setEditedBook(prev => ({
         ...prev,
-        highlights: highlightsArray.map(h => `- ${h}`).join('
-')
+        highlights: highlightsArray.map(h => `- ${h}`).join('\n')
       }));
     }
   };
@@ -131,8 +130,7 @@ const BookDetailsPage = () => {
 
         // Parse highlights
         const highlightsArray = editedBook.highlights
-          .split('
-')
+          .split('\n')
           .filter(h => h.trim().startsWith('- '))
           .map(h => h.substring(2).trim());
 
