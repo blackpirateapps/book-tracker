@@ -86,17 +86,23 @@ const Dashboard = () => {
     });
   };
   
-  const handleEditBook = async (updatedBook) => {
-    requireAuth(async (pwd) => {
-      try {
-        await updateBook(updatedBook, pwd);
-        await loadData();
-        showGlobalToast('Book updated successfully', 'success');
-      } catch (error) {
-        showGlobalToast(error.message, 'error');
-      }
-    });
-  };
+  const handleEditBook = (book) => {
+  setSelectedBook(book);
+  setShowEditModal(true);
+};
+
+const handleSaveBook = (updatedBook) => {
+  requireAuth(async (pwd) => {
+    try {
+      await updateBook(updatedBook, pwd);
+      await loadData();
+      showGlobalToast('Book updated successfully', 'success');
+      setShowEditModal(false);
+    } catch (error) {
+      showGlobalToast(error.message, 'error');
+    }
+  });
+};
   
   const handleDeleteBook = (bookId) => {
     if (!confirm('Are you sure you want to remove this book?')) return;

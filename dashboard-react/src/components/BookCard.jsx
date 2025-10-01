@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
+const BookCard = ({ book, onEdit, onDelete, tags = [] }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-
+  
   const coverUrl = book.imageLinks?.thumbnail || 'https://placehold.co/80x120/e2e8f0/475569?text=N/A';
   const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
   const progress = book.readingProgress || 0;
-
+  
   const bookTags = tags.filter(tag => (book.tags || []).includes(tag.id));
-
+  
   const handleAction = async (action) => {
     setIsLoading(true);
     try {
@@ -19,33 +19,13 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
       setIsLoading(false);
     }
   };
-
+  
   const getProgressBarClass = (progress) => {
     if (progress >= 75) return 'bg-gradient-to-r from-green-500 to-emerald-500';
     if (progress >= 40) return 'bg-blue-500';
     return 'bg-blue-600';
   };
-
-  const handleMarkAsReading = () => {
-    const updatedBook = {
-      ...book,
-      shelf: 'currentlyReading',
-      startedOn: new Date().toISOString().split('T')[0],
-      readingProgress: 0
-    };
-    handleAction(() => onEdit(updatedBook));
-  };
-
-  const handleMarkAsFinished = () => {
-    const updatedBook = {
-      ...book,
-      shelf: 'read',
-      finishedOn: new Date().toISOString().split('T')[0],
-      readingProgress: 100
-    };
-    handleAction(() => onEdit(updatedBook));
-  };
-
+  
   return (
     <div className="book-card relative" data-book-id={book.id}>
       {isLoading && (
@@ -53,7 +33,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       )}
-
+      
       <div className="flex space-x-4 mb-4">
         <img
           src={coverUrl}
@@ -61,7 +41,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           className="w-24 h-32 object-cover rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           onClick={() => navigate(`/details/${book.id}`)}
         />
-
+        
         <div className="flex-1 min-w-0">
           <h3
             className="font-bold text-gray-900 mb-1 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors"
@@ -70,7 +50,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
             {book.title}
           </h3>
           <p className="text-sm text-gray-600 mb-2 line-clamp-1">{authors}</p>
-
+          
           {bookTags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
               {bookTags.slice(0, 2).map(tag => (
@@ -89,7 +69,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
               )}
             </div>
           )}
-
+          
           {book.startedOn && (
             <p className="text-xs text-gray-500">
               Started: {new Date(book.startedOn).toLocaleDateString()}
@@ -97,7 +77,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           )}
         </div>
       </div>
-
+      
       {book.shelf === 'currentlyReading' && (
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm mb-2">
@@ -112,7 +92,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           </div>
         </div>
       )}
-
+      
       {book.shelf === 'read' && book.finishedOn && (
         <p className="text-sm text-gray-600 mb-3 flex items-center">
           <svg className="w-4 h-4 mr-1 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -121,37 +101,16 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           Finished: {new Date(book.finishedOn).toLocaleDateString()}
         </p>
       )}
-
+      
       <div className="flex items-center space-x-2">
-        {/* Primary Action Button */}
-        {book.shelf === 'watchlist' && (
-          <button
-            onClick={handleMarkAsReading}
-            className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
-          >
-            Mark as Reading
-          </button>
-        )}
-
-        {book.shelf === 'currentlyReading' && (
-          <button
-            onClick={handleMarkAsFinished}
-            className="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors"
-          >
-            Mark as Finished
-          </button>
-        )}
-
-        {book.shelf === 'read' && (
-          <button
-            onClick={() => navigate(`/details/${book.id}`)}
-            className="flex-1 px-3 py-2 btn-primary text-sm"
-          >
-            View Details
-          </button>
-        )}
-
-        {/* Secondary Action Buttons */}
+        <button
+          onClick={() => navigate(`/details/${book.id}`)}
+          className="flex-1 px-3 py-2 btn-primary text-sm"
+        >
+          View Details
+        </button>
+        
+        {/* Edit Button - Opens Modal */}
         <button
           onClick={() => onEdit(book)}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
@@ -161,6 +120,8 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
           </svg>
         </button>
+        
+        {/* Delete Button */}
         <button
           onClick={() => handleAction(() => onDelete(book.id))}
           className="p-2 hover:bg-red-50 rounded-lg transition-colors"

@@ -1,52 +1,67 @@
-export const parseBook = (book) => {
-  try {
-    book.authors = JSON.parse(book.authors);
-  } catch (e) {
-    book.authors = Array.isArray(book.authors) ? book.authors : [];
-  }
-  
-  try {
-    book.imageLinks = JSON.parse(book.imageLinks);
-  } catch (e) {
-    book.imageLinks = typeof book.imageLinks === 'object' && book.imageLinks ? book.imageLinks : {};
-  }
-  
-  try {
-    book.industryIdentifiers = JSON.parse(book.industryIdentifiers);
-  } catch (e) {
-    book.industryIdentifiers = [];
-  }
-  
-  try {
-    book.highlights = JSON.parse(book.highlights);
-  } catch (e) {
-    book.highlights = [];
-  }
-  
-  try {
-    book.subjects = JSON.parse(book.subjects);
-  } catch (e) {
-    book.subjects = [];
-  }
-  
-  return book;
-};
-
 export const groupBooksIntoLibrary = (books) => {
-  const library = { watchlist: [], currentlyReading: [], read: [] };
-  
+  const library = {
+    watchlist: [],
+    currentlyReading: [],
+    read: []
+  };
+
+  if (!books || !Array.isArray(books)) {
+    return library;
+  }
+
   books.forEach(book => {
-    const parsedBook = parseBook(book);
-    if (library[parsedBook.shelf]) {
-      library[parsedBook.shelf].push(parsedBook);
-    } else {
+    // Parse JSON fields if they're strings
+    const parsedBook = { ...book };
+
+    if (typeof book.authors === 'string') {
+      try {
+        parsedBook.authors = JSON.parse(book.authors);
+      } catch (e) {
+        parsedBook.authors = [book.authors];
+      }
+    }
+
+    if (typeof book.imageLinks === 'string') {
+      try {
+        parsedBook.imageLinks = JSON.parse(book.imageLinks);
+      } catch (e) {
+        parsedBook.imageLinks = {};
+      }
+    }
+
+    if (typeof book.highlights === 'string') {
+      try {
+        parsedBook.highlights = JSON.parse(book.highlights);
+      } catch (e) {
+        parsedBook.highlights = [];
+      }
+    }
+
+    if (typeof book.tags === 'string') {
+      try {
+        parsedBook.tags = JSON.parse(book.tags);
+      } catch (e) {
+        parsedBook.tags = [];
+      }
+    }
+
+    if (typeof book.subjects === 'string') {
+      try {
+        parsedBook.subjects = JSON.parse(book.subjects);
+      } catch (e) {
+        parsedBook.subjects = [];
+      }
+    }
+
+    // Group by shelf
+    if (parsedBook.shelf === 'watchlist') {
       library.watchlist.push(parsedBook);
+    } else if (parsedBook.shelf === 'currentlyReading') {
+      library.currentlyReading.push(parsedBook);
+    } else if (parsedBook.shelf === 'read') {
+      library.read.push(parsedBook);
     }
   });
-  
-  library.watchlist.sort((a, b) => (a.title > b.title) ? 1 : -1);
-  library.currentlyReading.sort((a, b) => (a.title > b.title) ? 1 : -1);
-  library.read.sort((a, b) => new Date(b.finishedOn) - new Date(a.finishedOn));
-  
+
   return library;
 };
