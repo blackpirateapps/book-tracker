@@ -124,7 +124,6 @@ const AllReadBooks = () => {
   tags={tags}
   onEdit={handleEditBook}
   onDelete={handleDeleteBook}
-  onShelfChange={handleShelfChange}
 />
               ))}
             </div>
