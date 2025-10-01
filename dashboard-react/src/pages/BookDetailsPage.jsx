@@ -13,8 +13,8 @@ const BookDetailsPage = () => {
   const [book, setBook] = useState(null);
   const [tags, setTags] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [editingSection, setEditingSection] = useState(null);
-  const [editValue, setEditValue] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedBook, setEditedBook] = useState(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
 
@@ -58,43 +58,54 @@ const BookDetailsPage = () => {
     setShowPasswordModal(false);
   };
 
-  const startEdit = (section, currentValue) => {
-    setEditingSection(section);
-    setEditValue(currentValue || '');
+  const startEdit = () => {
+    setEditedBook({
+      ...book,
+      authors: book.authors?.join(', ') || '',
+      highlights: (book.highlights || []).map(h => `- ${h}`).join('\n')
+    });
+    setIsEditMode(true);
   };
 
   const cancelEdit = () => {
-    setEditingSection(null);
-    setEditValue('');
+    setEditedBook(null);
+    setIsEditMode(false);
   };
 
-  const saveEdit = async (section) => {
+  const handleChange = (field, value) => {
+    setEditedBook(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const saveEdit = async () => {
     requireAuth(async (pwd) => {
       try {
-        let updatedData = { ...book };
+        // Parse highlights from markdown
+        const highlightsArray = editedBook.highlights
+          .split('\n')
+          .filter(line => line.trim().startsWith('-') || line.trim().startsWith('*'))
+          .map(line => line.replace(/^[-*]\s*/, '').trim())
+          .filter(Boolean);
 
-        if (section === 'highlights') {
-          // Parse markdown list into array
-          const highlightsArray = editValue
-            .split('\n')
-            .filter(line => line.trim().startsWith('-') || line.trim().startsWith('*'))
-            .map(line => line.replace(/^[-*]\s*/, '').trim())
-            .filter(Boolean);
-          updatedData.highlights = highlightsArray;
-        } else if (section === 'authors') {
-          updatedData.authors = editValue.split(',').map(a => a.trim()).filter(Boolean);
-        } else if (section === 'tags') {
-          updatedData.tags = editValue;
-        } else if (section === 'readingProgress') {
-          updatedData.readingProgress = parseInt(editValue) || 0;
-        } else {
-          updatedData[section] = editValue;
-        }
+        // Parse authors
+        const authorsArray = editedBook.authors
+          .split(',')
+          .map(a => a.trim())
+          .filter(Boolean);
+
+        const updatedData = {
+          ...book,
+          ...editedBook,
+          authors: authorsArray,
+          highlights: highlightsArray
+        };
 
         await updateBook(updatedData, pwd);
         await loadData();
-        setEditingSection(null);
-        setEditValue('');
+        setIsEditMode(false);
+        setEditedBook(null);
         showGlobalToast('Book updated successfully', 'success');
       } catch (error) {
         showGlobalToast(error.message, 'error');
@@ -112,6 +123,7 @@ const BookDetailsPage = () => {
 
   if (!book) return null;
 
+  const displayBook = isEditMode ? editedBook : book;
   const coverUrl = book.imageLinks?.thumbnail || 'https://placehold.co/400x600/e2e8f0/475569?text=No+Cover';
   const bookTags = tags.filter(tag => (book.tags || []).includes(tag.id));
   const highlights = book.highlights || [];
@@ -123,9 +135,30 @@ const BookDetailsPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <h1 className="text-lg sm:text-xl font-bold text-gray-900">Book Details</h1>
-            <Link to="/" className="btn-secondary text-sm">
-              Back to Dashboard
-            </Link>
+            <div className="flex items-center space-x-2">
+              {!isEditMode ? (
+                <>
+                  <button onClick={startEdit} className="btn-primary text-sm flex items-center space-x-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    <span>Edit</span>
+                  </button>
+                  <Link to="/" className="btn-secondary text-sm">
+                    Back
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <button onClick={saveEdit} className="btn-primary text-sm">
+                    Save Changes
+                  </button>
+                  <button onClick={cancelEdit} className="btn-secondary text-sm">
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </nav>
@@ -172,62 +205,30 @@ const BookDetailsPage = () => {
           <div className="md:col-span-2 space-y-6">
             {/* Title */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-start justify-between mb-2">
-                <h2 className="text-sm font-medium text-gray-500 uppercase">Title</h2>
-                <button
-                  onClick={() => startEdit('title', book.title)}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                >
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                  </svg>
-                </button>
-              </div>
-              {editingSection === 'title' ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="input-field"
-                  />
-                  <div className="flex space-x-2">
-                    <button onClick={() => saveEdit('title')} className="btn-primary text-sm">Save</button>
-                    <button onClick={cancelEdit} className="btn-secondary text-sm">Cancel</button>
-                  </div>
-                </div>
+              <h2 className="text-sm font-medium text-gray-500 uppercase mb-2">Title</h2>
+              {isEditMode ? (
+                <input
+                  type="text"
+                  value={displayBook.title}
+                  onChange={(e) => handleChange('title', e.target.value)}
+                  className="input-field"
+                />
               ) : (
-                <p className="text-2xl font-bold text-gray-900">{book.title || 'N/A'}</p>
+                <p className="text-2xl font-bold text-gray-900">{displayBook.title || 'N/A'}</p>
               )}
             </div>
 
             {/* Authors */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-start justify-between mb-2">
-                <h2 className="text-sm font-medium text-gray-500 uppercase">Authors</h2>
-                <button
-                  onClick={() => startEdit('authors', book.authors?.join(', '))}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                >
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                  </svg>
-                </button>
-              </div>
-              {editingSection === 'authors' ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="input-field"
-                    placeholder="Comma-separated authors"
-                  />
-                  <div className="flex space-x-2">
-                    <button onClick={() => saveEdit('authors')} className="btn-primary text-sm">Save</button>
-                    <button onClick={cancelEdit} className="btn-secondary text-sm">Cancel</button>
-                  </div>
-                </div>
+              <h2 className="text-sm font-medium text-gray-500 uppercase mb-2">Authors</h2>
+              {isEditMode ? (
+                <input
+                  type="text"
+                  value={displayBook.authors}
+                  onChange={(e) => handleChange('authors', e.target.value)}
+                  className="input-field"
+                  placeholder="Comma-separated authors"
+                />
               ) : (
                 <p className="text-lg text-gray-700">{book.authors?.join(', ') || 'N/A'}</p>
               )}
@@ -237,159 +238,79 @@ const BookDetailsPage = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Publisher */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase">Publisher</h3>
-                  <button
-                    onClick={() => startEdit('publisher', book.publisher)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                    </svg>
-                  </button>
-                </div>
-                {editingSection === 'publisher' ? (
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="input-field text-sm"
-                    />
-                    <div className="flex space-x-2">
-                      <button onClick={() => saveEdit('publisher')} className="btn-primary text-xs">Save</button>
-                      <button onClick={cancelEdit} className="btn-secondary text-xs">Cancel</button>
-                    </div>
-                  </div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Publisher</h3>
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={displayBook.publisher || ''}
+                    onChange={(e) => handleChange('publisher', e.target.value)}
+                    className="input-field text-sm"
+                  />
                 ) : (
-                  <p className="text-sm text-gray-700">{book.publisher || 'N/A'}</p>
+                  <p className="text-sm text-gray-700">{displayBook.publisher || 'N/A'}</p>
                 )}
               </div>
 
               {/* Published Date */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase">Published</h3>
-                  <button
-                    onClick={() => startEdit('publishedDate', book.publishedDate)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                    </svg>
-                  </button>
-                </div>
-                {editingSection === 'publishedDate' ? (
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="input-field text-sm"
-                    />
-                    <div className="flex space-x-2">
-                      <button onClick={() => saveEdit('publishedDate')} className="btn-primary text-xs">Save</button>
-                      <button onClick={cancelEdit} className="btn-secondary text-xs">Cancel</button>
-                    </div>
-                  </div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Published</h3>
+                {isEditMode ? (
+                  <input
+                    type="text"
+                    value={displayBook.publishedDate || ''}
+                    onChange={(e) => handleChange('publishedDate', e.target.value)}
+                    className="input-field text-sm"
+                  />
                 ) : (
-                  <p className="text-sm text-gray-700">{book.publishedDate || 'N/A'}</p>
+                  <p className="text-sm text-gray-700">{displayBook.publishedDate || 'N/A'}</p>
                 )}
               </div>
 
               {/* Page Count */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase">Pages</h3>
-                  <button
-                    onClick={() => startEdit('pageCount', book.pageCount)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                    </svg>
-                  </button>
-                </div>
-                {editingSection === 'pageCount' ? (
-                  <div className="space-y-2">
-                    <input
-                      type="number"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="input-field text-sm"
-                    />
-                    <div className="flex space-x-2">
-                      <button onClick={() => saveEdit('pageCount')} className="btn-primary text-xs">Save</button>
-                      <button onClick={cancelEdit} className="btn-secondary text-xs">Cancel</button>
-                    </div>
-                  </div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Pages</h3>
+                {isEditMode ? (
+                  <input
+                    type="number"
+                    value={displayBook.pageCount || ''}
+                    onChange={(e) => handleChange('pageCount', e.target.value)}
+                    className="input-field text-sm"
+                  />
                 ) : (
-                  <p className="text-sm text-gray-700">{book.pageCount || 'N/A'}</p>
+                  <p className="text-sm text-gray-700">{displayBook.pageCount || 'N/A'}</p>
                 )}
               </div>
 
               {/* Reading Medium */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase">Reading Medium</h3>
-                  <button
-                    onClick={() => startEdit('readingMedium', book.readingMedium)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Reading Medium</h3>
+                {isEditMode ? (
+                  <select
+                    value={displayBook.readingMedium || 'Not set'}
+                    onChange={(e) => handleChange('readingMedium', e.target.value)}
+                    className="input-field text-sm"
                   >
-                    <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                    </svg>
-                  </button>
-                </div>
-                {editingSection === 'readingMedium' ? (
-                  <div className="space-y-2">
-                    <select
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="input-field text-sm"
-                    >
-                      {READING_MEDIUMS.map(medium => (
-                        <option key={medium} value={medium}>{medium}</option>
-                      ))}
-                    </select>
-                    <div className="flex space-x-2">
-                      <button onClick={() => saveEdit('readingMedium')} className="btn-primary text-xs">Save</button>
-                      <button onClick={cancelEdit} className="btn-secondary text-xs">Cancel</button>
-                    </div>
-                  </div>
+                    {READING_MEDIUMS.map(medium => (
+                      <option key={medium} value={medium}>{medium}</option>
+                    ))}
+                  </select>
                 ) : (
-                  <p className="text-sm text-gray-700">{book.readingMedium || 'N/A'}</p>
+                  <p className="text-sm text-gray-700">{displayBook.readingMedium || 'N/A'}</p>
                 )}
               </div>
             </div>
 
-            {/* Reading Dates */}
+            {/* Reading Dates & Progress */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase">Started On</h3>
-                  <button
-                    onClick={() => startEdit('startedOn', book.startedOn)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                    </svg>
-                  </button>
-                </div>
-                {editingSection === 'startedOn' ? (
-                  <div className="space-y-2">
-                    <input
-                      type="date"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="input-field text-sm"
-                    />
-                    <div className="flex space-x-2">
-                      <button onClick={() => saveEdit('startedOn')} className="btn-primary text-xs">Save</button>
-                      <button onClick={cancelEdit} className="btn-secondary text-xs">Cancel</button>
-                    </div>
-                  </div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Started On</h3>
+                {isEditMode ? (
+                  <input
+                    type="date"
+                    value={displayBook.startedOn || ''}
+                    onChange={(e) => handleChange('startedOn', e.target.value)}
+                    className="input-field text-sm"
+                  />
                 ) : (
                   <p className="text-sm text-gray-700">
                     {book.startedOn ? new Date(book.startedOn).toLocaleDateString() : 'N/A'}
@@ -398,36 +319,51 @@ const BookDetailsPage = () => {
               </div>
 
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase">Finished On</h3>
-                  <button
-                    onClick={() => startEdit('finishedOn', book.finishedOn)}
-                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                  >
-                    <svg className="w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                    </svg>
-                  </button>
-                </div>
-                {editingSection === 'finishedOn' ? (
-                  <div className="space-y-2">
-                    <input
-                      type="date"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="input-field text-sm"
-                    />
-                    <div className="flex space-x-2">
-                      <button onClick={() => saveEdit('finishedOn')} className="btn-primary text-xs">Save</button>
-                      <button onClick={cancelEdit} className="btn-secondary text-xs">Cancel</button>
-                    </div>
-                  </div>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Finished On</h3>
+                {isEditMode ? (
+                  <input
+                    type="date"
+                    value={displayBook.finishedOn || ''}
+                    onChange={(e) => handleChange('finishedOn', e.target.value)}
+                    className="input-field text-sm"
+                  />
                 ) : (
                   <p className="text-sm text-gray-700">
                     {book.finishedOn ? new Date(book.finishedOn).toLocaleDateString() : 'N/A'}
                   </p>
                 )}
               </div>
+
+              {isEditMode && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">
+                    Reading Progress: {displayBook.readingProgress || 0}%
+                  </h3>
+                  <input
+                    type="range"
+                    value={displayBook.readingProgress || 0}
+                    onChange={(e) => handleChange('readingProgress', e.target.value)}
+                    min="0"
+                    max="100"
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              )}
+
+              {isEditMode && (
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Shelf</h3>
+                  <select
+                    value={displayBook.shelf || 'watchlist'}
+                    onChange={(e) => handleChange('shelf', e.target.value)}
+                    className="input-field text-sm"
+                  >
+                    <option value="watchlist">Watchlist</option>
+                    <option value="currentlyReading">Currently Reading</option>
+                    <option value="read">Read</option>
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -458,31 +394,17 @@ const BookDetailsPage = () => {
 
             {/* Highlights */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="text-sm font-medium text-gray-500 uppercase">Highlights</h3>
-                <button
-                  onClick={() => startEdit('highlights', highlights.map(h => `- ${h}`).join('\n'))}
-                  className="p-1 hover:bg-gray-100 rounded transition-colors"
-                >
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                  </svg>
-                </button>
-              </div>
+              <h3 className="text-sm font-medium text-gray-500 uppercase mb-4">Highlights</h3>
 
-              {editingSection === 'highlights' ? (
+              {isEditMode ? (
                 <div className="space-y-2">
                   <textarea
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
+                    value={displayBook.highlights}
+                    onChange={(e) => handleChange('highlights', e.target.value)}
                     className="input-field min-h-[200px] font-mono text-sm"
                     placeholder="- Highlight 1&#10;- Highlight 2&#10;- Highlight 3"
                   />
                   <p className="text-xs text-gray-500">Use markdown list format (- or * at the start of each line)</p>
-                  <div className="flex space-x-2">
-                    <button onClick={() => saveEdit('highlights')} className="btn-primary text-sm">Save</button>
-                    <button onClick={cancelEdit} className="btn-secondary text-sm">Cancel</button>
-                  </div>
                 </div>
               ) : highlights.length === 0 ? (
                 <p className="text-gray-500 italic text-sm">No highlights yet</p>
