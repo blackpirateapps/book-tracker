@@ -59,54 +59,97 @@ const BookDetailsPage = () => {
   };
 
   const startEdit = () => {
+    setIsEditMode(true);
+    // FIX: Ensure authors is always an array before calling .join()
+    const authorsArray = Array.isArray(book.authors) ? book.authors : [book.authors || ''];
     setEditedBook({
       ...book,
-      authors: book.authors?.join(', ') || '',
-      highlights: (book.highlights || []).map(h => `- ${h}`).join('\n')
+      authors: authorsArray.join(', '),
+      highlights: (book.highlights || []).map(h => `- ${h}`).join('
+')
     });
-    setIsEditMode(true);
   };
 
   const cancelEdit = () => {
-    setEditedBook(null);
     setIsEditMode(false);
+    setEditedBook(null);
   };
 
   const handleChange = (field, value) => {
-    setEditedBook(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setEditedBook(prev => ({ ...prev, [field]: value }));
   };
 
-  const saveEdit = async () => {
+  const handleTagToggle = (tagId) => {
+    setEditedBook(prev => {
+      const currentTags = prev.tags || [];
+      const newTags = currentTags.includes(tagId)
+        ? currentTags.filter(id => id !== tagId)
+        : [...currentTags, tagId];
+      return { ...prev, tags: newTags };
+    });
+  };
+
+  const addHighlight = () => {
+    const newHighlight = prompt('Enter your highlight:');
+    if (newHighlight && newHighlight.trim()) {
+      const currentHighlights = editedBook.highlights || '';
+      const newHighlights = currentHighlights 
+        ? `${currentHighlights}
+- ${newHighlight.trim()}`
+        : `- ${newHighlight.trim()}`;
+      setEditedBook(prev => ({
+        ...prev,
+        highlights: newHighlights
+      }));
+    }
+  };
+
+  const removeHighlight = (index) => {
+    if (confirm('Remove this highlight?')) {
+      const highlightsArray = editedBook.highlights
+        .split('
+')
+        .filter(h => h.trim().startsWith('- '))
+        .map(h => h.substring(2).trim());
+      
+      highlightsArray.splice(index, 1);
+      
+      setEditedBook(prev => ({
+        ...prev,
+        highlights: highlightsArray.map(h => `- ${h}`).join('
+')
+      }));
+    }
+  };
+
+  const saveEdit = () => {
     requireAuth(async (pwd) => {
       try {
-        // Parse highlights from markdown
-        const highlightsArray = editedBook.highlights
-          .split('\n')
-          .filter(line => line.trim().startsWith('-') || line.trim().startsWith('*'))
-          .map(line => line.replace(/^[-*]\s*/, '').trim())
-          .filter(Boolean);
-
         // Parse authors
         const authorsArray = editedBook.authors
           .split(',')
           .map(a => a.trim())
-          .filter(Boolean);
+          .filter(a => a);
 
-        const updatedData = {
+        // Parse highlights
+        const highlightsArray = editedBook.highlights
+          .split('
+')
+          .filter(h => h.trim().startsWith('- '))
+          .map(h => h.substring(2).trim());
+
+        const updatedBook = {
           ...book,
           ...editedBook,
           authors: authorsArray,
           highlights: highlightsArray
         };
 
-        await updateBook(updatedData, pwd);
+        await updateBook(updatedBook, pwd);
         await loadData();
+        showGlobalToast('Book updated successfully', 'success');
         setIsEditMode(false);
         setEditedBook(null);
-        showGlobalToast('Book updated successfully', 'success');
       } catch (error) {
         showGlobalToast(error.message, 'error');
       }
@@ -121,12 +164,25 @@ const BookDetailsPage = () => {
     );
   }
 
-  if (!book) return null;
+  if (!book) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Book not found</p>
+          <Link to="/" className="btn-primary">Go to Dashboard</Link>
+        </div>
+      </div>
+    );
+  }
 
   const displayBook = isEditMode ? editedBook : book;
   const coverUrl = book.imageLinks?.thumbnail || 'https://placehold.co/400x600/e2e8f0/475569?text=No+Cover';
   const bookTags = tags.filter(tag => (book.tags || []).includes(tag.id));
   const highlights = book.highlights || [];
+
+  // FIX: Ensure authors is always treated as an array
+  const authorsArray = Array.isArray(book.authors) ? book.authors : [book.authors || 'Unknown Author'];
+  const authorsDisplay = authorsArray.join(', ');
 
   return (
     <div className="min-h-screen">
@@ -198,6 +254,15 @@ const BookDetailsPage = () => {
                   <p className="text-sm font-medium text-green-800">Completed</p>
                 </div>
               )}
+
+              {book.shelf === 'watchlist' && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-center">
+                  <svg className="w-8 h-8 text-orange-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                  </svg>
+                  <p className="text-sm font-medium text-orange-800">On Watchlist</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -214,7 +279,7 @@ const BookDetailsPage = () => {
                   className="input-field"
                 />
               ) : (
-                <p className="text-2xl font-bold text-gray-900">{displayBook.title || 'N/A'}</p>
+                <h1 className="text-2xl font-bold text-gray-900">{displayBook.title || 'N/A'}</h1>
               )}
             </div>
 
@@ -230,15 +295,14 @@ const BookDetailsPage = () => {
                   placeholder="Comma-separated authors"
                 />
               ) : (
-                <p className="text-lg text-gray-700">{book.authors?.join(', ') || 'N/A'}</p>
+                <p className="text-lg text-gray-700">{authorsDisplay || 'N/A'}</p>
               )}
             </div>
 
-            {/* Book Info Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Publisher */}
+            {/* Meta Information Grid */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Publisher</h3>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Publisher</h3>
                 {isEditMode ? (
                   <input
                     type="text"
@@ -251,9 +315,8 @@ const BookDetailsPage = () => {
                 )}
               </div>
 
-              {/* Published Date */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Published</h3>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Published</h3>
                 {isEditMode ? (
                   <input
                     type="text"
@@ -266,9 +329,8 @@ const BookDetailsPage = () => {
                 )}
               </div>
 
-              {/* Page Count */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Pages</h3>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Pages</h3>
                 {isEditMode ? (
                   <input
                     type="number"
@@ -281,9 +343,8 @@ const BookDetailsPage = () => {
                 )}
               </div>
 
-              {/* Reading Medium */}
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Reading Medium</h3>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Reading Medium</h3>
                 {isEditMode ? (
                   <select
                     value={displayBook.readingMedium || 'Not set'}
@@ -298,12 +359,9 @@ const BookDetailsPage = () => {
                   <p className="text-sm text-gray-700">{displayBook.readingMedium || 'N/A'}</p>
                 )}
               </div>
-            </div>
 
-            {/* Reading Dates & Progress */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Started On</h3>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Started On</h3>
                 {isEditMode ? (
                   <input
                     type="date"
@@ -319,7 +377,7 @@ const BookDetailsPage = () => {
               </div>
 
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Finished On</h3>
+                <h3 className="text-xs font-medium text-gray-500 uppercase mb-1">Finished On</h3>
                 {isEditMode ? (
                   <input
                     type="date"
@@ -333,88 +391,121 @@ const BookDetailsPage = () => {
                   </p>
                 )}
               </div>
-
-              {isEditMode && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">
-                    Reading Progress: {displayBook.readingProgress || 0}%
-                  </h3>
-                  <input
-                    type="range"
-                    value={displayBook.readingProgress || 0}
-                    onChange={(e) => handleChange('readingProgress', e.target.value)}
-                    min="0"
-                    max="100"
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-              )}
-
-              {isEditMode && (
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <h3 className="text-xs font-medium text-gray-500 uppercase mb-2">Shelf</h3>
-                  <select
-                    value={displayBook.shelf || 'watchlist'}
-                    onChange={(e) => handleChange('shelf', e.target.value)}
-                    className="input-field text-sm"
-                  >
-                    <option value="watchlist">Watchlist</option>
-                    <option value="currentlyReading">Currently Reading</option>
-                    <option value="read">Read</option>
-                  </select>
-                </div>
-              )}
             </div>
 
-            {/* Description */}
-            {book.bookDescription && (
+            {/* Reading Progress (only show for currently reading) */}
+            {(book.shelf === 'currentlyReading' || isEditMode) && (
               <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-medium text-gray-500 uppercase mb-3">Description</h3>
-                <p className="text-sm text-gray-700 leading-relaxed">{book.bookDescription}</p>
+                <h2 className="text-sm font-medium text-gray-500 uppercase mb-2">Reading Progress</h2>
+                {isEditMode ? (
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={displayBook.readingProgress || 0}
+                      onChange={(e) => handleChange('readingProgress', parseInt(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-lg font-bold text-blue-600 min-w-[50px]">
+                      {displayBook.readingProgress || 0}%
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1 bg-gray-100 rounded-full h-3">
+                      <div
+                        className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${book.readingProgress || 0}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-lg font-bold text-blue-600">{book.readingProgress || 0}%</span>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Tags */}
-            {bookTags.length > 0 && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h3 className="text-sm font-medium text-gray-500 uppercase mb-3">Tags</h3>
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+              <h2 className="text-sm font-medium text-gray-500 uppercase mb-3">Tags</h2>
+              {isEditMode ? (
                 <div className="flex flex-wrap gap-2">
-                  {bookTags.map(tag => (
-                    <span
-                      key={tag.id}
-                      className="px-3 py-1.5 text-sm font-medium rounded-lg"
-                      style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
-                    >
-                      {tag.name}
-                    </span>
-                  ))}
+                  {tags.map(tag => {
+                    const isSelected = (displayBook.tags || []).includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        onClick={() => handleTagToggle(tag.id)}
+                        className={`px-3 py-1 text-sm font-medium rounded-lg transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-offset-2'
+                            : 'opacity-50 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: `${tag.color}20`,
+                          color: tag.color,
+                          ringColor: isSelected ? tag.color : 'transparent'
+                        }}
+                      >
+                        {tag.name}
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {bookTags.length > 0 ? (
+                    bookTags.map(tag => (
+                      <span
+                        key={tag.id}
+                        className="px-3 py-1 text-sm font-medium rounded-lg"
+                        style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                      >
+                        {tag.name}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">No tags assigned</p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Highlights */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h3 className="text-sm font-medium text-gray-500 uppercase mb-4">Highlights</h3>
-
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-medium text-gray-500 uppercase">Highlights</h2>
+                {isEditMode && (
+                  <button
+                    onClick={addHighlight}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    + Add Highlight
+                  </button>
+                )}
+              </div>
               {isEditMode ? (
-                <div className="space-y-2">
-                  <textarea
-                    value={displayBook.highlights}
-                    onChange={(e) => handleChange('highlights', e.target.value)}
-                    className="input-field min-h-[200px] font-mono text-sm"
-                    placeholder="- Highlight 1&#10;- Highlight 2&#10;- Highlight 3"
-                  />
-                  <p className="text-xs text-gray-500">Use markdown list format (- or * at the start of each line)</p>
-                </div>
-              ) : highlights.length === 0 ? (
-                <p className="text-gray-500 italic text-sm">No highlights yet</p>
+                <textarea
+                  value={displayBook.highlights || ''}
+                  onChange={(e) => handleChange('highlights', e.target.value)}
+                  className="input-field font-mono text-sm"
+                  rows="10"
+                  placeholder="- Highlight 1&#10;- Highlight 2"
+                />
               ) : (
                 <div className="space-y-3">
-                  {highlights.map((highlight, index) => (
-                    <div key={index} className="pl-4 border-l-4 border-blue-200 py-2">
-                      <p className="text-sm text-gray-700">{highlight}</p>
-                    </div>
-                  ))}
+                  {highlights.length > 0 ? (
+                    highlights.map((highlight, index) => (
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <svg className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                        <p className="text-sm text-gray-700 flex-1">{highlight}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-gray-500">No highlights yet</p>
+                  )}
                 </div>
               )}
             </div>
