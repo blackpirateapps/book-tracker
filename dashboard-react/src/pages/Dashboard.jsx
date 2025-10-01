@@ -8,6 +8,7 @@ import StatCard from '../components/StatCard';
 import BookCard from '../components/BookCard';
 import SearchBar from '../components/SearchBar';
 import PasswordModal from '../components/PasswordModal';
+import EditBookModal from '../components/EditBookModal';
 import SkeletonLoader from '../components/SkeletonLoader';
 
 const Dashboard = () => {
@@ -17,6 +18,8 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   
   const PREVIEW_LIMIT = 6;
   
@@ -87,22 +90,22 @@ const Dashboard = () => {
   };
   
   const handleEditBook = (book) => {
-  setSelectedBook(book);
-  setShowEditModal(true);
-};
+    setSelectedBook(book);
+    setShowEditModal(true);
+  };
 
-const handleSaveBook = (updatedBook) => {
-  requireAuth(async (pwd) => {
-    try {
-      await updateBook(updatedBook, pwd);
-      await loadData();
-      showGlobalToast('Book updated successfully', 'success');
-      setShowEditModal(false);
-    } catch (error) {
-      showGlobalToast(error.message, 'error');
-    }
-  });
-};
+  const handleSaveBook = (updatedBook) => {
+    requireAuth(async (pwd) => {
+      try {
+        await updateBook(updatedBook, pwd);
+        await loadData();
+        showGlobalToast('Book updated successfully', 'success');
+        setShowEditModal(false);
+      } catch (error) {
+        showGlobalToast(error.message, 'error');
+      }
+    });
+  };
   
   const handleDeleteBook = (bookId) => {
     if (!confirm('Are you sure you want to remove this book?')) return;
@@ -302,6 +305,14 @@ const handleSaveBook = (updatedBook) => {
         isOpen={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
         onConfirm={handlePasswordConfirm}
+      />
+
+      <EditBookModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        book={selectedBook}
+        tags={tags}
+        onSave={handleSaveBook}
       />
     </div>
   );
