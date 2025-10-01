@@ -4,13 +4,13 @@ import { useNavigate } from 'react-router-dom';
 const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const coverUrl = book.imageLinks?.thumbnail || 'https://placehold.co/80x120/e2e8f0/475569?text=N/A';
   const authors = book.authors ? book.authors.join(', ') : 'Unknown Author';
   const progress = book.readingProgress || 0;
-  
+
   const bookTags = tags.filter(tag => (book.tags || []).includes(tag.id));
-  
+
   const handleAction = async (action) => {
     setIsLoading(true);
     try {
@@ -19,13 +19,13 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
       setIsLoading(false);
     }
   };
-  
+
   const getProgressBarClass = (progress) => {
     if (progress >= 75) return 'bg-gradient-to-r from-green-500 to-emerald-500';
     if (progress >= 40) return 'bg-blue-500';
     return 'bg-blue-600';
   };
-  
+
   const handleMarkAsReading = () => {
     const updatedBook = {
       ...book,
@@ -35,7 +35,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
     };
     handleAction(() => onEdit(updatedBook));
   };
-  
+
   const handleMarkAsFinished = () => {
     const updatedBook = {
       ...book,
@@ -45,7 +45,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
     };
     handleAction(() => onEdit(updatedBook));
   };
-  
+
   return (
     <div className="book-card relative" data-book-id={book.id}>
       {isLoading && (
@@ -53,7 +53,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       )}
-      
+
       <div className="flex space-x-4 mb-4">
         <img
           src={coverUrl}
@@ -61,7 +61,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           className="w-24 h-32 object-cover rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           onClick={() => navigate(`/details/${book.id}`)}
         />
-        
+
         <div className="flex-1 min-w-0">
           <h3
             className="font-bold text-gray-900 mb-1 line-clamp-2 cursor-pointer hover:text-blue-600 transition-colors"
@@ -70,7 +70,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
             {book.title}
           </h3>
           <p className="text-sm text-gray-600 mb-2 line-clamp-1">{authors}</p>
-          
+
           {bookTags.length > 0 && (
             <div className="flex flex-wrap gap-1 mb-2">
               {bookTags.slice(0, 2).map(tag => (
@@ -89,7 +89,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
               )}
             </div>
           )}
-          
+
           {book.startedOn && (
             <p className="text-xs text-gray-500">
               Started: {new Date(book.startedOn).toLocaleDateString()}
@@ -97,7 +97,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           )}
         </div>
       </div>
-      
+
       {book.shelf === 'currentlyReading' && (
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm mb-2">
@@ -112,7 +112,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           </div>
         </div>
       )}
-      
+
       {book.shelf === 'read' && book.finishedOn && (
         <p className="text-sm text-gray-600 mb-3 flex items-center">
           <svg className="w-4 h-4 mr-1 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -121,7 +121,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
           Finished: {new Date(book.finishedOn).toLocaleDateString()}
         </p>
       )}
-      
+
       <div className="flex items-center space-x-2">
         {/* Primary Action Button */}
         {book.shelf === 'watchlist' && (
@@ -132,7 +132,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
             Mark as Reading
           </button>
         )}
-        
+
         {book.shelf === 'currentlyReading' && (
           <button
             onClick={handleMarkAsFinished}
@@ -141,7 +141,7 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
             Mark as Finished
           </button>
         )}
-        
+
         {book.shelf === 'read' && (
           <button
             onClick={() => navigate(`/details/${book.id}`)}
@@ -150,16 +150,15 @@ const BookCard = ({ book, onEdit, onDelete, onMove, tags = [] }) => {
             View Details
           </button>
         )}
-        
+
         {/* Secondary Action Buttons */}
         <button
-          onClick={() => navigate(`/details/${book.id}`)}
+          onClick={() => onEdit(book)}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          title="View Details"
+          title="Edit"
         >
           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
           </svg>
         </button>
         <button
