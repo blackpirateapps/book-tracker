@@ -4,40 +4,199 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Latest Read Book</title>
-    <!-- Uses the pre-compiled Tailwind CSS file for styling. -->
-    <link href="/styles/output.css" rel="stylesheet">
     <style>
-        /* Uses a stack of common, browser-safe fonts. No external requests are made. */
-        :root { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-            /* CSS variables for easy theme customization via URL parameters. */
-            --bg-color: #ffffff;
-            --text-color: #374151;
-            --quote-color: #111827;
-            --border-color: #e5e7eb;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
+        :root { 
+            font-family: Times New Roman, serif;
+            --bg-color: #f0f0f0;
+            --text-color: #333;
+            --quote-color: #FF6B6B;
+            --border-color: black;
+            --accent-color: #1E90FF;
+        }
+        
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
             overflow: hidden;
             font-size: 14px;
+            padding: 1rem;
         }
         
-        /* Responsive improvements for cover images and highlights */
+        #widget-container {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Skeleton loader with vibrant colors */
+        #skeleton {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .skeleton-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .skeleton-label {
+            height: 16px;
+            background: #FFE66D;
+            border: 2px solid black;
+            border-radius: 0;
+            width: 120px;
+        }
+        
+        .skeleton-badge {
+            height: 20px;
+            background: #4ECDC4;
+            border: 2px solid black;
+            width: 100px;
+        }
+        
+        .skeleton-content {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .skeleton-cover {
+            width: 80px;
+            height: 112px;
+            background: #95E1D3;
+            border: 3px solid black;
+            box-shadow: 4px 4px 0 #1E90FF;
+            flex-shrink: 0;
+        }
+        
+        .skeleton-text {
+            flex-grow: 1;
+            padding-top: 0.25rem;
+        }
+        
+        .skeleton-line {
+            height: 12px;
+            background: #FF6B6B;
+            border: 2px solid black;
+            margin-bottom: 0.75rem;
+        }
+        
+        .skeleton-line.title {
+            width: 85%;
+            height: 16px;
+        }
+        
+        .skeleton-line.author {
+            width: 70%;
+        }
+        
+        .skeleton-line.quote1 {
+            width: 100%;
+            margin-top: 1rem;
+            background: #FFE66D;
+        }
+        
+        .skeleton-line.quote2 {
+            width: 50%;
+            background: #FFE66D;
+        }
+        
+        /* Content styles */
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .latest-label {
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: white;
+            background: #FF6B6B;
+            padding: 0.4rem 0.8rem;
+            border: 2px solid black;
+            box-shadow: 2px 2px 0 black;
+        }
+        
+        .stats-badge {
+            font-size: 0.7rem;
+            padding: 0.4rem 0.8rem;
+            background: #4ECDC4;
+            color: black;
+            font-weight: bold;
+            border: 2px solid black;
+            box-shadow: 2px 2px 0 black;
+            white-space: nowrap;
+        }
+        
+        .book-container {
+            display: flex;
+            gap: 1rem;
+        }
+        
         .book-cover {
             max-width: 80px;
-            max-height: 120px;
+            max-height: 112px;
             object-fit: cover;
+            border: 3px solid black;
+            box-shadow: 4px 4px 0 #1E90FF;
+            flex-shrink: 0;
+            background: white;
         }
         
-        @media (max-width: 640px) {
-            .book-cover {
-                max-width: 60px;
-                max-height: 90px;
-            }
+        .book-info {
+            flex-grow: 1;
+            padding-top: 0.25rem;
+            min-width: 0;
+        }
+        
+        .book-title {
+            font-weight: bold;
+            font-size: 1rem;
+            color: #FF6B6B;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.25rem;
+        }
+        
+        .book-author {
+            font-size: 0.85rem;
+            color: #1E90FF;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .highlight-container {
+            margin-top: 0.75rem;
+            border-left: 4px solid #FFE66D;
+            padding-left: 0.75rem;
+            background: white;
+            padding: 0.75rem;
+            border: 2px solid black;
+            box-shadow: 3px 3px 0 #FFE66D;
         }
         
         .highlight-text {
+            font-size: 0.85rem;
+            font-style: italic;
+            color: #333;
             display: -webkit-box;
             -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
@@ -45,44 +204,86 @@
             line-height: 1.5;
         }
         
-        .stats-badge {
-            font-size: 0.7rem;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.375rem;
-            background-color: rgba(59, 130, 246, 0.1);
-            color: #2563eb;
-            font-weight: 600;
+        .error-message {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .error-text {
+            font-size: 0.9rem;
+            color: #FF6B6B;
+            background: white;
+            padding: 1rem 1.5rem;
+            border: 3px solid black;
+            box-shadow: 4px 4px 0 #1E90FF;
+            font-weight: bold;
+        }
+        
+        @media (max-width: 640px) {
+            body {
+                padding: 0.75rem;
+            }
+            
+            .book-cover {
+                max-width: 60px;
+                max-height: 90px;
+            }
+            
+            .skeleton-cover {
+                width: 60px;
+                height: 90px;
+            }
+            
+            .book-container {
+                gap: 0.75rem;
+            }
+            
+            .stats-badge {
+                font-size: 0.65rem;
+                padding: 0.3rem 0.6rem;
+            }
+            
+            .latest-label {
+                font-size: 0.65rem;
+                padding: 0.3rem 0.6rem;
+            }
+        }
+        
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
-<body class="p-4">
+<body>
 
-    <div id="widget-container" class="w-full h-full">
-        <!-- A skeleton loader is shown initially to prevent content popping or layout shifts. -->
-        <div id="skeleton" class="animate-pulse w-full">
-            <div class="flex justify-between items-center mb-3">
-                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">LATEST READ</p>
-                <div class="h-4 bg-gray-200 rounded w-20"></div>
+    <div id="widget-container">
+        <!-- Skeleton loader -->
+        <div id="skeleton">
+            <div class="skeleton-header">
+                <div class="skeleton-label"></div>
+                <div class="skeleton-badge"></div>
             </div>
-            <div class="flex space-x-4">
-                <div class="w-20 h-28 bg-gray-200 rounded-md flex-shrink-0"></div>
-                <div class="flex-grow pt-1 space-y-3 w-full">
-                    <div class="h-4 bg-gray-200 rounded w-5/6"></div>
-                    <div class="h-3 bg-gray-200 rounded w-3/4"></div>
-                    <div class="space-y-2 mt-4">
-                        <div class="h-3 bg-gray-200 rounded w-full"></div>
-                        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                    </div>
+            <div class="skeleton-content">
+                <div class="skeleton-cover"></div>
+                <div class="skeleton-text">
+                    <div class="skeleton-line title"></div>
+                    <div class="skeleton-line author"></div>
+                    <div class="skeleton-line quote1"></div>
+                    <div class="skeleton-line quote2"></div>
                 </div>
             </div>
         </div>
 
-        <!-- The actual content, which is hidden by default. -->
+        <!-- Actual content -->
         <div id="content" class="hidden"></div>
 
-        <!-- An error message, also hidden by default. -->
-         <div id="error" class="hidden flex items-center justify-center h-full text-center">
-            <p class="text-sm text-gray-500">Could not load latest read book.</p>
+        <!-- Error message -->
+         <div id="error" class="hidden error-message">
+            <p class="error-text">Could not load latest read book 📚</p>
         </div>
     </div>
 
@@ -92,20 +293,14 @@
             const skeletonEl = document.getElementById('skeleton');
             const errorEl = document.getElementById('error');
             
-            // This function calculates the total height of the content and sends it to the parent page.
             const sendHeight = () => {
                 const height = document.body.scrollHeight;
-                // The parent window receives this message and can use it to adjust the iframe's height.
-                // Using '*' is convenient for demos, but for production, you might restrict this to your site's origin for security.
                 window.parent.postMessage({ frameHeight: height, frameUrl: window.location.href }, '*');
             };
 
-            // A ResizeObserver is the most reliable way to detect content size changes.
-            // It will automatically send the new height if the content reflows (e.g., on window resize).
             const resizeObserver = new ResizeObserver(() => sendHeight());
             resizeObserver.observe(document.body);
 
-            // This section reads URL parameters to allow for easy color theme customization.
             const params = new URLSearchParams(window.location.search);
             const theme = {
                 bg: params.get('bg'),
@@ -121,7 +316,6 @@
             if (theme.border) root.style.setProperty('--border-color', `#${theme.border}`);
             
             try {
-                // Fetch both the latest read and stats data
                 const [latestReadResponse, statsResponse] = await Promise.all([
                     fetch('/api/latest-read'),
                     fetch('/api/stats')
@@ -133,39 +327,34 @@
                 const data = await latestReadResponse.json();
                 const statsData = await statsResponse.json();
 
-                // Calculate current year stats
                 const currentYear = new Date().getFullYear().toString();
                 const currentYearBooks = statsData.booksByYear[currentYear] || [];
                 const totalBooks = currentYearBooks.length;
                 const totalPages = currentYearBooks.reduce((sum, book) => sum + (book.pageCount || 0), 0);
 
-                // Use a placeholder if no cover image URL is available.
-                const coverUrl = data.coverUrl || `https://placehold.co/80x112/${theme.bg || 'e2e8f0'}/${theme.text || '475569'}?text=N/A`;
+                const coverUrl = data.coverUrl || `https://placehold.co/80x112/95E1D3/000000?text=N/A`;
 
-                // Build the HTML with the fetched data, including stats badge
                 contentEl.innerHTML = `
-                    <div class="flex justify-between items-center mb-3">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">LATEST READ</p>
-                        <span class="stats-badge">${totalBooks} books · ${totalPages.toLocaleString()} pages</span>
+                    <div class="content-header">
+                        <div class="latest-label">Latest Read</div>
+                        <div class="stats-badge">${totalBooks} books · ${totalPages.toLocaleString()} pages</div>
                     </div>
-                    <div class="flex space-x-4">
-                        <img src="${coverUrl}" alt="Cover of ${data.title}" class="book-cover rounded-md shadow-sm flex-shrink-0" style="border: 1px solid var(--border-color);">
-                        <div class="flex-grow pt-1 min-w-0">
-                            <p class="font-bold truncate" style="color: var(--quote-color);">${data.title}</p>
-                            <p class="text-sm truncate">${data.author}</p>
-                            <blockquote class="mt-2 border-l-2 pl-3" style="border-color: var(--border-color);">
-                                <p class="text-sm italic highlight-text" style="color: var(--quote-color);">"${data.highlight}"</p>
+                    <div class="book-container">
+                        <img src="${coverUrl}" alt="Cover of ${data.title}" class="book-cover">
+                        <div class="book-info">
+                            <div class="book-title">${data.title}</div>
+                            <div class="book-author">${data.author}</div>
+                            <blockquote class="highlight-container">
+                                <p class="highlight-text">"${data.highlight}"</p>
                             </blockquote>
                         </div>
                     </div>
                 `;
                 
-                // Hide the skeleton and show the content.
                 skeletonEl.style.display = 'none';
                 contentEl.classList.remove('hidden');
 
             } catch (err) {
-                // If anything goes wrong, show the error message.
                 console.error(err);
                 skeletonEl.style.display = 'none';
                 errorEl.classList.remove('hidden');
