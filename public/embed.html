@@ -22,6 +22,37 @@
             overflow: hidden;
             font-size: 14px;
         }
+        
+        /* Responsive improvements for cover images and highlights */
+        .book-cover {
+            max-width: 80px;
+            max-height: 120px;
+            object-fit: cover;
+        }
+        
+        @media (max-width: 640px) {
+            .book-cover {
+                max-width: 60px;
+                max-height: 90px;
+            }
+        }
+        
+        .highlight-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.5;
+        }
+        
+        .stats-badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="p-4">
@@ -29,7 +60,10 @@
     <div id="widget-container" class="w-full h-full">
         <!-- A skeleton loader is shown initially to prevent content popping or layout shifts. -->
         <div id="skeleton" class="animate-pulse w-full">
-            <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">LATEST READ</p>
+            <div class="flex justify-between items-center mb-3">
+                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">LATEST READ</p>
+                <div class="h-4 bg-gray-200 rounded w-20"></div>
+            </div>
             <div class="flex space-x-4">
                 <div class="w-20 h-28 bg-gray-200 rounded-md flex-shrink-0"></div>
                 <div class="flex-grow pt-1 space-y-3 w-full">
@@ -87,24 +121,40 @@
             if (theme.border) root.style.setProperty('--border-color', `#${theme.border}`);
             
             try {
-                // Fetch the data from our fast API endpoint.
-                const response = await fetch('/api/latest-read');
-                if (!response.ok) throw new Error('Failed to fetch data');
-                const data = await response.json();
+                // Fetch both the latest read and stats data
+                const [latestReadResponse, statsResponse] = await Promise.all([
+                    fetch('/api/latest-read'),
+                    fetch('/api/stats')
+                ]);
+                
+                if (!latestReadResponse.ok) throw new Error('Failed to fetch latest read data');
+                if (!statsResponse.ok) throw new Error('Failed to fetch stats data');
+                
+                const data = await latestReadResponse.json();
+                const statsData = await statsResponse.json();
+
+                // Calculate current year stats
+                const currentYear = new Date().getFullYear().toString();
+                const currentYearBooks = statsData.booksByYear[currentYear] || [];
+                const totalBooks = currentYearBooks.length;
+                const totalPages = currentYearBooks.reduce((sum, book) => sum + (book.pageCount || 0), 0);
 
                 // Use a placeholder if no cover image URL is available.
                 const coverUrl = data.coverUrl || `https://placehold.co/80x112/${theme.bg || 'e2e8f0'}/${theme.text || '475569'}?text=N/A`;
 
-                // Build the HTML with the fetched data. The client no longer needs to do any randomization.
+                // Build the HTML with the fetched data, including stats badge
                 contentEl.innerHTML = `
-                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3">LATEST READ</p>
+                    <div class="flex justify-between items-center mb-3">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">LATEST READ</p>
+                        <span class="stats-badge">${totalBooks} books · ${totalPages.toLocaleString()} pages</span>
+                    </div>
                     <div class="flex space-x-4">
-                        <img src="${coverUrl}" alt="Cover of ${data.title}" class="w-20 h-28 object-cover rounded-md shadow-sm flex-shrink-0" style="border: 1px solid var(--border-color);">
+                        <img src="${coverUrl}" alt="Cover of ${data.title}" class="book-cover rounded-md shadow-sm flex-shrink-0" style="border: 1px solid var(--border-color);">
                         <div class="flex-grow pt-1 min-w-0">
                             <p class="font-bold truncate" style="color: var(--quote-color);">${data.title}</p>
                             <p class="text-sm truncate">${data.author}</p>
                             <blockquote class="mt-2 border-l-2 pl-3" style="border-color: var(--border-color);">
-                                <p class="text-sm italic" style="color: var(--quote-color);">“${data.highlight}”</p>
+                                <p class="text-sm italic highlight-text" style="color: var(--quote-color);">"${data.highlight}"</p>
                             </blockquote>
                         </div>
                     </div>
@@ -124,4 +174,3 @@
     </script>
 </body>
 </html>
-
