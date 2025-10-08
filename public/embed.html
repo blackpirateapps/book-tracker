@@ -1,4 +1,4 @@
-<!-- embed.html -->
+<!-- embed.html (listener) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,10 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Latest Read Book</title>
   <style>
-    /* Reset */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* Theme variables with URL override support (kept) */
     :root{
       --font-main: "Times New Roman", serif;
       --bg-color: #ffffff;
@@ -24,17 +22,12 @@
       --blockquote-left-dark: #4bb583;
       --card-bg: #ffffff;
       --card-bg-dark: #1a1a1a;
-      --muted: #666666;
-      --muted-dark: #bdbdbd;
+
+      /* Legacy variables kept */
+      --quote-color: #FF6B6B;
+      --border-color: #000000;
     }
 
-    /* Existing query-param theming preserved (original variables) */
-    :root{
-      --quote-color: #FF6B6B;  /* kept for skeleton color usage */
-      --border-color: #000000; /* legacy border var used in skeleton */
-    }
-
-    /* Body matches site */
     body{
       background-color: var(--bg-color);
       color: var(--text-color);
@@ -46,7 +39,6 @@
       transition: background 0.3s, color 0.3s;
     }
 
-    /* Centered width like site container */
     .widget-container{
       max-width: 900px;
       margin-left: auto;
@@ -57,18 +49,15 @@
       height: 100%;
     }
 
-    /* Links styled like theme */
     a{ color: var(--accent); text-decoration: underline; }
     a:visited{ color: var(--accent-visited); }
 
-    /* Divider */
     hr{
       border: none;
       border-top: 1px solid var(--border-soft);
       margin: 1rem 0;
     }
 
-    /* Subtle card feel for content */
     .card{
       background: var(--card-bg);
       border: 1px solid var(--border-soft);
@@ -77,7 +66,6 @@
       box-shadow: none;
     }
 
-    /* Header row */
     .content-header{
       display: flex;
       justify-content: space-between;
@@ -91,28 +79,14 @@
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: var(--accent-visited);
-      background: transparent;
-      padding: 0;
-      border: none;
-      box-shadow: none;
     }
 
     .stats-badge{
       font-size: 0.8rem;
-      padding: 0;
-      background: transparent;
-      color: inherit;
-      font-weight: normal;
-      border: none;
-      box-shadow: none;
       white-space: nowrap;
     }
 
-    /* Book row */
-    .book-container{
-      display: flex;
-      gap: 1rem;
-    }
+    .book-container{ display: flex; gap: 1rem; }
 
     .book-cover{
       max-width: 80px;
@@ -123,11 +97,7 @@
       flex-shrink: 0;
     }
 
-    .book-info{
-      flex-grow: 1;
-      padding-top: 0.25rem;
-      min-width: 0;
-    }
+    .book-info{ flex-grow: 1; padding-top: 0.25rem; min-width: 0; }
 
     .book-title{
       font-weight: normal;
@@ -152,10 +122,9 @@
     .highlight-container{
       margin-top: 0.5rem;
       border-left: 3px solid var(--blockquote-left);
-      padding-left: 0.75rem;
-      background: transparent;
       padding: 0.25rem 0 0.25rem 0.75rem;
       border: 1px solid transparent;
+      background: transparent;
     }
 
     .highlight-text{
@@ -169,15 +138,9 @@
       line-height: 1.5;
     }
 
-    /* Skeleton simplified to neutral theme look (structure preserved) */
     .skeleton{ animation: none; }
-    .skeleton-header{
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
-    }
-    .skeleton-label,
-    .skeleton-badge,
-    .skeleton-cover,
-    .skeleton-line{
+    .skeleton-header{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .skeleton-label, .skeleton-badge, .skeleton-cover, .skeleton-line{
       background: #e8e8e8;
       border: 1px solid var(--border-soft);
     }
@@ -192,42 +155,19 @@
     .skeleton-line.quote1{ width: 100%; }
     .skeleton-line.quote2{ width: 55%; }
 
-    /* Error look aligned with theme */
     .error-message{
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 120px;
-      text-align: center;
-      padding: 1rem;
+      display: flex; align-items: center; justify-content: center; min-height: 120px; text-align: center; padding: 1rem;
     }
-    .error-text{
-      font-size: 0.95rem;
-      color: inherit;
-      background: transparent;
-      padding: 0;
-      border: none;
-      box-shadow: none;
-      font-weight: normal;
-    }
+    .error-text{ font-size: 0.95rem; color: inherit; }
 
-    /* Utilities */
     .hidden{ display: none !important; }
-    .center{ text-align: center; }
 
-    /* Dark scheme override when parent adds body.dark via message or default behavior */
     @media (prefers-color-scheme: dark){
-      :root{
-        --bg-color: #1a1a1a;
-        --text-color: #e0e0e0;
-      }
+      :root{ --bg-color: #1a1a1a; --text-color: #e0e0e0; }
       .book-cover{ background: #2a2a2a; border-color: var(--border-strong); }
       hr{ border-top-color: var(--border-strong); }
       .highlight-container{ border-left-color: var(--blockquote-left-dark); }
-      .skeleton-label,
-      .skeleton-badge,
-      .skeleton-cover,
-      .skeleton-line{ background: #2a2a2a; border-color: var(--border-strong); }
+      .skeleton-label, .skeleton-badge, .skeleton-cover, .skeleton-line{ background: #2a2a2a; border-color: var(--border-strong); }
       a{ color: var(--accent-dark); }
       a:visited{ color: var(--accent-visited-dark); }
     }
@@ -243,7 +183,6 @@
 </head>
 <body>
   <div id="widget-container" class="widget-container">
-    <!-- Skeleton loader -->
     <div id="skeleton" class="skeleton card">
       <div class="skeleton-header">
         <div class="skeleton-label"></div>
@@ -260,42 +199,68 @@
       </div>
     </div>
 
-    <!-- Actual content -->
     <div id="content" class="hidden card"></div>
 
-    <!-- Error message -->
     <div id="error" class="hidden error-message">
       <p class="error-text">Could not load latest read book</p>
     </div>
   </div>
 
   <script>
+    // Auto-height back to host
+    const sendHeight = () => {
+      const height = document.body.scrollHeight;
+      window.parent.postMessage({ frameHeight: height, frameUrl: window.location.href }, '*');
+    };
+    new ResizeObserver(sendHeight).observe(document.body);
+
+    // Apply theme from host message
+    (function(){
+      const root = document.documentElement;
+      function applyTheme(dark, colors) {
+        document.body.classList.toggle('dark', !!dark);
+        if (colors) {
+          if (colors.bg) root.style.setProperty('--bg-color', colors.bg);
+          if (colors.text) root.style.setProperty('--text-color', colors.text);
+          if (colors.accent) root.style.setProperty('--accent', colors.accent);
+          if (colors.accentVisited) root.style.setProperty('--accent-visited', colors.accentVisited);
+          if (colors.borderSoft) root.style.setProperty('--border-soft', colors.borderSoft);
+        }
+      }
+
+      window.addEventListener('message', (event) => {
+        const data = event.data || {};
+        if (data.type === 'theme') {
+          applyTheme(data.dark, data.colors);
+          sendHeight();
+        }
+      });
+
+      // URL param overrides (kept)
+      const params = new URLSearchParams(window.location.search);
+      const override = {
+        bg: params.get('bg'),
+        text: params.get('text'),
+        accent: params.get('accent'),
+        accentVisited: params.get('accentVisited'),
+        borderSoft: params.get('border')
+      };
+      if (Object.values(override).some(Boolean)) {
+        applyTheme(null, override);
+      } else {
+        // System preference fallback
+        try {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          applyTheme(prefersDark, null);
+        } catch (e) {}
+      }
+    })();
+
+    // Example data fetch logic preserved (replace endpoints as needed)
     document.addEventListener('DOMContentLoaded', async () => {
       const contentEl = document.getElementById('content');
       const skeletonEl = document.getElementById('skeleton');
       const errorEl = document.getElementById('error');
-
-      // Keep existing auto-height messaging
-      const sendHeight = () => {
-        const height = document.body.scrollHeight;
-        window.parent.postMessage({ frameHeight: height, frameUrl: window.location.href }, '*');
-      };
-      const resizeObserver = new ResizeObserver(sendHeight);
-      resizeObserver.observe(document.body);
-
-      // Support URL param theming (preserved)
-      const params = new URLSearchParams(window.location.search);
-      const theme = {
-        bg: params.get('bg'),
-        text: params.get('text'),
-        quote: params.get('quote'),
-        border: params.get('border')
-      };
-      const root = document.documentElement;
-      if (theme.bg) root.style.setProperty('--bg-color', theme.bg);
-      if (theme.text) root.style.setProperty('--text-color', theme.text);
-      if (theme.quote) root.style.setProperty('--quote-color', theme.quote);
-      if (theme.border) root.style.setProperty('--border-color', theme.border);
 
       try {
         const [latestReadResponse, statsResponse] = await Promise.all([
