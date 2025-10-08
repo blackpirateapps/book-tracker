@@ -1,365 +1,348 @@
+<!-- embed.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Latest Read Book</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Latest Read Book</title>
+  <style>
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        :root { 
-            font-family: Times New Roman, serif;
-            --bg-color: #f0f0f0;
-            --text-color: #333;
-            --quote-color: #FF6B6B;
-            --border-color: black;
-            --accent-color: #1E90FF;
-        }
-        
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            overflow: hidden;
-            font-size: 14px;
-            padding: 1rem;
-        }
-        
-        #widget-container {
-            width: 100%;
-            height: 100%;
-        }
-        
-        /* Skeleton loader with vibrant colors */
-        #skeleton {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .skeleton-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .skeleton-label {
-            height: 16px;
-            background: #FFE66D;
-            border: 2px solid black;
-            border-radius: 0;
-            width: 120px;
-        }
-        
-        .skeleton-badge {
-            height: 20px;
-            background: #4ECDC4;
-            border: 2px solid black;
-            width: 100px;
-        }
-        
-        .skeleton-content {
-            display: flex;
-            gap: 1rem;
-        }
-        
-        .skeleton-cover {
-            width: 80px;
-            height: 112px;
-            background: #95E1D3;
-            border: 3px solid black;
-            box-shadow: 4px 4px 0 #1E90FF;
-            flex-shrink: 0;
-        }
-        
-        .skeleton-text {
-            flex-grow: 1;
-            padding-top: 0.25rem;
-        }
-        
-        .skeleton-line {
-            height: 12px;
-            background: #FF6B6B;
-            border: 2px solid black;
-            margin-bottom: 0.75rem;
-        }
-        
-        .skeleton-line.title {
-            width: 85%;
-            height: 16px;
-        }
-        
-        .skeleton-line.author {
-            width: 70%;
-        }
-        
-        .skeleton-line.quote1 {
-            width: 100%;
-            margin-top: 1rem;
-            background: #FFE66D;
-        }
-        
-        .skeleton-line.quote2 {
-            width: 50%;
-            background: #FFE66D;
-        }
-        
-        /* Content styles */
-        .content-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-        
-        .latest-label {
-            font-size: 0.7rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: white;
-            background: #FF6B6B;
-            padding: 0.4rem 0.8rem;
-            border: 2px solid black;
-            box-shadow: 2px 2px 0 black;
-        }
-        
-        .stats-badge {
-            font-size: 0.7rem;
-            padding: 0.4rem 0.8rem;
-            background: #4ECDC4;
-            color: black;
-            font-weight: bold;
-            border: 2px solid black;
-            box-shadow: 2px 2px 0 black;
-            white-space: nowrap;
-        }
-        
-        .book-container {
-            display: flex;
-            gap: 1rem;
-        }
-        
-        .book-cover {
-            max-width: 80px;
-            max-height: 112px;
-            object-fit: cover;
-            border: 3px solid black;
-            box-shadow: 4px 4px 0 #1E90FF;
-            flex-shrink: 0;
-            background: white;
-        }
-        
-        .book-info {
-            flex-grow: 1;
-            padding-top: 0.25rem;
-            min-width: 0;
-        }
-        
-        .book-title {
-            font-weight: bold;
-            font-size: 1rem;
-            color: #FF6B6B;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 0.25rem;
-        }
-        
-        .book-author {
-            font-size: 0.85rem;
-            color: #1E90FF;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 0.75rem;
-            font-weight: bold;
-        }
-        
-        .highlight-container {
-            margin-top: 0.75rem;
-            border-left: 4px solid #FFE66D;
-            padding-left: 0.75rem;
-            background: white;
-            padding: 0.75rem;
-            border: 2px solid black;
-            box-shadow: 3px 3px 0 #FFE66D;
-        }
-        
-        .highlight-text {
-            font-size: 0.85rem;
-            font-style: italic;
-            color: #333;
-            display: -webkit-box;
-            -webkit-line-clamp: 4;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            line-height: 1.5;
-        }
-        
-        .error-message {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            text-align: center;
-            padding: 2rem;
-        }
-        
-        .error-text {
-            font-size: 0.9rem;
-            color: #FF6B6B;
-            background: white;
-            padding: 1rem 1.5rem;
-            border: 3px solid black;
-            box-shadow: 4px 4px 0 #1E90FF;
-            font-weight: bold;
-        }
-        
-        @media (max-width: 640px) {
-            body {
-                padding: 0.75rem;
-            }
-            
-            .book-cover {
-                max-width: 60px;
-                max-height: 90px;
-            }
-            
-            .skeleton-cover {
-                width: 60px;
-                height: 90px;
-            }
-            
-            .book-container {
-                gap: 0.75rem;
-            }
-            
-            .stats-badge {
-                font-size: 0.65rem;
-                padding: 0.3rem 0.6rem;
-            }
-            
-            .latest-label {
-                font-size: 0.65rem;
-                padding: 0.3rem 0.6rem;
-            }
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-    </style>
+    /* Theme variables with URL override support (kept) */
+    :root{
+      --font-main: "Times New Roman", serif;
+      --bg-color: #ffffff;
+      --text-color: #000000;
+      --border-soft: #cccccc;
+      --border-strong: #444444;
+      --accent: #2d8659;
+      --accent-visited: #1f5d3d;
+      --accent-dark: #4bb583;
+      --accent-visited-dark: #3a9d6f;
+      --blockquote-left: #2d8659;
+      --blockquote-left-dark: #4bb583;
+      --card-bg: #ffffff;
+      --card-bg-dark: #1a1a1a;
+      --muted: #666666;
+      --muted-dark: #bdbdbd;
+    }
+
+    /* Existing query-param theming preserved (original variables) */
+    :root{
+      --quote-color: #FF6B6B;  /* kept for skeleton color usage */
+      --border-color: #000000; /* legacy border var used in skeleton */
+    }
+
+    /* Body matches site */
+    body{
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-main);
+      line-height: 1.6;
+      overflow: hidden;
+      font-size: 14px;
+      padding: 1rem;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    /* Centered width like site container */
+    .widget-container{
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+      padding-left: 0.5rem;
+      padding-right: 0.5rem;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Links styled like theme */
+    a{ color: var(--accent); text-decoration: underline; }
+    a:visited{ color: var(--accent-visited); }
+
+    /* Divider */
+    hr{
+      border: none;
+      border-top: 1px solid var(--border-soft);
+      margin: 1rem 0;
+    }
+
+    /* Subtle card feel for content */
+    .card{
+      background: var(--card-bg);
+      border: 1px solid var(--border-soft);
+      padding: 1rem;
+      border-radius: 2px;
+      box-shadow: none;
+    }
+
+    /* Header row */
+    .content-header{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .latest-label{
+      font-size: 0.8rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent-visited);
+      background: transparent;
+      padding: 0;
+      border: none;
+      box-shadow: none;
+    }
+
+    .stats-badge{
+      font-size: 0.8rem;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-weight: normal;
+      border: none;
+      box-shadow: none;
+      white-space: nowrap;
+    }
+
+    /* Book row */
+    .book-container{
+      display: flex;
+      gap: 1rem;
+    }
+
+    .book-cover{
+      max-width: 80px;
+      max-height: 112px;
+      object-fit: cover;
+      border: 1px solid var(--border-soft);
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .book-info{
+      flex-grow: 1;
+      padding-top: 0.25rem;
+      min-width: 0;
+    }
+
+    .book-title{
+      font-weight: normal;
+      font-size: 1rem;
+      color: inherit;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 0.25rem;
+    }
+
+    .book-author{
+      font-size: 0.9rem;
+      color: var(--accent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 0.75rem;
+      font-weight: normal;
+    }
+
+    .highlight-container{
+      margin-top: 0.5rem;
+      border-left: 3px solid var(--blockquote-left);
+      padding-left: 0.75rem;
+      background: transparent;
+      padding: 0.25rem 0 0.25rem 0.75rem;
+      border: 1px solid transparent;
+    }
+
+    .highlight-text{
+      font-size: 0.9rem;
+      font-style: italic;
+      color: inherit;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.5;
+    }
+
+    /* Skeleton simplified to neutral theme look (structure preserved) */
+    .skeleton{ animation: none; }
+    .skeleton-header{
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
+    }
+    .skeleton-label,
+    .skeleton-badge,
+    .skeleton-cover,
+    .skeleton-line{
+      background: #e8e8e8;
+      border: 1px solid var(--border-soft);
+    }
+    .skeleton-label{ height: 14px; width: 120px; }
+    .skeleton-badge{ height: 16px; width: 100px; }
+    .skeleton-content{ display: flex; gap: 1rem; }
+    .skeleton-cover{ width: 80px; height: 112px; flex-shrink: 0; }
+    .skeleton-text{ flex-grow: 1; padding-top: 0.25rem; }
+    .skeleton-line{ height: 12px; margin-bottom: 0.5rem; }
+    .skeleton-line.title{ width: 85%; height: 14px; }
+    .skeleton-line.author{ width: 70%; }
+    .skeleton-line.quote1{ width: 100%; }
+    .skeleton-line.quote2{ width: 55%; }
+
+    /* Error look aligned with theme */
+    .error-message{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 120px;
+      text-align: center;
+      padding: 1rem;
+    }
+    .error-text{
+      font-size: 0.95rem;
+      color: inherit;
+      background: transparent;
+      padding: 0;
+      border: none;
+      box-shadow: none;
+      font-weight: normal;
+    }
+
+    /* Utilities */
+    .hidden{ display: none !important; }
+    .center{ text-align: center; }
+
+    /* Dark scheme override when parent adds body.dark via message or default behavior */
+    @media (prefers-color-scheme: dark){
+      :root{
+        --bg-color: #1a1a1a;
+        --text-color: #e0e0e0;
+      }
+      .book-cover{ background: #2a2a2a; border-color: var(--border-strong); }
+      hr{ border-top-color: var(--border-strong); }
+      .highlight-container{ border-left-color: var(--blockquote-left-dark); }
+      .skeleton-label,
+      .skeleton-badge,
+      .skeleton-cover,
+      .skeleton-line{ background: #2a2a2a; border-color: var(--border-strong); }
+      a{ color: var(--accent-dark); }
+      a:visited{ color: var(--accent-visited-dark); }
+    }
+
+    @media (max-width: 640px){
+      body{ padding: 0.75rem; }
+      .book-cover{ max-width: 60px; max-height: 90px; }
+      .skeleton-cover{ width: 60px; height: 90px; }
+      .book-container{ gap: 0.75rem; }
+      .stats-badge, .latest-label{ font-size: 0.75rem; }
+    }
+  </style>
 </head>
 <body>
-
-    <div id="widget-container">
-        <!-- Skeleton loader -->
-        <div id="skeleton">
-            <div class="skeleton-header">
-                <div class="skeleton-label"></div>
-                <div class="skeleton-badge"></div>
-            </div>
-            <div class="skeleton-content">
-                <div class="skeleton-cover"></div>
-                <div class="skeleton-text">
-                    <div class="skeleton-line title"></div>
-                    <div class="skeleton-line author"></div>
-                    <div class="skeleton-line quote1"></div>
-                    <div class="skeleton-line quote2"></div>
-                </div>
-            </div>
+  <div id="widget-container" class="widget-container">
+    <!-- Skeleton loader -->
+    <div id="skeleton" class="skeleton card">
+      <div class="skeleton-header">
+        <div class="skeleton-label"></div>
+        <div class="skeleton-badge"></div>
+      </div>
+      <div class="skeleton-content">
+        <div class="skeleton-cover"></div>
+        <div class="skeleton-text">
+          <div class="skeleton-line title"></div>
+          <div class="skeleton-line author"></div>
+          <div class="skeleton-line quote1"></div>
+          <div class="skeleton-line quote2"></div>
         </div>
-
-        <!-- Actual content -->
-        <div id="content" class="hidden"></div>
-
-        <!-- Error message -->
-         <div id="error" class="hidden error-message">
-            <p class="error-text">Could not load latest read book 📚</p>
-        </div>
+      </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const contentEl = document.getElementById('content');
-            const skeletonEl = document.getElementById('skeleton');
-            const errorEl = document.getElementById('error');
-            
-            const sendHeight = () => {
-                const height = document.body.scrollHeight;
-                window.parent.postMessage({ frameHeight: height, frameUrl: window.location.href }, '*');
-            };
+    <!-- Actual content -->
+    <div id="content" class="hidden card"></div>
 
-            const resizeObserver = new ResizeObserver(() => sendHeight());
-            resizeObserver.observe(document.body);
+    <!-- Error message -->
+    <div id="error" class="hidden error-message">
+      <p class="error-text">Could not load latest read book</p>
+    </div>
+  </div>
 
-            const params = new URLSearchParams(window.location.search);
-            const theme = {
-                bg: params.get('bg'),
-                text: params.get('text'),
-                quote: params.get('quote'),
-                border: params.get('border')
-            };
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const contentEl = document.getElementById('content');
+      const skeletonEl = document.getElementById('skeleton');
+      const errorEl = document.getElementById('error');
 
-            const root = document.documentElement;
-            if (theme.bg) root.style.setProperty('--bg-color', `#${theme.bg}`);
-            if (theme.text) root.style.setProperty('--text-color', `#${theme.text}`);
-            if (theme.quote) root.style.setProperty('--quote-color', `#${theme.quote}`);
-            if (theme.border) root.style.setProperty('--border-color', `#${theme.border}`);
-            
-            try {
-                const [latestReadResponse, statsResponse] = await Promise.all([
-                    fetch('/api/latest-read'),
-                    fetch('/api/stats')
-                ]);
-                
-                if (!latestReadResponse.ok) throw new Error('Failed to fetch latest read data');
-                if (!statsResponse.ok) throw new Error('Failed to fetch stats data');
-                
-                const data = await latestReadResponse.json();
-                const statsData = await statsResponse.json();
+      // Keep existing auto-height messaging
+      const sendHeight = () => {
+        const height = document.body.scrollHeight;
+        window.parent.postMessage({ frameHeight: height, frameUrl: window.location.href }, '*');
+      };
+      const resizeObserver = new ResizeObserver(sendHeight);
+      resizeObserver.observe(document.body);
 
-                const currentYear = new Date().getFullYear().toString();
-                const currentYearBooks = statsData.booksByYear[currentYear] || [];
-                const totalBooks = currentYearBooks.length;
-                const totalPages = currentYearBooks.reduce((sum, book) => sum + (book.pageCount || 0), 0);
+      // Support URL param theming (preserved)
+      const params = new URLSearchParams(window.location.search);
+      const theme = {
+        bg: params.get('bg'),
+        text: params.get('text'),
+        quote: params.get('quote'),
+        border: params.get('border')
+      };
+      const root = document.documentElement;
+      if (theme.bg) root.style.setProperty('--bg-color', theme.bg);
+      if (theme.text) root.style.setProperty('--text-color', theme.text);
+      if (theme.quote) root.style.setProperty('--quote-color', theme.quote);
+      if (theme.border) root.style.setProperty('--border-color', theme.border);
 
-                const coverUrl = data.coverUrl || `https://placehold.co/80x112/95E1D3/000000?text=N/A`;
+      try {
+        const [latestReadResponse, statsResponse] = await Promise.all([
+          fetch('api/latest-read'),
+          fetch('api/stats')
+        ]);
 
-                contentEl.innerHTML = `
-                    <div class="content-header">
-                        <div class="latest-label">Latest Read</div>
-                        <div class="stats-badge">${totalBooks} books · ${totalPages.toLocaleString()} pages</div>
-                    </div>
-                    <div class="book-container">
-                        <img src="${coverUrl}" alt="Cover of ${data.title}" class="book-cover">
-                        <div class="book-info">
-                            <div class="book-title">${data.title}</div>
-                            <div class="book-author">${data.author}</div>
-                            <blockquote class="highlight-container">
-                                <p class="highlight-text">"${data.highlight}"</p>
-                            </blockquote>
-                        </div>
-                    </div>
-                `;
-                
-                skeletonEl.style.display = 'none';
-                contentEl.classList.remove('hidden');
+        if (!latestReadResponse.ok) throw new Error('Failed to fetch latest read data');
+        if (!statsResponse.ok) throw new Error('Failed to fetch stats data');
 
-            } catch (err) {
-                console.error(err);
-                skeletonEl.style.display = 'none';
-                errorEl.classList.remove('hidden');
-            }
-        });
-    </script>
+        const data = await latestReadResponse.json();
+        const statsData = await statsResponse.json();
+
+        const currentYear = new Date().getFullYear().toString();
+        const currentYearBooks = statsData.booksByYear[currentYear] || [];
+        const totalBooks = currentYearBooks.length;
+        const totalPages = currentYearBooks.reduce((sum, book) => sum + (book.pageCount || 0), 0);
+
+        const coverUrl = data.coverUrl || 'https://placehold.co/80x112/ffffff/cccccc?text=NA';
+
+        contentEl.innerHTML = `
+          <div class="content-header">
+            <div class="latest-label">Latest Read</div>
+            <div class="stats-badge">${totalBooks} books • ${totalPages.toLocaleString()} pages</div>
+          </div>
+          <div class="book-container">
+            <img src="${coverUrl}" alt="Cover of ${data.title}" class="book-cover" />
+            <div class="book-info">
+              <div class="book-title">${data.title}</div>
+              <div class="book-author">${data.author}</div>
+              <blockquote class="highlight-container">
+                <p class="highlight-text">${data.highlight}</p>
+              </blockquote>
+            </div>
+          </div>
+        `;
+
+        skeletonEl.style.display = 'none';
+        contentEl.classList.remove('hidden');
+        sendHeight();
+      } catch (err) {
+        console.error(err);
+        skeletonEl.style.display = 'none';
+        errorEl.classList.remove('hidden');
+        sendHeight();
+      }
+    });
+  </script>
 </body>
 </html>
