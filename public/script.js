@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (error) {
             console.error(error);
-            container.style.display = 'none';
+            if (container) container.style.display = 'none'; // Check if container exists before setting style
         }
     };
 
@@ -100,7 +100,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 try { book.imageLinks = JSON.parse(book.imageLinks || '{}'); } catch (e) { book.imageLinks = {}; }
                 // MODIFIED: Parse tags
                 try { book.tags = JSON.parse(book.tags || '[]'); } catch (e) { book.tags = []; }
-                if (groupedLibrary[book.shelf]) groupedLibrary[book.shelf].push(book);
+                if (groupedLibrary[book.shelf]) {
+                   groupedLibrary[book.shelf].push(book);
+                } else {
+                   // If shelf is invalid or missing, maybe default to watchlist or log an error
+                   console.warn(`Book ${book.id} has invalid shelf: ${book.shelf}. Defaulting to watchlist.`);
+                   groupedLibrary.watchlist.push(book);
+                }
             });
             localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify(groupedLibrary));
             return groupedLibrary;
@@ -149,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // NEW: Add tags to meta info
-            if (book.tags && book.tags.length > 0) {
+            if (book.tags && Array.isArray(book.tags) && book.tags.length > 0) {
                  book.tags.forEach(tagId => {
                      const tagInfo = allTagsMap.get(tagId);
                      if (tagInfo) {
@@ -162,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const metaInfoHTML = metaItems.join(''); // Join all items
 
+            // CORRECTED: Removed the comment from the template literal
             return `
                 <div class="book-list-item flex items-start p-4 space-x-4">
                     <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-14 h-20 object-cover rounded-md shadow-sm flex-shrink-0">
@@ -169,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <a href="/details.html?id=${book.id}" class="font-semibold text-gray-800 hover:underline">${book.title}</a>
                         <p class="text-sm text-gray-500 mb-2">${authors}</p>
                         <div class="flex items-center flex-wrap gap-x-3 gap-y-1">
-                            ${metaInfoHTML} {/* Inject combined meta info */}
+                            ${metaInfoHTML}
                         </div>
                     </div>
                     <a href="/details.html?id=${book.id}" class="flex-shrink-0 pt-1">
@@ -179,9 +186,17 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const renderAllShelves = (lib) => {
-            const renderShelf = (shelf, container, shelfName) => container.innerHTML = shelf.length > 0 ? shelf.map(book => createBookListItem(book, shelfName)).join('') : `<p class="p-8 text-center text-gray-500">Nothing here yet.</p>`;
+            const renderShelf = (shelf, container, shelfName) => {
+                 if (!container) return; // Check if container exists
+                 container.innerHTML = shelf.length > 0 ? shelf.map(book => createBookListItem(book, shelfName)).join('') : `<p class="p-8 text-center text-gray-500">Nothing here yet.</p>`;
+            }
             renderShelf(lib.currentlyReading, currentlyReadingContainer, 'currentlyReading');
-            const sortedRead = [...lib.read].sort((a,b) => new Date(b.finishedOn) - new Date(a.finishedOn));
+            // Sort read books by finished date, most recent first
+            const sortedRead = [...lib.read].sort((a,b) => {
+                const dateA = a.finishedOn ? new Date(a.finishedOn) : new Date(0); // Handle null dates
+                const dateB = b.finishedOn ? new Date(b.finishedOn) : new Date(0);
+                return dateB - dateA;
+            });
             renderShelf(sortedRead, readContainer, 'read');
             renderShelf(lib.watchlist, watchlistContainer, 'watchlist');
         }
@@ -197,31 +212,43 @@ document.addEventListener('DOMContentLoaded', () => {
                  renderAllShelves(lib);
                  return true;
              } else {
-                 [currentlyReadingContainer, readContainer, watchlistContainer].forEach(c => c.innerHTML = `<p class="p-8 text-center text-red-500">Could not load library.</p>`);
+                 [currentlyReadingContainer, readContainer, watchlistContainer].forEach(c => {
+                    if (c) c.innerHTML = `<p class="p-8 text-center text-red-500">Could not load library.</p>`; // Check container existence
+                 });
                  return false;
              }
         };
 
         initializePublicPage(); // Initial load
 
-        menuButton.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
-        forceRefreshBtn.addEventListener('click', async () => {
-            showToast('Refreshing from database...');
-            const success = await initializePublicPage(true); // Force refresh both tags and library
-            if (success) {
-                showToast('Library updated!');
-            } else {
-                showToast('Failed to update library.', 'error');
-            }
-            menu.classList.add('hidden');
+        if (menuButton && menu) { // Check if menu elements exist
+            menuButton.addEventListener('click', (e) => { e.stopPropagation(); menu.classList.toggle('hidden'); });
+        }
+        if (forceRefreshBtn) { // Check if refresh button exists
+            forceRefreshBtn.addEventListener('click', async () => {
+                showToast('Refreshing from database...');
+                const success = await initializePublicPage(true); // Force refresh both tags and library
+                if (success) {
+                    showToast('Library updated!');
+                } else {
+                    showToast('Failed to update library.', 'error');
+                }
+                if (menu) menu.classList.add('hidden'); // Check menu existence again
+            });
+        }
+        document.body.addEventListener('click', () => {
+             if (menu && !menu.classList.contains('hidden')) { // Check menu existence and visibility
+                menu.classList.add('hidden');
+             }
         });
-        document.body.addEventListener('click', () => menu.classList.add('hidden'));
     }
 
     if (document.getElementById('public-details-content')) {
         const detailsContainer = document.getElementById('public-details-content');
 
         const renderDetails = (book) => {
+            if (!detailsContainer) return; // Check if container exists
+
             if (!book) {
                 detailsContainer.innerHTML = `<a href="/" class="text-blue-500 mb-8 inline-block">&larr; Back to Library</a><p class="text-center text-gray-500">Book not found.</p>`;
                 return;
@@ -237,12 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const loadBookDetails = async () => {
+             if (!detailsContainer) return; // Check if container exists
             const bookId = new URLSearchParams(window.location.search).get('id');
             if (!bookId) {
                 renderDetails(null);
                 return;
             }
             try {
+                // Use the correct details endpoint that returns the full book object
                 const response = await fetch(`${DETAILS_API_ENDPOINT}?id=${bookId}`);
                 if (!response.ok) throw new Error('Book not found.');
                 const book = await response.json();
