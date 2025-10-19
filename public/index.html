@@ -4,186 +4,120 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BlackPirateX's Book Tracker</title>
-   <link href="/styles/output.css" rel="stylesheet">
-   <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://rsms.me/">
+   <script src="https://cdn.tailwindcss.com"></script> <link rel="preconnect" href="https://rsms.me/">
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     <style>
         :root { font-family: 'Inter', sans-serif; }
         @supports (font-variation-settings: normal) {
             :root { font-family: 'Inter var', sans-serif; }
         }
-        body { background-color: #f8f8f8; }
-        .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
-        
+        body { background-color: #f8f8f8; } /* */
+        .book-list-item:not(:last-child) { border-bottom: 1px solid #e5e7eb; } /* */
+
         #highlight-text {
-            max-height: 7.2rem; /* Clamp to 4 lines */
-            overflow: hidden;
-            /* MODIFIED: Changed to a smoother, iOS-style easing curve */
-            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
+            max-height: 7.2rem; /* Clamp to 4 lines */ /* */
+            overflow: hidden; /* */
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* */
+            position: relative; /* */
         }
         #highlight-text.expanded {
-            max-height: 50rem;
+            max-height: 50rem; /* */
         }
-        
+
         #highlight-text.has-overflow:not(.expanded)::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3rem;
-            background: linear-gradient(to top, white, rgba(255, 255, 255, 0));
-            pointer-events: none;
+            content: ''; /* */
+            position: absolute; /* */
+            bottom: 0; /* */
+            left: 0; /* */
+            right: 0; /* */
+            height: 3rem; /* */
+            background: linear-gradient(to top, white, rgba(255, 255, 255, 0)); /* */
+            pointer-events: none; /* */
         }
 
         #expand-highlight-btn {
-            opacity: 0;
-            transform: scale(0.8);
-            /* MODIFIED: Smoother easing to match the text animation */
-            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0; /* */
+            transform: scale(0.8); /* */
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* */
         }
         #expand-highlight-btn.visible {
-            opacity: 1;
-            transform: scale(1);
+            opacity: 1; /* */
+            transform: scale(1); /* */
         }
 
-        /* NEW: Styles to handle the icon rotation */
         #expand-collapse-icon {
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* */
         }
         #highlight-text.expanded ~ #expand-highlight-btn #expand-collapse-icon {
-            transform: rotate(45deg);
+            transform: rotate(45deg); /* */
         }
+
+        /* --- NEW CSS FOR PROGRESS --- */
+        .book-list-item {
+            transition: background 0.3s ease-out; /* Add transition for the background */ /* */
+            position: relative; /* Ensure positioning context for absolute children */ /* */
+            z-index: 1;
+        }
+
+        .book-list-item > * {
+            /* Ensure text/images stay above the background gradient */
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Ensure the border doesn't get covered by the gradient */
+        .book-list-item:not(:last-child) {
+            border-bottom: 1px solid #e5e7eb; /* */
+        }
+        /* --- END NEW CSS --- */
+
     </style>
 </head>
 <body>
     <div id="public-library" class="max-w-2xl mx-auto py-8 px-4">
-        <header class="pb-4 mb-6 relative">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h1 class="text-3xl font-bold tracking-tight text-gray-900">BlackPirateX's Book Tracker</h1>
-                    <p class="text-gray-500 mt-1">A curated collection of reads, thoughts, and literary journeys.</p>
-                </div>
-                <button id="menu-button" class="p-2 rounded-md hover:bg-gray-200">
-                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                </button>
+        <header class="pb-4 mb-6 relative"> <div class="flex justify-between items-center"> <div>
+                    <h1 class="text-3xl font-bold tracking-tight text-gray-900">BlackPirateX's Book Tracker</h1> <p class="text-gray-500 mt-1">A curated collection of reads, thoughts, and literary journeys.</p> </div>
+                <button id="menu-button" class="p-2 rounded-md hover:bg-gray-200"> <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg> </button>
             </div>
-             <div id="menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200/75 text-sm z-10">
-                <a href="/" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Home</a>
-                <a href="/dashboard" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Dashboard</a>
-                <a href="https://blackpiratex.com" target="_blank" rel="noopener noreferrer" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Frontpage</a>
-                <div class="border-t my-1"></div>
-                <button id="force-refresh-btn" class="w-full text-left px-4 py-2 text-blue-600 font-semibold hover:bg-gray-100">Force Refresh</button>
-            </div>
+             <div id="menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200/75 text-sm z-10"> <a href="/" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Home</a> <a href="/dashboard" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Dashboard</a> <a href="https://blackpiratex.com" target="_blank" rel="noopener noreferrer" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">Frontpage</a> <div class="border-t my-1"></div> <button id="force-refresh-btn" class="w-full text-left px-4 py-2 text-blue-600 font-semibold hover:bg-gray-100">Force Refresh</button> </div>
         </header>
 
-        <section id="random-highlight-container" class="mb-10 p-6 bg-white rounded-xl border border-gray-200/75 min-h-[150px] relative">
-            <div id="highlight-skeleton" class="animate-pulse">
-                <div class="h-5 bg-gray-200 rounded w-5/6 mb-4"></div>
-                <div class="h-5 bg-gray-200 rounded w-3/4"></div>
-                <div class="h-4 bg-gray-200 rounded w-1/3 mt-6"></div>
-            </div>
-            <div id="highlight-content" class="hidden">
-                <!-- Content will be injected here by script.js -->
-            </div>
+        <section id="random-highlight-container" class="mb-10 p-6 bg-white rounded-xl border border-gray-200/75 min-h-[150px] relative"> <div id="highlight-skeleton" class="animate-pulse"> <div class="h-5 bg-gray-200 rounded w-5/6 mb-4"></div> <div class="h-5 bg-gray-200 rounded w-3/4"></div> <div class="h-4 bg-gray-200 rounded w-1/3 mt-6"></div> </div>
+            <div id="highlight-content" class="hidden"> </div>
         </section>
 
-        <!-- Link to Stats Page -->
-        <div class="mb-10">
-            <a href="/stats.html" class="block w-full text-center bg-white hover:bg-gray-50 border border-gray-200/75 rounded-xl px-6 py-4 text-sm font-semibold text-gray-700 transition-colors">
-                View Detailed Reading Statistics &rarr;
-            </a>
+        <div class="mb-10"> <a href="/stats.html" class="block w-full text-center bg-white hover:bg-gray-50 border border-gray-200/75 rounded-xl px-6 py-4 text-sm font-semibold text-gray-700 transition-colors"> View Detailed Reading Statistics &rarr; </a>
         </div>
 
 
         <main class="space-y-10">
-            <section id="currently-reading-section">
-                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Currently Reading</h2>
-                <div id="public-currentlyReading" class="bg-white rounded-xl border border-gray-200/75">
-                    <div class="book-list-item flex items-start p-4 space-x-4 animate-pulse">
-                        <div class="w-14 h-20 bg-gray-200 rounded-md flex-shrink-0"></div>
-                        <div class="flex-grow pt-1 space-y-3">
-                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <section id="read-section">
-                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Read</h2>
-                <div id="public-read" class="bg-white rounded-xl border border-gray-200/75">
-                    <div class="book-list-item flex items-start p-4 space-x-4 animate-pulse">
-                        <div class="w-14 h-20 bg-gray-200 rounded-md flex-shrink-0"></div>
-                        <div class="flex-grow pt-1 space-y-3">
-                            <div class="h-4 bg-gray-200 rounded w-5/6"></div>
-                            <div class="h-3 bg-gray-200 rounded w-2/4"></div>
-                        </div>
-                    </div>
-                    <div class="book-list-item flex items-start p-4 space-x-4 animate-pulse">
-                        <div class="w-14 h-20 bg-gray-200 rounded-md flex-shrink-0"></div>
-                        <div class="flex-grow pt-1 space-y-3">
-                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-                            <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                        </div>
+            <section id="currently-reading-section"> <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Currently Reading</h2> <div id="public-currentlyReading" class="bg-white rounded-xl border border-gray-200/75"> <div class="book-list-item flex items-start p-4 space-x-4 animate-pulse"> <div class="w-14 h-20 bg-gray-200 rounded-md flex-shrink-0"></div> <div class="flex-grow pt-1 space-y-3"> <div class="h-4 bg-gray-200 rounded w-3/4"></div> <div class="h-3 bg-gray-200 rounded w-1/2"></div> </div>
                     </div>
                 </div>
             </section>
 
-            <section id="watchlist-section">
-                <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Watchlist</h2>
-                <div id="public-watchlist" class="bg-white rounded-xl border border-gray-200/75">
-                    <div class="book-list-item flex items-start p-4 space-x-4 animate-pulse">
-                        <div class="w-14 h-20 bg-gray-200 rounded-md flex-shrink-0"></div>
-                        <div class="flex-grow pt-1 space-y-3">
-                            <div class="h-4 bg-gray-200 rounded w-2/3"></div>
-                            <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-                        </div>
+            <section id="read-section"> <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Read</h2> <div id="public-read" class="bg-white rounded-xl border border-gray-200/75"> <div class="book-list-item flex items-start p-4 space-x-4 animate-pulse"> <div class="w-14 h-20 bg-gray-200 rounded-md flex-shrink-0"></div> <div class="flex-grow pt-1 space-y-3"> <div class="h-4 bg-gray-200 rounded w-5/6"></div> <div class="h-3 bg-gray-200 rounded w-2/4"></div> </div>
+                    </div>
+                    <div class="book-list-item flex items-start p-4 space-x-4 animate-pulse"> <div class="w-14 h-20 bg-gray-200 rounded-md flex-shrink-0"></div> <div class="flex-grow pt-1 space-y-3"> <div class="h-4 bg-gray-200 rounded w-3/4"></div> <div class="h-3 bg-gray-200 rounded w-1/2"></div> </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="watchlist-section"> <h2 class="text-lg font-semibold text-gray-900 mb-2 px-4">Watchlist</h2> <div id="public-watchlist" class="bg-white rounded-xl border border-gray-200/75"> <div class="book-list-item flex items-start p-4 space-x-4 animate-pulse"> <div class="w-14 h-20 bg-gray-200 rounded-md flex-shrink-0"></div> <div class="flex-grow pt-1 space-y-3"> <div class="h-4 bg-gray-200 rounded w-2/3"></div> <div class="h-3 bg-gray-200 rounded w-1/2"></div> </div>
                     </div>
                 </div>
             </section>
         </main>
-        
-        <hr class="mt-16 mb-8 border-gray-200">
-        <footer class="pb-8">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 text-sm text-gray-500">
-                <div class="text-left">
-                    <h3 class="font-semibold text-gray-800 mb-2">Browse</h3>
-                    <div class="grid grid-cols-2 gap-x-6 gap-y-1">
-                        <a href="https://blog.blackpiratex.com/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Blog 🖊️</a>
-                        <a href="https://gallery.blackpiratex.com" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Gallery 📸</a>
-                        <a href="https://music.blackpiratex.com" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Music 🎧</a>
-                        <a href="https://notes.blackpiratex.com" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Notes 📚</a>
-                        <a href="https://status.blackpiratex.com" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Status 🎯</a>
-                        <a href="https://blackpiratex.com/bookmarks/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Bookmarks 📑</a>
-                        <a href="https://blackpiratex.com/contact/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Contact 💌</a>
-                        <a href="https://blackpiratex.com/credits/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Credits 🤝</a>
-                        <a href="https://blackpiratex.com/about/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">About 🙋‍♂️</a>
-                    </div>
+
+        <hr class="mt-16 mb-8 border-gray-200"> <footer class="pb-8"> <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 text-sm text-gray-500"> <div class="text-left"> <h3 class="font-semibold text-gray-800 mb-2">Browse</h3> <div class="grid grid-cols-2 gap-x-6 gap-y-1"> <a href="https://blog.blackpiratex.com/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Blog 🖊️</a> <a href="https://gallery.blackpiratex.com" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Gallery 📸</a> <a href="https://music.blackpiratex.com" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Music 🎧</a> <a href="https://notes.blackpiratex.com" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Notes 📚</a> <a href="https://status.blackpiratex.com" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Status 🎯</a> <a href="https://blackpiratex.com/bookmarks/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Bookmarks 📑</a> <a href="https://blackpiratex.com/contact/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Contact 💌</a> <a href="https://blackpiratex.com/credits/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">Credits 🤝</a> <a href="https://blackpiratex.com/about/" target="_blank" rel="noopener noreferrer" class="hover:text-gray-900 hover:underline">About 🙋‍♂️</a> </div>
                 </div>
-                <div class="text-left">
-                    <h3 class="font-semibold text-gray-800 mb-2">Follow</h3>
-                    <div class="space-y-1">
-                        <a href="https://links.blackpiratex.com/github" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">Github 💻</a>
-                        <a href="https://links.blackpiratex.com/pixelfed" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">PixelFed 📷</a>
-                        <a href="https://links.blackpiratex.com/yt" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">Youtube 🎥</a>
-                        <a href="https://links.blackpiratex.com/mastodon" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">Mastodon 🌑</a>
-                        <a href="https://links.blackpiratex.com/wa" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">WhatsApp 🗨️</a>
-                        <a href="https://links.blackpiratex.com/last.fm" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">Last.fm 🎵</a>
-                    </div>
+                <div class="text-left"> <h3 class="font-semibold text-gray-800 mb-2">Follow</h3> <div class="space-y-1"> <a href="https://links.blackpiratex.com/github" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">Github 💻</a> <a href="https://links.blackpiratex.com/pixelfed" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">PixelFed 📷</a> <a href="https://links.blackpiratex.com/yt" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">Youtube 🎥</a> <a href="https://links.blackpiratex.com/mastodon" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">Mastodon 🌑</a> <a href="https://links.blackpiratex.com/wa" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">WhatsApp 🗨️</a> <a href="https://links.blackpiratex.com/last.fm" target="_blank" rel="noopener noreferrer" class="block hover:text-gray-900 hover:underline">Last.fm 🎵</a> </div>
                 </div>
             </div>
-            <p class="mt-12 text-center text-xs text-gray-500">
-                Want your own book tracker? Here's the 
-                <a href="https://github.com/blackpirateapps/book-tracker.git" target="_blank" rel="noopener noreferrer" class="font-semibold text-gray-600 hover:underline">source code</a>.
-            </p>
+            <p class="mt-12 text-center text-xs text-gray-500"> Want your own book tracker? Here's the
+                <a href="https://github.com/blackpirateapps/book-tracker.git" target="_blank" rel="noopener noreferrer" class="font-semibold text-gray-600 hover:underline">source code</a>. </p>
         </footer>
 
     </div>
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity duration-300 z-50"><p id="toast-message"></p></div>
-    <script src="script.js" defer></script>
-</body>
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white py-2 px-5 rounded-lg shadow-xl opacity-0 transition-opacity duration-300 z-50"><p id="toast-message"></p></div> <script src="script.js" defer></script> </body>
 </html>
-

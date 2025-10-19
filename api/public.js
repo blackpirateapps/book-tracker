@@ -11,7 +11,6 @@ export default async function handler(req, res) {
     try {
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
 
-      // MODIFIED: Added 'hasHighlights' column to the table definition.
       // Ensure table exists (also includes the tags column needed by other endpoints)
       await client.execute(`
         CREATE TABLE IF NOT EXISTS books (
@@ -24,18 +23,18 @@ export default async function handler(req, res) {
         );
       `);
 
-      // MODIFIED: Select the 'tags' column as well
+      // MODIFIED: Select the 'readingProgress' column
       const result = await client.execute(
-        "SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights, tags FROM books" // Added 'tags'
-      );
+        "SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights, tags, readingProgress FROM books" // Added 'readingProgress'
+      ); //
 
       return res.status(200).json(result.rows);
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ error: 'Failed to fetch books from the database.' });
+      return res.status(500).json({ error: 'Failed to fetch books from the database.' }); //
     }
   }
 
   // Reject any other method
-  return res.status(405).json({ error: `Method ${req.method} not allowed.` });
+  return res.status(405).json({ error: `Method ${req.method} not allowed.` }); //
 }
