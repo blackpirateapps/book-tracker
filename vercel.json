@@ -9,9 +9,14 @@
       "destination": "/dashboard/index.html"
     },
     {
-      "source": "/dashboard/(.*)",
-      "destination": "/dashboard/$1"
+      "source": "/dashboard/:path*", // Match /dashboard followed by anything
+      "destination": "/dashboard/index.html" // Always serve the React app's entry point
     }
+     // You might not need the old /dashboard/(.*) rule anymore
+     // {
+     //   "source": "/dashboard/(.*)",
+     //   "destination": "/dashboard/$1"
+     // }
   ],
   "headers": [
     {
