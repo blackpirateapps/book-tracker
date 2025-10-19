@@ -1,3 +1,4 @@
+// api/public.js
 import { createClient } from '@libsql/client';
 
 const client = createClient({
@@ -5,28 +6,29 @@ const client = createClient({
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
-// This API only handles GET requests. It is safe for public access.
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      // This header tells Vercel's CDN to cache the response for 600 seconds (10 minutes).
       res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
 
       // MODIFIED: Added 'hasHighlights' column to the table definition.
+      // Ensure table exists (also includes the tags column needed by other endpoints)
       await client.execute(`
         CREATE TABLE IF NOT EXISTS books (
-          id TEXT PRIMARY KEY, title TEXT, authors TEXT, imageLinks TEXT, 
-          pageCount INTEGER, publishedDate TEXT, industryIdentifiers TEXT, 
+          id TEXT PRIMARY KEY, title TEXT, authors TEXT, imageLinks TEXT,
+          pageCount INTEGER, publishedDate TEXT, industryIdentifiers TEXT,
           highlights TEXT, startedOn TEXT, finishedOn TEXT, readingMedium TEXT, shelf TEXT,
-          hasHighlights INTEGER DEFAULT 0
+          hasHighlights INTEGER DEFAULT 0, readingProgress INTEGER DEFAULT 0,
+          publisher TEXT, fullPublishDate TEXT, bookDescription TEXT, subjects TEXT,
+          tags TEXT
         );
       `);
 
-      // MODIFIED: Selects 'hasHighlights' but NOT the full 'highlights' text.
+      // MODIFIED: Select the 'tags' column as well
       const result = await client.execute(
-        "SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights FROM books"
+        "SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights, tags FROM books" // Added 'tags'
       );
-      
+
       return res.status(200).json(result.rows);
     } catch (e) {
       console.error(e);
