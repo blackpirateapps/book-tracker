@@ -167,25 +167,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const metaInfoHTML = metaItems.join(''); //
 
-            // --- MODIFICATION FOR PROGRESS ---
             let progressStyle = ''; //
             let progressClass = ''; //
-            let progressPercent = 0; // Keep track for maybe adding text later
+            let progressPercent = 0; //
             if (shelf === 'currentlyReading' && book.readingProgress > 0) { //
                  progressPercent = book.readingProgress; //
-                 // Using a subtle blue gradient that stops at the progress percentage
-                 // The gradient goes from a slightly transparent blue to transparent white
-                 // Adjust colors (#bfdbfe with alpha, #ffffff with alpha) as needed
                  progressStyle = `style="background: linear-gradient(to right, #bfdbfe66 ${progressPercent}%, #ffffff00 ${progressPercent}%);"`; //
-                 progressClass = ' book-progress-item'; // Add a class for potential hover effects or transitions
+                 progressClass = ' book-progress-item'; //
             }
-            // --- END MODIFICATION ---
 
-            // --- MODIFIED RETURN: Added progressStyle and progressClass ---
+            // CORRECTED: Removed the comments from the template literal
             return `
-                <div class="book-list-item flex items-start p-4 space-x-4 relative${progressClass}" ${progressStyle}> {/* Added relative positioning and style/class */}
-                    {/* Optional: Add percentage text if needed, absolutely positioned */}
-                    ${shelf === 'currentlyReading' && progressPercent > 0 ? `<div class="absolute top-1 right-2 text-xs font-medium text-blue-700">${progressPercent}%</div>` : ''} {/* */}
+                <div class="book-list-item flex items-start p-4 space-x-4 relative${progressClass}" ${progressStyle}>
+                    ${shelf === 'currentlyReading' && progressPercent > 0 ? `<div class="absolute top-1 right-2 text-xs font-medium text-blue-700">${progressPercent}%</div>` : ''}
                     <img src="${coverUrl}" alt="Cover of ${book.title}" class="w-14 h-20 object-cover rounded-md shadow-sm flex-shrink-0">
                     <div class="flex-grow">
                         <a href="/details.html?id=${book.id}" class="font-semibold text-gray-800 hover:underline">${book.title}</a>
@@ -197,8 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <a href="/details.html?id=${book.id}" class="flex-shrink-0 pt-1">
                         <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                     </a>
-                </div>`; //
+                </div>`;
         };
+         // --- End of createBookListItem ---
 
         const renderAllShelves = (lib) => {
             const renderShelf = (shelf, container, shelfName) => {
