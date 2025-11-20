@@ -6,15 +6,19 @@ const client = createClient({
 });
 
 export default async function handler(req, res) {
+  // Allow GET requests from any origin
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: "Method not allowed." });
   }
 
   try {
-    // This header is key for speed. It caches the response on Vercel's Edge Network.
+    // This header caches the response on Vercel's Edge Network for speed
     res.setHeader('Cache-Control', 's-maxage=1, stale-while-revalidate=59');
 
-    // Efficiently select one random book that is guaranteed to have highlights.
+    // Select one random book with highlights
     const result = await client.execute(
       "SELECT highlights, title, authors FROM books WHERE hasHighlights = 1 ORDER BY RANDOM() LIMIT 1"
     );
@@ -31,10 +35,10 @@ export default async function handler(req, res) {
     try { authors = JSON.parse(book.authors); } catch (e) {}
 
     if (highlights.length === 0) {
-        return res.status(404).json({ error: "Book found, but it contains no highlights." });
+      return res.status(404).json({ error: "Book found, but it contains no highlights." });
     }
-    
-    // Pick a random highlight from the selected book's array
+
+    // Pick a random highlight from the book
     const randomHighlight = highlights[Math.floor(Math.random() * highlights.length)];
     const author = authors.length > 0 ? authors.join(', ') : 'Unknown Author';
 
