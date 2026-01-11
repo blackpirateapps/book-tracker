@@ -10,9 +10,13 @@ import {
     Lock,
     LogOut,
     RefreshCw,
-    Tag
+    Tag,
+    BookOpen,
+    CheckCircle2,
+    Clock,
+    Loader2
 } from 'lucide-react';
-import TagsManager from './TagsManager'; // Ensure this component exists in the same folder
+import TagsManager from './TagsManager';
 
 const Dashboard = ({ onBack }) => {
     // Auth State
@@ -29,10 +33,13 @@ const Dashboard = ({ onBack }) => {
     const [successMsg, setSuccessMsg] = useState('');
     const [filter, setFilter] = useState('');
 
-    // Action State (Books)
-    const [newBookOLID, setNewBookOLID] = useState('');
-    const [newBookShelf, setNewBookShelf] = useState('watchlist');
-    const [isAdding, setIsAdding] = useState(false);
+    // --- Search & Add State ---
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [addingBookId, setAddingBookId] = useState(null); 
+
+    // Action State (Edit)
     const [editingBook, setEditingBook] = useState(null);
 
     // --- Authentication ---
@@ -81,12 +88,34 @@ const Dashboard = ({ onBack }) => {
         return str.split(',').map(s => s.trim()).filter(Boolean);
     };
 
-    // --- Book Actions ---
-    const handleAddBook = async (e) => {
+    // --- OpenLibrary Search ---
+    const handleSearch = async (e) => {
         e.preventDefault();
-        if (!newBookOLID.trim()) return;
+        if (!searchQuery.trim()) return;
 
-        setIsAdding(true);
+        setIsSearching(true);
+        setSearchResults([]);
+        setError(null);
+
+        try {
+            // Using the proxy API to avoid CORS and normalize data
+            const res = await fetch(`/api/openlibrary-search?q=${encodeURIComponent(searchQuery)}`);
+            
+            if (!res.ok) throw new Error('Search failed');
+            
+            const results = await res.json();
+            setSearchResults(results);
+        } catch (e) {
+            console.error(e);
+            setError("Could not fetch results from OpenLibrary.");
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    // --- Book Actions ---
+    const handleAddBook = async (olid, shelf) => {
+        setAddingBookId(olid);
         setError(null);
         setSuccessMsg('');
 
@@ -97,7 +126,7 @@ const Dashboard = ({ onBack }) => {
                 body: JSON.stringify({
                     password,
                     action: 'add',
-                    data: { olid: newBookOLID.trim(), shelf: newBookShelf }
+                    data: { olid, shelf }
                 })
             });
 
@@ -106,12 +135,11 @@ const Dashboard = ({ onBack }) => {
             if (!res.ok) throw new Error(data.error || 'Failed to add book');
             
             setSuccessMsg(`Successfully added: "${data.book.title}"`);
-            setNewBookOLID('');
-            fetchBooks(); 
+            fetchBooks(); // Refresh local list
         } catch (e) {
             setError(e.message);
         } finally {
-            setIsAdding(false);
+            setAddingBookId(null);
         }
     };
 
@@ -282,49 +310,97 @@ const Dashboard = ({ onBack }) => {
                     {error && <div style={{ backgroundColor: '#ffe6e6', color: '#d00', padding: '10px', border: '1px solid #d00', marginBottom: '15px' }}>Error: {error}</div>}
                     {successMsg && <div style={{ backgroundColor: '#e6fffa', color: '#006600', padding: '10px', border: '1px solid #006600', marginBottom: '15px' }}>{successMsg}</div>}
 
-                    {/* Add Book Panel */}
+                    {/* NEW: SEARCH & ADD SECTION */}
                     <div style={{ backgroundColor: '#f4f4f4', padding: '15px', border: '1px solid #999', marginBottom: '30px' }}>
                         <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', borderBottom: '1px dotted #999', paddingBottom: '5px' }}>
-                            <Plus size={14} style={{ display: 'inline' }} /> Add Book via OpenLibrary
+                            <Plus size={14} style={{ display: 'inline' }} /> Add New Books
                         </h3>
-                        <form onSubmit={handleAddBook} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                            <div style={{ flex: 1, minWidth: '200px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>OLID (e.g. OL27448W):</label>
+                        
+                        {/* Search Input */}
+                        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                            <div style={{ flex: 1, position: 'relative' }}>
+                                <Search size={16} style={{ position: 'absolute', left: '8px', top: '8px', color: '#666' }} />
                                 <input 
                                     type="text" 
-                                    value={newBookOLID}
-                                    onChange={e => setNewBookOLID(e.target.value)}
-                                    placeholder="OL..."
-                                    style={{ width: '100%', padding: '6px', border: '1px solid #999' }}
-                                    required
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Search by Title, Author, or OLID..."
+                                    style={{ width: '100%', padding: '8px 8px 8px 30px', border: '1px solid #999', boxSizing: 'border-box' }}
                                 />
                             </div>
-                            <div style={{ width: '150px' }}>
-                                <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>Shelf:</label>
-                                <select 
-                                    value={newBookShelf} 
-                                    onChange={e => setNewBookShelf(e.target.value)}
-                                    style={{ width: '100%', padding: '6px', border: '1px solid #999' }}
-                                >
-                                    <option value="watchlist">Watchlist</option>
-                                    <option value="currentlyReading">Reading Now</option>
-                                    <option value="read">Finished</option>
-                                </select>
-                            </div>
-                            <button type="submit" disabled={isAdding} style={{ padding: '7px 15px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                                {isAdding ? 'Fetching...' : 'ADD BOOK'}
+                            <button type="submit" disabled={isSearching} style={{ padding: '8px 20px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                                {isSearching ? 'SEARCHING...' : 'SEARCH'}
                             </button>
                         </form>
+
+                        {/* Search Results */}
+                        {searchResults.length > 0 && (
+                            <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ccc', backgroundColor: 'white' }}>
+                                {searchResults.map(result => {
+                                    // Check if book exists in local library
+                                    const existingBook = books.find(b => b.id === result.key);
+                                    
+                                    const coverUrl = result.cover_i 
+                                        ? `https://covers.openlibrary.org/b/id/${result.cover_i}-S.jpg` 
+                                        : null;
+
+                                    return (
+                                        <div key={result.key} style={{ display: 'flex', padding: '10px', borderBottom: '1px solid #eee', alignItems: 'center', gap: '15px' }}>
+                                            {/* Cover */}
+                                            <div style={{ width: '40px', height: '60px', backgroundColor: '#eee', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {coverUrl ? <img src={coverUrl} alt="" style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <span style={{ fontSize: '10px' }}>No Img</span>}
+                                            </div>
+
+                                            {/* Info */}
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{result.title}</div>
+                                                <div style={{ fontSize: '12px', color: '#666' }}>
+                                                    {result.author_name ? result.author_name.join(', ') : 'Unknown Author'} 
+                                                    {result.first_publish_year && ` (${result.first_publish_year})`}
+                                                </div>
+                                                <div style={{ fontSize: '10px', color: '#999', marginTop: '2px' }}>OLID: {result.key}</div>
+                                            </div>
+
+                                            {/* Actions */}
+                                            <div style={{ textAlign: 'right' }}>
+                                                {existingBook ? (
+                                                    <span style={{ fontSize: '12px', color: 'green', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        <CheckCircle2 size={14} /> Added ({existingBook.shelf})
+                                                    </span>
+                                                ) : addingBookId === result.key ? (
+                                                    <span style={{ fontSize: '12px', color: '#666' }}>Adding...</span>
+                                                ) : (
+                                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                                        <button onClick={() => handleAddBook(result.key, 'watchlist')} title="Add to Watchlist" style={{ cursor: 'pointer', padding: '5px', background: '#fff', border: '1px solid #ccc' }}>
+                                                            <Clock size={16} />
+                                                        </button>
+                                                        <button onClick={() => handleAddBook(result.key, 'currentlyReading')} title="Add to Reading" style={{ cursor: 'pointer', padding: '5px', background: '#fff', border: '1px solid #ccc' }}>
+                                                            <BookOpen size={16} />
+                                                        </button>
+                                                        <button onClick={() => handleAddBook(result.key, 'read')} title="Add to Finished" style={{ cursor: 'pointer', padding: '5px', background: '#fff', border: '1px solid #ccc' }}>
+                                                            <CheckCircle2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {searchResults.length === 0 && !isSearching && searchQuery && (
+                            <div style={{ fontStyle: 'italic', color: '#666', marginTop: '10px' }}>Search above to find books.</div>
+                        )}
                     </div>
 
-                    {/* Filter */}
+                    {/* Filter Local List */}
                     <div style={{ marginBottom: '10px', textAlign: 'right' }}>
                         <Search size={12} style={{ display: 'inline', marginRight: '5px' }} />
                         <input 
                             type="text" 
                             value={filter}
                             onChange={e => setFilter(e.target.value)}
-                            placeholder="Filter list..."
+                            placeholder="Filter existing library..."
                             style={{ padding: '4px', border: '1px solid #ccc' }}
                         />
                     </div>
@@ -383,7 +459,7 @@ const Dashboard = ({ onBack }) => {
                                     );
                                 })}
                                 {filteredBooks.length === 0 && (
-                                    <tr><td colSpan="5" align="center" style={{ padding: '20px', fontStyle: 'italic' }}>No books found.</td></tr>
+                                    <tr><td colSpan="5" align="center" style={{ padding: '20px', fontStyle: 'italic' }}>No books found in library.</td></tr>
                                 )}
                             </tbody>
                         </table>
