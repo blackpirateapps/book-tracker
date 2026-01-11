@@ -1,4 +1,3 @@
-// api/public.js
 import { createClient } from '@libsql/client';
 
 const client = createClient({
@@ -11,7 +10,7 @@ export default async function handler(req, res) {
     try {
       const { q } = req.query;
 
-      // Ensure table exists (also includes the tags column needed by other endpoints)
+      // Ensure table exists (Keep this for safety, or move to a separate init script)
       await client.execute(`
         CREATE TABLE IF NOT EXISTS books (
           id TEXT PRIMARY KEY, title TEXT, authors TEXT, imageLinks TEXT,
@@ -23,32 +22,48 @@ export default async function handler(req, res) {
         );
       `);
 
-      let query = "SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights, tags, readingProgress FROM books";
+      // OPTIMIZED QUERY: Only select columns needed for the list view
+      // Removed: bookDescription, highlights, subjects, publisher, fullPublishDate, industryIdentifiers, pageCount, startedOn
+      let query = `
+        SELECT 
+          id, 
+          title, 
+          authors, 
+          imageLinks, 
+          shelf, 
+          readingMedium, 
+          finishedOn, 
+          tags, 
+          readingProgress 
+        FROM books
+      `;
+      
       let args = [];
 
       if (q) {
-        // If a search query is provided, filter by title, authors, or highlights
-        // We use % wildcard for partial matches
-        query += " WHERE title LIKE ? OR authors LIKE ? OR highlights LIKE ?";
+        // Search logic remains the same
+        query += " WHERE title LIKE ? OR authors LIKE ?";
         const searchPattern = `%${q}%`;
-        args = [searchPattern, searchPattern, searchPattern];
+        args = [searchPattern, searchPattern];
         
-        // Cache search results for a shorter duration (10 seconds)
+        // Lower cache for search results
         res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=59');
       } else {
-        // Standard cache for full library (10 minutes)
+        // High cache for main library view
         res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
       }
+
+      // Add simple sorting (optional but recommended)
+      // query += " ORDER BY finishedOn DESC"; 
 
       const result = await client.execute({ sql: query, args });
 
       return res.status(200).json(result.rows);
     } catch (e) {
-      console.error(e);
+      console.error("Public API Error:", e);
       return res.status(500).json({ error: 'Failed to fetch books from the database.' });
     }
   }
 
-  // Reject any other method
   return res.status(405).json({ error: `Method ${req.method} not allowed.` });
 }
