@@ -7,6 +7,7 @@ const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
     const authors = book.authors ? book.authors.join(', ') : 'Unknown';
     const resolvedTags = book.tags ? book.tags.map(id => tagsMap.get(id)).filter(Boolean) : [];
 
+    // Layout Stability: Pre-defined height container for the row
     const containerStyle = {
         borderBottom: '1px solid #ddd',
         marginBottom: '10px',
@@ -15,22 +16,26 @@ const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
         display: 'flex',
         gap: '15px',
         alignItems: 'flex-start',
-        cursor: 'pointer' // Make it look clickable
+        cursor: 'pointer',
+        // Important for Virtuoso to estimate height correctly if content varies
+        minHeight: '80px' 
     };
 
     return (
-        <div style={containerStyle} onClick={() => onClick(book.id)} className="book-item-hover">
-            {/* Image Column */}
+        <div style={containerStyle} onClick={() => onClick(book.id)}>
             <div style={{ flexShrink: 0 }}>
-                <img 
-                    src={coverUrl} 
-                    alt={book.title} 
-                    width="45"
-                    style={{ border: '1px solid #999', display: 'block' }} 
-                />
+                {/* Fixed Dimension Wrapper for Layout Stability */}
+                <div style={{ width: '45px', height: '68px', backgroundColor: '#f4f4f4', border: '1px solid #999' }}>
+                    <img 
+                        src={coverUrl} 
+                        alt={book.title} 
+                        width="45" height="68"
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
+                    />
+                </div>
             </div>
 
-            {/* Content Column */}
             <div style={{ flexGrow: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '16px', color: '#0000AA', lineHeight: '1.2' }}>
                     <b style={{ textDecoration: 'underline' }}>{book.title}</b>
@@ -39,6 +44,11 @@ const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
                     by {authors}
                 </div>
                 
+                {/* Show status explicitly since we merged the shelves */}
+                <div style={{ marginBottom: '4px', fontSize: '11px', color: '#666' }}>
+                    STATUS: <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{shelf === 'currentlyReading' ? 'Reading' : shelf}</span>
+                </div>
+
                 {shelf === 'currentlyReading' && (
                     <div style={{ marginBottom: '5px', fontSize: '12px' }}>
                         Progress: {book.readingProgress}%
@@ -64,7 +74,6 @@ const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
                 </div>
             </div>
 
-            {/* Action Column */}
             <div style={{ flexShrink: 0 }}>
                  <div style={{ color: '#000' }}>
                     <MoreHorizontal size={16} />

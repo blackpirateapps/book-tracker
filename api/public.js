@@ -8,9 +8,12 @@ const client = createClient({
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      const { q } = req.query;
+      // Default to 20 items per chunk
+      const { q, limit = 20, offset = 0 } = req.query;
+      const limitVal = parseInt(limit);
+      const offsetVal = parseInt(offset);
 
-      // Ensure table exists (Keep this for safety, or move to a separate init script)
+      // Ensure table exists (Keep this for safety)
       await client.execute(`
         CREATE TABLE IF NOT EXISTS books (
           id TEXT PRIMARY KEY, title TEXT, authors TEXT, imageLinks TEXT,
@@ -22,8 +25,8 @@ export default async function handler(req, res) {
         );
       `);
 
-      // OPTIMIZED QUERY: Only select columns needed for the list view
-      // Removed: bookDescription, highlights, subjects, publisher, fullPublishDate, industryIdentifiers, pageCount, startedOn
+      // OPTIMIZED QUERY: Select only columns needed for the list
+      // Added LIMIT and OFFSET for pagination
       let query = `
         SELECT 
           id, 
@@ -41,20 +44,19 @@ export default async function handler(req, res) {
       let args = [];
 
       if (q) {
-        // Search logic remains the same
         query += " WHERE title LIKE ? OR authors LIKE ?";
         const searchPattern = `%${q}%`;
         args = [searchPattern, searchPattern];
-        
-        // Lower cache for search results
+        // Lower cache for search
         res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=59');
       } else {
-        // High cache for main library view
-        res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
+        // High cache for browsing
+        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
       }
 
-      // Add simple sorting (optional but recommended)
-      // query += " ORDER BY finishedOn DESC"; 
+      // Consistent ordering is crucial for pagination
+      query += " ORDER BY finishedOn DESC, title ASC LIMIT ? OFFSET ?";
+      args.push(limitVal, offsetVal);
 
       const result = await client.execute({ sql: query, args });
 

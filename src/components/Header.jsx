@@ -24,33 +24,27 @@ const Header = ({ onStatsClick, onHomeClick, onDashboardClick }) => {
                 "A digital catalog of my literary journey."
             </div>
 
-            {/* Navbar */}
             <div style={{ 
-                borderTop: '1px solid #ccc', 
-                borderBottom: '1px solid #ccc', 
-                padding: '8px 0',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '5px 10px'
+                borderTop: '1px solid #ccc', borderBottom: '1px solid #ccc', padding: '8px 0',
+                display: 'flex', flexWrap: 'wrap', gap: '5px 10px'
             }}>
-                <a href="#" onClick={(e) => { e.preventDefault(); onDashboardClick(); }} style={linkStyle}>
+                <a onClick={(e) => { e.preventDefault(); onDashboardClick(); }} style={linkStyle}>
                     <LayoutDashboard size={14} /> Dashboard
                 </a>
                 <span style={{color: '#ccc'}}>|</span>
-                <a href="#" onClick={(e) => { e.preventDefault(); onStatsClick(); }} style={linkStyle}>
+                <a onClick={(e) => { e.preventDefault(); onStatsClick(); }} style={linkStyle}>
                     <TrendingUp size={14} /> Stats
                 </a>
                 <span style={{color: '#ccc'}}>|</span>
-                <a href="#" onClick={e => e.preventDefault()} style={linkStyle}>
+                <a href="https://github.com/yourusername/repo" target="_blank" rel="noreferrer" style={linkStyle}>
                     <Github size={14} /> Source Code
                 </a>
                 <span style={{color: '#ccc'}}>|</span>
-                <a href="#" onClick={e => e.preventDefault()} style={linkStyle}>
+                <a href="https://yourwebsite.com" target="_blank" rel="noreferrer" style={linkStyle}>
                     <ExternalLink size={14} /> Website
                 </a>
             </div>
         </div>
     );
 };
-
 export default Header;

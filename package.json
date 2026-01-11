@@ -14,7 +14,9 @@
     "lucide-react": "^0.300.0",
     "@libsql/client": "latest",
     "@vercel/blob": "latest",
-    "sharp": "latest"
+    "sharp": "latest",
+    "react-virtuoso": "latest",
+    "react-router-dom": "latest"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
