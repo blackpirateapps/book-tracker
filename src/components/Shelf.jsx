@@ -1,7 +1,7 @@
 import React from 'react';
 import BookListItem from './BookListItem';
 
-const Shelf = ({ title, books, icon: Icon, loading, tagsMap }) => {
+const Shelf = ({ title, books, icon: Icon, loading, tagsMap, onBookClick }) => {
     return (
         <div style={{ marginBottom: '30px' }}>
             <h4 style={{ 
@@ -27,6 +27,7 @@ const Shelf = ({ title, books, icon: Icon, loading, tagsMap }) => {
                             book={book} 
                             shelf={book.shelf} 
                             tagsMap={tagsMap} 
+                            onClick={onBookClick} // Pass the click handler down
                         />
                     ))}
                 </div>

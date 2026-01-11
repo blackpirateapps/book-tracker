@@ -2,7 +2,7 @@ import React from 'react';
 import { MoreHorizontal, CheckCircle2 } from 'lucide-react';
 import TagBadge from './TagBadge';
 
-const BookListItem = ({ book, shelf, tagsMap }) => {
+const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
     const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120?text=No+Cover`;
     const authors = book.authors ? book.authors.join(', ') : 'Unknown';
     const resolvedTags = book.tags ? book.tags.map(id => tagsMap.get(id)).filter(Boolean) : [];
@@ -14,11 +14,12 @@ const BookListItem = ({ book, shelf, tagsMap }) => {
         backgroundColor: 'transparent',
         display: 'flex',
         gap: '15px',
-        alignItems: 'flex-start'
+        alignItems: 'flex-start',
+        cursor: 'pointer' // Make it look clickable
     };
 
     return (
-        <div style={containerStyle}>
+        <div style={containerStyle} onClick={() => onClick(book.id)} className="book-item-hover">
             {/* Image Column */}
             <div style={{ flexShrink: 0 }}>
                 <img 
@@ -32,7 +33,7 @@ const BookListItem = ({ book, shelf, tagsMap }) => {
             {/* Content Column */}
             <div style={{ flexGrow: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '16px', color: '#0000AA', lineHeight: '1.2' }}>
-                    <b>{book.title}</b>
+                    <b style={{ textDecoration: 'underline' }}>{book.title}</b>
                 </div>
                 <div style={{ fontSize: '12px', color: '#444', marginBottom: '6px' }}>
                     by {authors}
@@ -65,9 +66,9 @@ const BookListItem = ({ book, shelf, tagsMap }) => {
 
             {/* Action Column */}
             <div style={{ flexShrink: 0 }}>
-                 <a href="#" onClick={e => e.preventDefault()} style={{ color: '#000', textDecoration: 'none' }}>
+                 <div style={{ color: '#000' }}>
                     <MoreHorizontal size={16} />
-                 </a>
+                 </div>
             </div>
         </div>
     );
