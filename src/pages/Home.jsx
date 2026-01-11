@@ -4,7 +4,6 @@ import { BookOpen, CheckCircle2, Clock, Search, Loader2 } from 'lucide-react';
 import { Virtuoso } from 'react-virtuoso';
 import RandomHighlight from '../components/RandomHighlight';
 import BookListItem from '../components/BookListItem';
-import { MOCK_DATA } from '../data/mockData';
 
 const LIMIT = 50;
 
