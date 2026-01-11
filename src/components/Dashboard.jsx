@@ -7,49 +7,51 @@ import {
     Save, 
     X, 
     Search,
-    Lock
+    Lock,
+    LogOut,
+    RefreshCw
 } from 'lucide-react';
 
 const Dashboard = ({ onBack }) => {
+    // Auth State
     const [password, setPassword] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    
+    // Data State
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [successMsg, setSuccessMsg] = useState('');
-
-    // Add Book State
-    const [newBookOLID, setNewBookOLID] = useState('');
-    const [isAdding, setIsAdding] = useState(false);
-
-    // Edit Book State
-    const [editingBook, setEditingBook] = useState(null);
-
-    // Filter State
     const [filter, setFilter] = useState('');
 
-    // --- Authentication ---
+    // Action State
+    const [newBookOLID, setNewBookOLID] = useState('');
+    const [newBookShelf, setNewBookShelf] = useState('watchlist');
+    const [isAdding, setIsAdding] = useState(false);
+    const [editingBook, setEditingBook] = useState(null);
+
+    // --- Authentication & Initialization ---
+
     const handleLogin = (e) => {
         e.preventDefault();
-        // Simple client-side check to persist session temporarily, 
-        // real auth happens on every API call.
+        // Try to fetch books to verify access/connection
         if (password) {
             setIsAuthenticated(true);
             fetchBooks();
         }
     };
 
-    // --- Fetch Data ---
     const fetchBooks = async () => {
         setLoading(true);
+        setError(null);
         try {
-            // Re-using the public endpoint for list, but admin actions go to /api/books
-            const res = await fetch('/api/public'); 
+            // Using the books endpoint which usually returns all raw data
+            const res = await fetch('/api/books'); 
             if (res.ok) {
                 const data = await res.json();
                 setBooks(data);
             } else {
-                setError('Failed to fetch books');
+                setError('Failed to fetch books. Check your connection.');
             }
         } catch (e) {
             setError(e.message);
@@ -58,10 +60,32 @@ const Dashboard = ({ onBack }) => {
         }
     };
 
+    // --- Helpers for Data Transformation ---
+
+    // Convert Array/JSON -> Comma Separated String
+    const arrayToString = (data) => {
+        if (!data) return '';
+        try {
+            const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+            if (Array.isArray(parsed)) return parsed.join(', ');
+            return String(parsed);
+        } catch (e) {
+            return String(data); // Fallback for raw strings
+        }
+    };
+
+    // Convert Comma Separated String -> Array
+    const stringToArray = (str) => {
+        if (!str) return [];
+        return str.split(',').map(s => s.trim()).filter(Boolean);
+    };
+
     // --- Actions ---
 
     const handleAddBook = async (e) => {
         e.preventDefault();
+        if (!newBookOLID.trim()) return;
+
         setIsAdding(true);
         setError(null);
         setSuccessMsg('');
@@ -73,7 +97,7 @@ const Dashboard = ({ onBack }) => {
                 body: JSON.stringify({
                     password,
                     action: 'add',
-                    data: { olid: newBookOLID }
+                    data: { olid: newBookOLID.trim(), shelf: newBookShelf }
                 })
             });
 
@@ -81,9 +105,9 @@ const Dashboard = ({ onBack }) => {
             
             if (!res.ok) throw new Error(data.error || 'Failed to add book');
             
-            setSuccessMsg(`Book added: ${data.book.title}`);
+            setSuccessMsg(`Successfully added: "${data.book.title}"`);
             setNewBookOLID('');
-            fetchBooks(); // Refresh list
+            fetchBooks(); 
         } catch (e) {
             setError(e.message);
         } finally {
@@ -91,8 +115,8 @@ const Dashboard = ({ onBack }) => {
         }
     };
 
-    const handleDeleteBook = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this book?')) return;
+    const handleDeleteBook = async (id, title) => {
+        if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
 
         try {
             const res = await fetch('/api/books', {
@@ -110,7 +134,7 @@ const Dashboard = ({ onBack }) => {
                 throw new Error(data.error || 'Failed to delete');
             }
             
-            setSuccessMsg('Book deleted successfully');
+            setSuccessMsg(`Deleted "${title}"`);
             fetchBooks();
         } catch (e) {
             setError(e.message);
@@ -119,31 +143,22 @@ const Dashboard = ({ onBack }) => {
 
     const handleUpdateBook = async (e) => {
         e.preventDefault();
+        setError(null);
+        setSuccessMsg('');
         
         try {
-            // Parse JSON fields back to objects/arrays if they were edited as strings
-            const updatedData = { ...editingBook };
-            
-            // Helper to parse if string, else keep as is
-            const safeParse = (val) => {
-                if (typeof val === 'string') {
-                    try { return JSON.parse(val); } catch(e) { return val; } // Return as string if parse fails (allows simple text updates if schema changes)
-                }
-                return val;
-            };
-
             // Prepare data for API
-            // Note: The API expects these fields. We send them as is, the API handler stringifies them.
-            // But if we edited them in a textarea, they are strings. We should try to parse them back to objects
-            // if we want the API to re-stringify them correctly, OR just send them if the API handles raw strings.
-            // Looking at your API code: `values.push(JSON.stringify(value))` if object.
-            // So if we send a string, it saves a string. If we send an object, it saves a stringified object.
-            // Best approach: Parse JSON-string fields in UI to objects before sending.
+            // We transform the comma-separated strings back to Arrays here
+            const updatedData = { 
+                ...editingBook,
+                authors: stringToArray(editingBook.authorsInput),
+                tags: stringToArray(editingBook.tagsInput)
+            };
             
-            try { updatedData.authors = JSON.parse(editingBook.authors); } catch(e) {}
-            try { updatedData.tags = JSON.parse(editingBook.tags); } catch(e) {}
-            try { updatedData.highlights = JSON.parse(editingBook.highlights); } catch(e) {}
-            
+            // Remove temporary input fields before sending
+            delete updatedData.authorsInput;
+            delete updatedData.tagsInput;
+
             const res = await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -167,163 +182,234 @@ const Dashboard = ({ onBack }) => {
         }
     };
 
-    // --- Render Helpers ---
+    // Prep book for editing (flatten arrays to strings)
+    const startEditing = (book) => {
+        setEditingBook({
+            ...book,
+            authorsInput: arrayToString(book.authors),
+            tagsInput: arrayToString(book.tags)
+        });
+    };
 
+    // --- Filtering ---
     const filteredBooks = books.filter(b => 
-        b.title.toLowerCase().includes(filter.toLowerCase())
+        (b.title && b.title.toLowerCase().includes(filter.toLowerCase())) ||
+        (b.authors && String(b.authors).toLowerCase().includes(filter.toLowerCase()))
     );
 
     // --- LOGIN VIEW ---
     if (!isAuthenticated) {
         return (
-            <div style={{ maxWidth: '400px', margin: '50px auto', textAlign: 'center', fontFamily: '"Times New Roman", serif' }}>
-                <h2 style={{ borderBottom: '1px solid black', paddingBottom: '10px' }}>Admin Access</h2>
-                <form onSubmit={handleLogin} style={{ marginTop: '20px' }}>
+            <div style={{ maxWidth: '400px', margin: '60px auto', border: '1px solid #000', padding: '20px', backgroundColor: '#fff' }}>
+                <div style={{ borderBottom: '1px solid #000', paddingBottom: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Lock size={16} />
+                    <h2 style={{ margin: 0, fontSize: '18px' }}>Admin Dashboard</h2>
+                </div>
+                
+                <form onSubmit={handleLogin}>
+                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 'bold' }}>Password:</label>
                     <input 
                         type="password" 
                         value={password}
                         onChange={e => setPassword(e.target.value)}
-                        placeholder="Enter Admin Password"
-                        style={{ padding: '8px', width: '100%', marginBottom: '10px' }}
+                        style={{ width: '100%', padding: '8px', marginBottom: '15px', boxSizing: 'border-box', border: '1px solid #999' }}
+                        autoFocus
                     />
-                    <button type="submit" style={{ padding: '8px 16px', cursor: 'pointer', backgroundColor: '#eee', border: '1px solid black' }}>
-                        Unlock Dashboard
+                    <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                        ENTER
                     </button>
                 </form>
-                <button onClick={onBack} style={{ marginTop: '20px', background: 'none', border: 'none', color: 'blue', textDecoration: 'underline', cursor: 'pointer' }}>
-                    Cancel
-                </button>
+                <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                    <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#0000AA', textDecoration: 'underline', cursor: 'pointer', fontSize: '13px' }}>
+                        &larr; Return to Library
+                    </button>
+                </div>
             </div>
         );
     }
 
-    // --- DASHBOARD VIEW ---
+    // --- MAIN DASHBOARD VIEW ---
     return (
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px', fontFamily: '"Times New Roman", serif' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '10px', fontFamily: '"Times New Roman", serif', color: '#000' }}>
+            
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid black', paddingBottom: '10px' }}>
-                <h1 style={{ margin: 0, fontSize: '24px' }}>Dashboard</h1>
-                <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    <ArrowLeft size={16} /> Exit
-                </button>
+                <h1 style={{ margin: 0, fontSize: '24px' }}>Library Dashboard</h1>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                    <button onClick={fetchBooks} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <RefreshCw size={14} /> Refresh
+                    </button>
+                    <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#0000AA' }}>
+                        <LogOut size={14} /> Exit
+                    </button>
+                </div>
             </div>
 
             {/* Notifications */}
-            {error && <div style={{ backgroundColor: '#fee', color: 'red', padding: '10px', border: '1px solid red', marginBottom: '15px' }}>{error}</div>}
-            {successMsg && <div style={{ backgroundColor: '#efe', color: 'green', padding: '10px', border: '1px solid green', marginBottom: '15px' }}>{successMsg}</div>}
+            {error && <div style={{ backgroundColor: '#ffe6e6', color: '#d00', padding: '10px', border: '1px solid #d00', marginBottom: '15px' }}>Error: {error}</div>}
+            {successMsg && <div style={{ backgroundColor: '#e6fffa', color: '#006600', padding: '10px', border: '1px solid #006600', marginBottom: '15px' }}>{successMsg}</div>}
 
-            {/* Add Book Section */}
-            <div style={{ backgroundColor: '#f9f9f9', padding: '15px', border: '1px solid #ccc', marginBottom: '30px' }}>
-                <h3 style={{ margin: '0 0 10px 0' }}>Add New Book</h3>
-                <form onSubmit={handleAddBook} style={{ display: 'flex', gap: '10px' }}>
-                    <input 
-                        type="text" 
-                        value={newBookOLID}
-                        onChange={e => setNewBookOLID(e.target.value)}
-                        placeholder="OpenLibrary ID (e.g., OL27448W)"
-                        style={{ flex: 1, padding: '8px' }}
-                        required
-                    />
-                    <button type="submit" disabled={isAdding} style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '8px 15px', cursor: 'pointer', backgroundColor: 'black', color: 'white', border: 'none' }}>
-                        {isAdding ? 'Adding...' : <><Plus size={16} /> Fetch & Add</>}
-                    </button>
-                </form>
-                <small style={{ color: '#666' }}>Fetches metadata automatically from OpenLibrary.</small>
-            </div>
-
-            {/* Book List */}
-            <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h3>Manage Library ({books.length})</h3>
-                    <div style={{ position: 'relative' }}>
-                        <Search size={14} style={{ position: 'absolute', left: '8px', top: '8px', color: '#666' }} />
+            {/* Add Book Panel */}
+            <div style={{ backgroundColor: '#f4f4f4', padding: '15px', border: '1px solid #999', marginBottom: '30px' }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', borderBottom: '1px dotted #999', paddingBottom: '5px' }}>
+                    <Plus size={14} style={{ display: 'inline' }} /> Add Book via OpenLibrary
+                </h3>
+                <form onSubmit={handleAddBook} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>OLID (e.g. OL27448W):</label>
                         <input 
                             type="text" 
-                            value={filter}
-                            onChange={e => setFilter(e.target.value)}
-                            placeholder="Filter books..."
-                            style={{ padding: '5px 5px 5px 25px' }}
+                            value={newBookOLID}
+                            onChange={e => setNewBookOLID(e.target.value)}
+                            placeholder="OL..."
+                            style={{ width: '100%', padding: '6px', border: '1px solid #999' }}
+                            required
                         />
                     </div>
-                </div>
+                    <div style={{ width: '150px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>Shelf:</label>
+                        <select 
+                            value={newBookShelf} 
+                            onChange={e => setNewBookShelf(e.target.value)}
+                            style={{ width: '100%', padding: '6px', border: '1px solid #999' }}
+                        >
+                            <option value="watchlist">Watchlist</option>
+                            <option value="currentlyReading">Reading Now</option>
+                            <option value="read">Finished</option>
+                        </select>
+                    </div>
+                    <button type="submit" disabled={isAdding} style={{ padding: '7px 15px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
+                        {isAdding ? 'Fetching...' : 'ADD BOOK'}
+                    </button>
+                </form>
+            </div>
 
-                <table width="100%" cellPadding="8" style={{ borderCollapse: 'collapse', border: '1px solid #ddd' }}>
+            {/* Filter */}
+            <div style={{ marginBottom: '10px', textAlign: 'right' }}>
+                <Search size={12} style={{ display: 'inline', marginRight: '5px' }} />
+                <input 
+                    type="text" 
+                    value={filter}
+                    onChange={e => setFilter(e.target.value)}
+                    placeholder="Filter list..."
+                    style={{ padding: '4px', border: '1px solid #ccc' }}
+                />
+            </div>
+
+            {/* Books Table */}
+            <div style={{ overflowX: 'auto' }}>
+                <table width="100%" cellPadding="8" cellSpacing="0" style={{ borderCollapse: 'collapse', border: '1px solid #999', fontSize: '14px' }}>
                     <thead>
-                        <tr style={{ backgroundColor: '#eee', textAlign: 'left', borderBottom: '1px solid #000' }}>
-                            <th>Title</th>
-                            <th>Author</th>
+                        <tr style={{ backgroundColor: '#eee', borderBottom: '1px solid #000', textAlign: 'left' }}>
+                            <th width="40">Cover</th>
+                            <th>Title / Author</th>
+                            <th>Tags</th>
                             <th>Shelf</th>
-                            <th>Status</th>
-                            <th align="right">Actions</th>
+                            <th align="center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredBooks.map(book => {
-                            // Safe parse for display
-                            let authors = book.authors;
-                            if (typeof authors === 'string') try { authors = JSON.parse(authors); } catch(e){}
-                            if (Array.isArray(authors)) authors = authors.join(', ');
+                            let cover = null;
+                            try {
+                                const links = typeof book.imageLinks === 'string' ? JSON.parse(book.imageLinks) : book.imageLinks;
+                                cover = links?.thumbnail;
+                            } catch(e){}
 
                             return (
-                                <tr key={book.id} style={{ borderBottom: '1px solid #eee' }}>
-                                    <td><strong>{book.title}</strong></td>
-                                    <td>{authors}</td>
+                                <tr key={book.id} style={{ borderBottom: '1px solid #ddd' }}>
+                                    <td>
+                                        {cover && <img src={cover} alt="" style={{ width: '30px', height: '45px', border: '1px solid #999' }} />}
+                                    </td>
+                                    <td>
+                                        <div style={{ fontWeight: 'bold' }}>{book.title}</div>
+                                        <div style={{ fontSize: '12px', color: '#555' }}>
+                                            {arrayToString(book.authors)}
+                                        </div>
+                                    </td>
+                                    <td style={{ fontSize: '12px', color: '#444' }}>
+                                        {arrayToString(book.tags)}
+                                    </td>
                                     <td>
                                         <span style={{ 
-                                            padding: '2px 6px', 
-                                            borderRadius: '4px', 
-                                            fontSize: '11px', 
-                                            backgroundColor: book.shelf === 'read' ? '#e6fffa' : book.shelf === 'currentlyReading' ? '#ebf8ff' : '#fffaf0',
-                                            border: '1px solid #ccc'
+                                            border: '1px solid #ccc', padding: '2px 5px', fontSize: '11px',
+                                            backgroundColor: book.shelf === 'currentlyReading' ? '#e6f7ff' : book.shelf === 'read' ? '#f6ffed' : '#fff'
                                         }}>
                                             {book.shelf}
                                         </span>
                                     </td>
-                                    <td style={{ fontSize: '12px' }}>
-                                        {book.shelf === 'currentlyReading' ? `${book.readingProgress}%` : book.shelf === 'read' ? 'Done' : '-'}
-                                    </td>
-                                    <td align="right">
-                                        <button onClick={() => setEditingBook(book)} style={{ marginRight: '10px', cursor: 'pointer', background: 'none', border: 'none', color: 'blue' }} title="Edit">
+                                    <td align="center">
+                                        <button onClick={() => startEditing(book)} style={{ marginRight: '8px', cursor: 'pointer', background: 'none', border: 'none', color: 'blue' }} title="Edit">
                                             <Edit size={16} />
                                         </button>
-                                        <button onClick={() => handleDeleteBook(book.id)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'red' }} title="Delete">
+                                        <button onClick={() => handleDeleteBook(book.id, book.title)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'red' }} title="Delete">
                                             <Trash2 size={16} />
                                         </button>
                                     </td>
                                 </tr>
                             );
                         })}
+                        {filteredBooks.length === 0 && (
+                            <tr><td colSpan="5" align="center" style={{ padding: '20px', fontStyle: 'italic' }}>No books found.</td></tr>
+                        )}
                     </tbody>
                 </table>
             </div>
 
             {/* --- EDIT MODAL --- */}
             {editingBook && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 100 }}>
-                    <div style={{ backgroundColor: 'white', padding: '20px', width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', border: '1px solid black', boxShadow: '5px 5px 15px rgba(0,0,0,0.3)' }}>
+                <div style={{ 
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+                    backgroundColor: 'rgba(0,0,0,0.6)', 
+                    display: 'flex', justifyContent: 'center', alignItems: 'center', 
+                    zIndex: 1000 
+                }}>
+                    <div style={{ 
+                        backgroundColor: '#fff', 
+                        padding: '20px', 
+                        width: '90%', 
+                        maxWidth: '600px', 
+                        maxHeight: '90vh', 
+                        overflowY: 'auto', 
+                        border: '2px solid black',
+                        boxShadow: '10px 10px 0px rgba(0,0,0,0.5)'
+                    }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-                            <h2 style={{ margin: 0 }}>Edit Book</h2>
+                            <h2 style={{ margin: 0, fontSize: '20px' }}>Edit: {editingBook.title}</h2>
                             <button onClick={() => setEditingBook(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
                         </div>
                         
-                        <form onSubmit={handleUpdateBook} style={{ display: 'grid', gap: '15px' }}>
+                        <form onSubmit={handleUpdateBook} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                            
+                            {/* Basic Info */}
                             <div>
-                                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px' }}>Title</label>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Title</label>
                                 <input 
                                     type="text" 
                                     value={editingBook.title} 
                                     onChange={e => setEditingBook({...editingBook, title: e.target.value})}
-                                    style={{ width: '100%', padding: '5px' }}
+                                    style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
                                 />
                             </div>
 
+                            <div>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Authors (comma separated)</label>
+                                <input 
+                                    type="text" 
+                                    value={editingBook.authorsInput} 
+                                    onChange={e => setEditingBook({...editingBook, authorsInput: e.target.value})}
+                                    style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+                                />
+                            </div>
+
+                            {/* Status Row */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px' }}>Shelf</label>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Shelf</label>
                                     <select 
                                         value={editingBook.shelf}
                                         onChange={e => setEditingBook({...editingBook, shelf: e.target.value})}
-                                        style={{ width: '100%', padding: '5px' }}
+                                        style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
                                     >
                                         <option value="watchlist">Watchlist</option>
                                         <option value="currentlyReading">Reading Now</option>
@@ -331,72 +417,77 @@ const Dashboard = ({ onBack }) => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px' }}>Progress (%)</label>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Progress (%)</label>
                                     <input 
                                         type="number" 
                                         min="0" max="100"
                                         value={editingBook.readingProgress} 
-                                        onChange={e => setEditingBook({...editingBook, readingProgress: parseInt(e.target.value)})}
-                                        style={{ width: '100%', padding: '5px' }}
+                                        onChange={e => setEditingBook({...editingBook, readingProgress: e.target.value})}
+                                        style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
                                     />
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            {/* Medium & Dates */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px' }}>Started On</label>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Reading Medium</label>
+                                    <input 
+                                        type="text" 
+                                        value={editingBook.readingMedium || ''} 
+                                        onChange={e => setEditingBook({...editingBook, readingMedium: e.target.value})}
+                                        placeholder="e.g. Kindle"
+                                        style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Started</label>
                                     <input 
                                         type="date" 
                                         value={editingBook.startedOn || ''} 
                                         onChange={e => setEditingBook({...editingBook, startedOn: e.target.value})}
-                                        style={{ width: '100%', padding: '5px' }}
+                                        style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px' }}>Finished On</label>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Finished</label>
                                     <input 
                                         type="date" 
                                         value={editingBook.finishedOn || ''} 
                                         onChange={e => setEditingBook({...editingBook, finishedOn: e.target.value})}
-                                        style={{ width: '100%', padding: '5px' }}
+                                        style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
                                     />
                                 </div>
                             </div>
 
+                            {/* Tags & Desc */}
                             <div>
-                                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px' }}>Authors (JSON Array)</label>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Tags (comma separated)</label>
                                 <input 
                                     type="text" 
-                                    value={typeof editingBook.authors === 'string' ? editingBook.authors : JSON.stringify(editingBook.authors)} 
-                                    onChange={e => setEditingBook({...editingBook, authors: e.target.value})}
-                                    style={{ width: '100%', padding: '5px', fontFamily: 'monospace' }}
+                                    value={editingBook.tagsInput} 
+                                    onChange={e => setEditingBook({...editingBook, tagsInput: e.target.value})}
+                                    placeholder="e.g. Fiction, History, Tech"
+                                    style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
                                 />
-                                <small style={{ color: '#666' }}>e.g. ["Author Name", "Second Author"]</small>
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px' }}>Tags (JSON Array of IDs)</label>
-                                <input 
-                                    type="text" 
-                                    value={typeof editingBook.tags === 'string' ? editingBook.tags : JSON.stringify(editingBook.tags)} 
-                                    onChange={e => setEditingBook({...editingBook, tags: e.target.value})}
-                                    style={{ width: '100%', padding: '5px', fontFamily: 'monospace' }}
-                                />
-                                <small style={{ color: '#666' }}>e.g. ["1", "3"] (See api/tags for IDs)</small>
-                            </div>
-
-                            <div>
-                                <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px' }}>Highlights (JSON Array)</label>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Description</label>
                                 <textarea 
-                                    value={typeof editingBook.highlights === 'string' ? editingBook.highlights : JSON.stringify(editingBook.highlights)} 
-                                    onChange={e => setEditingBook({...editingBook, highlights: e.target.value})}
-                                    style={{ width: '100%', padding: '5px', fontFamily: 'monospace', height: '80px' }}
+                                    value={editingBook.bookDescription || ''} 
+                                    onChange={e => setEditingBook({...editingBook, bookDescription: e.target.value})}
+                                    rows="4"
+                                    style={{ width: '100%', padding: '6px', boxSizing: 'border-box', fontFamily: 'inherit' }}
                                 />
                             </div>
 
-                            <button type="submit" style={{ marginTop: '10px', padding: '10px', backgroundColor: 'black', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px' }}>
-                                <Save size={16} /> Save Changes
-                            </button>
+                            <div style={{ borderTop: '1px solid #eee', paddingTop: '15px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                <button type="button" onClick={() => setEditingBook(null)} style={{ padding: '8px 15px', background: '#eee', border: '1px solid #ccc', cursor: 'pointer' }}>Cancel</button>
+                                <button type="submit" style={{ padding: '8px 20px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <Save size={16} /> Save Changes
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
