@@ -3,11 +3,12 @@ import { BookOpen, CheckCircle2, Clock, Search } from 'lucide-react';
 import Header from './components/Header';
 import RandomHighlight from './components/RandomHighlight';
 import Shelf from './components/Shelf';
-import BookDetails from './components/BookDetails'; // Import the new component
+import BookDetails from './components/BookDetails';
+import Stats from './components/Stats'; // Import Stats
 
 function App() {
-    // Routing State
-    const [currentView, setCurrentView] = useState('list'); // 'list' or 'details'
+    // Routing State: 'list', 'details', 'stats'
+    const [currentView, setCurrentView] = useState('list'); 
     const [selectedBookId, setSelectedBookId] = useState(null);
 
     // Data State
@@ -28,7 +29,6 @@ function App() {
                     if (tagsRes.ok) tags = await tagsRes.json();
                 } catch (e) { console.warn(e); }
                 
-                // Fallback to mock tags if fetch failed (optional)
                 if (tags.length === 0) tags = MOCK_DATA.tags;
 
                 const tMap = new Map();
@@ -41,8 +41,6 @@ function App() {
                 if (booksRes.ok) {
                     books = await booksRes.json();
                 } else {
-                   // Fallback to mock data for demo if API fails
-                   console.warn("API failed, using mock data");
                    books = MOCK_DATA.books;
                 }
 
@@ -69,7 +67,8 @@ function App() {
         fetchData();
     }, []);
 
-    // Navigation Handlers
+    // --- Navigation Handlers ---
+
     const handleBookClick = (id) => {
         setSelectedBookId(id);
         setCurrentView('details');
@@ -80,6 +79,12 @@ function App() {
         setSelectedBookId(null);
         setCurrentView('list');
     };
+    
+    // Pass this to Header
+    const handleStatsClick = () => {
+        setCurrentView('stats');
+        window.scrollTo(0, 0);
+    };
 
     const filterShelf = (list) => {
         if (!searchQuery) return list;
@@ -89,8 +94,6 @@ function App() {
             (Array.isArray(b.authors) && b.authors.some(a => a.toLowerCase().includes(q)))
         );
     };
-
-    // --- RENDER ---
 
     return (
         <div style={{ 
@@ -105,18 +108,21 @@ function App() {
             minHeight: '100vh'
         }}>
             
-            <Header />
+            {/* Header now accepts navigation props */}
+            <Header onStatsClick={handleStatsClick} onHomeClick={handleBackClick} />
 
-            {/* CONDITIONAL RENDERING BASED ON VIEW */}
+            {/* ROUTER */}
             {currentView === 'details' ? (
                 <BookDetails 
                     bookId={selectedBookId} 
                     onBack={handleBackClick} 
                     tagsMap={tagsMap} 
                 />
+            ) : currentView === 'stats' ? (
+                <Stats onBack={handleBackClick} />
             ) : (
                 <>
-                    {/* Search */}
+                    {/* LIST VIEW */}
                     <div style={{ margin: '20px 0' }}>
                         <label style={{ fontSize: '13px', fontWeight: 'bold', display: 'block', marginBottom: '5px' }}>
                             <Search size={12} style={{ display: 'inline', marginRight: '4px' }} /> Search:

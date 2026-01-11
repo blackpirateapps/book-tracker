@@ -1,7 +1,7 @@
 import React from 'react';
 import { Library, LayoutDashboard, TrendingUp, Github, ExternalLink } from 'lucide-react';
 
-const Header = () => {
+const Header = ({ onStatsClick, onHomeClick }) => {
     const linkStyle = {
         textDecoration: 'none',
         color: '#0000AA',
@@ -10,12 +10,13 @@ const Header = () => {
         alignItems: 'center',
         gap: '4px',
         whiteSpace: 'nowrap',
-        marginRight: '10px'
+        marginRight: '10px',
+        cursor: 'pointer'
     };
 
     return (
         <div style={{ marginBottom: '20px' }}>
-            <h1 style={{ marginBottom: '5px', fontSize: '28px', wordWrap: 'break-word' }}>
+            <h1 style={{ marginBottom: '5px', fontSize: '28px', wordWrap: 'break-word', cursor: 'pointer' }} onClick={onHomeClick}>
                 <Library size={24} style={{ display: 'inline', verticalAlign: 'baseline', marginRight: '8px' }} />
                 Sudip's book tracker
             </h1>
@@ -32,11 +33,11 @@ const Header = () => {
                 flexWrap: 'wrap',
                 gap: '5px 10px'
             }}>
-                <a href="#" onClick={e => e.preventDefault()} style={linkStyle}>
+                <a href="#" onClick={onHomeClick} style={linkStyle}>
                     <LayoutDashboard size={14} /> Dashboard
                 </a>
                 <span style={{color: '#ccc'}}>|</span>
-                <a href="#" onClick={e => e.preventDefault()} style={linkStyle}>
+                <a href="#" onClick={(e) => { e.preventDefault(); onStatsClick(); }} style={linkStyle}>
                     <TrendingUp size={14} /> Stats
                 </a>
                 <span style={{color: '#ccc'}}>|</span>
