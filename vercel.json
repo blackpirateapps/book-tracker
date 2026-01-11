@@ -1,27 +1,12 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "public",
-  "installCommand": "npm install && npm run install:dashboard",
-  "framework": null,
   "rewrites": [
     {
-      "source": "/dashboard",
-      "destination": "/dashboard/index.html"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
-      "source": "/dashboard/(.*)",
-      "destination": "/dashboard/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "s-maxage=60, stale-while-revalidate"
-        }
-      ]
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }

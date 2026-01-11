@@ -1,0 +1,27 @@
+/* Minimally reset to ensure consistent font rendering 
+  while maintaining the raw HTML vibe 
+*/
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Times New Roman", Times, serif;
+  background-color: #ffffff;
+  color: #000000;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  text-decoration: none;
+  color: #0000AA;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Ensure images don't overflow in responsive views */
+img {
+  max-width: 100%;
+  height: auto;
+}
