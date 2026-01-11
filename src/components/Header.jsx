@@ -1,7 +1,7 @@
 import React from 'react';
 import { Library, LayoutDashboard, TrendingUp, Github, ExternalLink } from 'lucide-react';
 
-const Header = ({ onStatsClick, onHomeClick }) => {
+const Header = ({ onStatsClick, onHomeClick, onDashboardClick }) => {
     const linkStyle = {
         textDecoration: 'none',
         color: '#0000AA',
@@ -33,7 +33,7 @@ const Header = ({ onStatsClick, onHomeClick }) => {
                 flexWrap: 'wrap',
                 gap: '5px 10px'
             }}>
-                <a href="#" onClick={onHomeClick} style={linkStyle}>
+                <a href="#" onClick={(e) => { e.preventDefault(); onDashboardClick(); }} style={linkStyle}>
                     <LayoutDashboard size={14} /> Dashboard
                 </a>
                 <span style={{color: '#ccc'}}>|</span>

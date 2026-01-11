@@ -4,10 +4,12 @@ import Header from './components/Header';
 import RandomHighlight from './components/RandomHighlight';
 import Shelf from './components/Shelf';
 import BookDetails from './components/BookDetails';
-import Stats from './components/Stats'; // Import Stats
+import Stats from './components/Stats';
+import Dashboard from './components/Dashboard'; // Import Dashboard
+import { MOCK_DATA } from './data/mockData';
 
 function App() {
-    // Routing State: 'list', 'details', 'stats'
+    // Routing State: 'list', 'details', 'stats', 'dashboard'
     const [currentView, setCurrentView] = useState('list'); 
     const [selectedBookId, setSelectedBookId] = useState(null);
 
@@ -22,7 +24,7 @@ function App() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // 1. Fetch Tags
+                // Fetch Tags
                 let tags = [];
                 try {
                     const tagsRes = await fetch('/api/tags');
@@ -35,7 +37,7 @@ function App() {
                 tags.forEach(tag => tMap.set(tag.id, tag));
                 setTagsMap(tMap);
 
-                // 2. Fetch Books
+                // Fetch Books
                 const booksRes = await fetch('/api/public');
                 let books = [];
                 if (booksRes.ok) {
@@ -44,7 +46,7 @@ function App() {
                    books = MOCK_DATA.books;
                 }
 
-                // 3. Process Books
+                // Process Books
                 const grouped = { currentlyReading: [], read: [], watchlist: [] };
                 books.forEach(book => {
                     if (typeof book.authors === 'string') try { book.authors = JSON.parse(book.authors); } catch(e) { book.authors = []; }
@@ -65,7 +67,7 @@ function App() {
         };
 
         fetchData();
-    }, []);
+    }, []); // Note: You might want to refresh data when returning from dashboard
 
     // --- Navigation Handlers ---
 
@@ -78,13 +80,18 @@ function App() {
     const handleBackClick = () => {
         setSelectedBookId(null);
         setCurrentView('list');
+        // Optional: Trigger a data re-fetch here to see updates from dashboard immediately
     };
     
-    // Pass this to Header
     const handleStatsClick = () => {
         setCurrentView('stats');
         window.scrollTo(0, 0);
     };
+
+    const handleDashboardClick = () => {
+        setCurrentView('dashboard');
+        window.scrollTo(0, 0);
+    }
 
     const filterShelf = (list) => {
         if (!searchQuery) return list;
@@ -108,8 +115,14 @@ function App() {
             minHeight: '100vh'
         }}>
             
-            {/* Header now accepts navigation props */}
-            <Header onStatsClick={handleStatsClick} onHomeClick={handleBackClick} />
+            {/* Header */}
+            {currentView !== 'dashboard' && (
+                <Header 
+                    onStatsClick={handleStatsClick} 
+                    onHomeClick={handleBackClick} 
+                    onDashboardClick={handleDashboardClick}
+                />
+            )}
 
             {/* ROUTER */}
             {currentView === 'details' ? (
@@ -120,6 +133,8 @@ function App() {
                 />
             ) : currentView === 'stats' ? (
                 <Stats onBack={handleBackClick} />
+            ) : currentView === 'dashboard' ? (
+                <Dashboard onBack={handleBackClick} />
             ) : (
                 <>
                     {/* LIST VIEW */}
