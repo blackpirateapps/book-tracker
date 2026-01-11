@@ -84,6 +84,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Helper to group flat list of books into shelves
+    const groupBooks = (books) => {
+        const groupedLibrary = { currentlyReading: [], read: [], watchlist: [] };
+        books.forEach(book => {
+            try { book.authors = JSON.parse(book.authors || '[]'); } catch (e) { book.authors = []; }
+            try { book.imageLinks = JSON.parse(book.imageLinks || '{}'); } catch (e) { book.imageLinks = {}; }
+            try { book.tags = JSON.parse(book.tags || '[]'); } catch (e) { book.tags = []; }
+            // Ensure readingProgress is a number
+            book.readingProgress = parseInt(book.readingProgress || 0, 10);
+            if (groupedLibrary[book.shelf]) {
+               groupedLibrary[book.shelf].push(book);
+            } else {
+               // If shelf is invalid or missing, maybe default to watchlist or log an error
+               console.warn(`Book ${book.id} has invalid shelf: ${book.shelf}. Defaulting to watchlist.`);
+               groupedLibrary.watchlist.push(book);
+            }
+        });
+        return groupedLibrary;
+    };
+
     const getPublicLibrary = async (forceRefresh = false) => {
         const cachedData = localStorage.getItem(PUBLIC_CACHE_KEY); //
         if (cachedData && !forceRefresh) {
@@ -93,21 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(PUBLIC_API_ENDPOINT); //
             if (!response.ok) throw new Error('Failed to fetch library.'); //
             const books = await response.json(); //
-            const groupedLibrary = { currentlyReading: [], read: [], watchlist: [] }; //
-            books.forEach(book => {
-                try { book.authors = JSON.parse(book.authors || '[]'); } catch (e) { book.authors = []; } //
-                try { book.imageLinks = JSON.parse(book.imageLinks || '{}'); } catch (e) { book.imageLinks = {}; } //
-                try { book.tags = JSON.parse(book.tags || '[]'); } catch (e) { book.tags = []; } //
-                // Ensure readingProgress is a number
-                book.readingProgress = parseInt(book.readingProgress || 0, 10); //
-                if (groupedLibrary[book.shelf]) {
-                   groupedLibrary[book.shelf].push(book); //
-                } else {
-                   // If shelf is invalid or missing, maybe default to watchlist or log an error
-                   console.warn(`Book ${book.id} has invalid shelf: ${book.shelf}. Defaulting to watchlist.`);
-                   groupedLibrary.watchlist.push(book); //
-                }
-            });
+            const groupedLibrary = groupBooks(books);
             localStorage.setItem(PUBLIC_CACHE_KEY, JSON.stringify(groupedLibrary)); //
             return groupedLibrary;
         } catch (error) {
@@ -136,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const menuButton = document.getElementById('menu-button'); //
         const menu = document.getElementById('menu'); //
         const forceRefreshBtn = document.getElementById('force-refresh-btn'); //
+        const searchInput = document.getElementById('public-search'); //
 
         const createBookListItem = (book, shelf) => {
             const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120/e2e8f0/475569?text=N/A`; //
@@ -176,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
                  progressClass = ' book-progress-item'; //
             }
 
-            // CORRECTED: Removed the comments from the template literal
             return `
                 <div class="book-list-item flex items-start p-4 space-x-4 relative${progressClass}" ${progressStyle}>
                     ${shelf === 'currentlyReading' && progressPercent > 0 ? `<div class="absolute top-1 right-2 text-xs font-medium text-blue-700">${progressPercent}%</div>` : ''}
@@ -198,7 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const renderAllShelves = (lib) => {
             const renderShelf = (shelf, container, shelfName) => {
                  if (!container) return; // Check if container exists
-                 container.innerHTML = shelf.length > 0 ? shelf.map(book => createBookListItem(book, shelfName)).join('') : `<p class="p-8 text-center text-gray-500">Nothing here yet.</p>`; //
+                 const emptyMessage = searchInput && searchInput.value.trim() ? "No matches found." : "Nothing here yet.";
+                 container.innerHTML = shelf.length > 0 ? shelf.map(book => createBookListItem(book, shelfName)).join('') : `<p class="p-8 text-center text-gray-500">${emptyMessage}</p>`; //
             }
             renderShelf(lib.currentlyReading, currentlyReadingContainer, 'currentlyReading'); //
             // Sort read books by finished date, most recent first
@@ -227,6 +234,34 @@ document.addEventListener('DOMContentLoaded', () => {
                  return false;
              }
         };
+
+        // --- NEW SEARCH LOGIC ---
+        let searchTimeout;
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value.trim();
+                
+                searchTimeout = setTimeout(async () => {
+                    if (query.length > 0) {
+                        try {
+                            const response = await fetch(`${PUBLIC_API_ENDPOINT}?q=${encodeURIComponent(query)}`);
+                            if (!response.ok) throw new Error('Search failed');
+                            const books = await response.json();
+                            const grouped = groupBooks(books);
+                            renderAllShelves(grouped);
+                        } catch (error) {
+                            console.error(error);
+                            showToast('Search failed.', 'error');
+                        }
+                    } else {
+                        // Reset to full library from cache or fetch
+                        initializePublicPage(false); 
+                    }
+                }, 300); // 300ms debounce
+            });
+        }
+        // --- END NEW SEARCH LOGIC ---
 
         initializePublicPage(); // Initial load
 

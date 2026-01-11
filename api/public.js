@@ -9,7 +9,7 @@ const client = createClient({
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     try {
-      res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
+      const { q } = req.query;
 
       // Ensure table exists (also includes the tags column needed by other endpoints)
       await client.execute(`
@@ -23,18 +23,32 @@ export default async function handler(req, res) {
         );
       `);
 
-      // MODIFIED: Select the 'readingProgress' column
-      const result = await client.execute(
-        "SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights, tags, readingProgress FROM books" // Added 'readingProgress'
-      ); //
+      let query = "SELECT id, title, authors, imageLinks, shelf, readingMedium, finishedOn, hasHighlights, tags, readingProgress FROM books";
+      let args = [];
+
+      if (q) {
+        // If a search query is provided, filter by title, authors, or highlights
+        // We use % wildcard for partial matches
+        query += " WHERE title LIKE ? OR authors LIKE ? OR highlights LIKE ?";
+        const searchPattern = `%${q}%`;
+        args = [searchPattern, searchPattern, searchPattern];
+        
+        // Cache search results for a shorter duration (10 seconds)
+        res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=59');
+      } else {
+        // Standard cache for full library (10 minutes)
+        res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=1200');
+      }
+
+      const result = await client.execute({ sql: query, args });
 
       return res.status(200).json(result.rows);
     } catch (e) {
       console.error(e);
-      return res.status(500).json({ error: 'Failed to fetch books from the database.' }); //
+      return res.status(500).json({ error: 'Failed to fetch books from the database.' });
     }
   }
 
   // Reject any other method
-  return res.status(405).json({ error: `Method ${req.method} not allowed.` }); //
+  return res.status(405).json({ error: `Method ${req.method} not allowed.` });
 }
