@@ -2,12 +2,16 @@ import React from 'react';
 import { MoreHorizontal, CheckCircle2 } from 'lucide-react';
 import TagBadge from './TagBadge';
 
-const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
+const BookListItem = ({ book, shelf, tagsMap, onClick, isPartial }) => {
     const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120?text=No+Cover`;
-    const authors = book.authors ? book.authors.join(', ') : 'Unknown';
-    const resolvedTags = book.tags ? book.tags.map(id => tagsMap.get(id)).filter(Boolean) : [];
+    
+    // Handle Partial Data Gracefully
+    const authors = isPartial ? 'Loading...' : (book.authors ? book.authors.join(', ') : 'Unknown');
+    const resolvedTags = (!isPartial && book.tags) ? book.tags.map(id => tagsMap.get(id)).filter(Boolean) : [];
 
-    // Layout Stability: Pre-defined height container for the row
+    // Skeleton style for text if partial
+    const textSkeletonStyle = isPartial ? { backgroundColor: '#eee', color: 'transparent', borderRadius: '3px' } : {};
+
     const containerStyle = {
         borderBottom: '1px solid #ddd',
         marginBottom: '10px',
@@ -17,14 +21,12 @@ const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
         gap: '15px',
         alignItems: 'flex-start',
         cursor: 'pointer',
-        // Important for Virtuoso to estimate height correctly if content varies
         minHeight: '80px' 
     };
 
     return (
         <div style={containerStyle} onClick={() => onClick(book.id)}>
             <div style={{ flexShrink: 0 }}>
-                {/* Fixed Dimension Wrapper for Layout Stability */}
                 <div style={{ width: '45px', height: '68px', backgroundColor: '#f4f4f4', border: '1px solid #999' }}>
                     <img 
                         src={coverUrl} 
@@ -40,16 +42,13 @@ const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
                 <div style={{ fontSize: '16px', color: '#0000AA', lineHeight: '1.2' }}>
                     <b style={{ textDecoration: 'underline' }}>{book.title}</b>
                 </div>
-                <div style={{ fontSize: '12px', color: '#444', marginBottom: '6px' }}>
+                
+                {/* Author Line */}
+                <div style={{ fontSize: '12px', color: '#444', marginBottom: '6px', ...textSkeletonStyle, display: 'inline-block', minWidth: isPartial ? '100px' : 'auto' }}>
                     by {authors}
                 </div>
                 
-                {/* Show status explicitly since we merged the shelves */}
-                <div style={{ marginBottom: '4px', fontSize: '11px', color: '#666' }}>
-                    STATUS: <span style={{ textTransform: 'uppercase', fontWeight: 'bold' }}>{shelf === 'currentlyReading' ? 'Reading' : shelf}</span>
-                </div>
-
-                {shelf === 'currentlyReading' && (
+                {shelf === 'currentlyReading' && !isPartial && (
                     <div style={{ marginBottom: '5px', fontSize: '12px' }}>
                         Progress: {book.readingProgress}%
                         <br/>
@@ -59,15 +58,15 @@ const BookListItem = ({ book, shelf, tagsMap, onClick }) => {
                     </div>
                 )}
 
-                {shelf === 'read' && book.finishedOn && (
+                {shelf === 'read' && book.finishedOn && !isPartial && (
                     <div style={{ fontSize: '12px', color: '#666' }}>
                         <CheckCircle2 size={10} style={{ display: 'inline', marginRight: '3px' }} /> 
                         Read on: {book.finishedOn}
                     </div>
                 )}
                 
-                <div style={{ marginTop: '4px' }}>
-                    {book.readingMedium && <span style={{ fontSize: '10px', color: '#666', marginRight: '5px' }}>[{book.readingMedium}]</span>}
+                <div style={{ marginTop: '4px', minHeight: '16px' }}>
+                    {book.readingMedium && !isPartial && <span style={{ fontSize: '10px', color: '#666', marginRight: '5px' }}>[{book.readingMedium}]</span>}
                     {resolvedTags.map(tag => (
                         <TagBadge key={tag.id} tag={tag} />
                     ))}
