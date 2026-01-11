@@ -1,22 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Quote } from 'lucide-react';
-import { MOCK_DATA } from '../data/mockData';
 
 const RandomHighlight = () => {
     const [highlight, setHighlight] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const load = async () => {
-            // Simulating an API call
-            await new Promise(r => setTimeout(r, 600));
-            setHighlight(MOCK_DATA.highlight);
-            setLoading(false);
+        const fetchHighlight = async () => {
+            try {
+                const res = await fetch('/api/random-highlight');
+                if (res.ok) {
+                    const data = await res.json();
+                    setHighlight(data);
+                } else {
+                    // Fail silently or hide component
+                    setHighlight(null); 
+                }
+            } catch (e) {
+                console.error("Failed to fetch highlight", e);
+                setHighlight(null);
+            } finally {
+                setLoading(false);
+            }
         };
-        load();
+        fetchHighlight();
     }, []);
 
     if (loading) return <div style={{ fontSize: '12px', color: '#666' }}>Loading daily quote...</div>;
+    if (!highlight) return null; // Hide if API fails or no highlight
 
     return (
         <div style={{ backgroundColor: '#ffffe0', border: '1px solid #ccc', padding: '10px', marginBottom: '25px' }}>
@@ -28,7 +39,7 @@ const RandomHighlight = () => {
                 "{highlight.highlight}"
             </p>
             <div style={{ textAlign: 'right', fontSize: '12px' }}>
-                -- {highlight.author}
+                -- {highlight.author}, <span style={{ fontStyle: 'italic' }}>{highlight.title}</span>
             </div>
         </div>
     );
