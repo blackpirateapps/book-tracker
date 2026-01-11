@@ -6,7 +6,6 @@ import Shelf from './components/Shelf';
 import BookDetails from './components/BookDetails';
 import Stats from './components/Stats';
 import Dashboard from './components/Dashboard'; // Import Dashboard
-import { MOCK_DATA } from './data/mockData';
 
 function App() {
     // Routing State: 'list', 'details', 'stats', 'dashboard'
