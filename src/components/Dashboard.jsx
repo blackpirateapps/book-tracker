@@ -109,9 +109,20 @@ const Dashboard = ({ onBack }) => {
         }
     };
 
-    const parseMarkdownHighlights = (mdContent) => {
-        if (!mdContent) return [];
-        const lines = mdContent.split('\n');
+    const parseHighlightsFromContent = (content) => {
+        if (!content) return [];
+        const trimmed = content.trim();
+        const looksLikeHtml = /<html[\s>]/i.test(trimmed) || /class=["']noteText["']/i.test(trimmed);
+        if (looksLikeHtml) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(content, 'text/html');
+            const nodes = Array.from(doc.querySelectorAll('div.noteText'));
+            return nodes
+                .map(node => node.textContent.trim())
+                .filter(Boolean);
+        }
+
+        const lines = content.split('\n');
         const highlights = [];
         for (const line of lines) {
             const match = line.match(/^\s*[-*+]\s+(.*)$/);
@@ -125,10 +136,10 @@ const Dashboard = ({ onBack }) => {
     const handleParseHighlights = () => {
         setHighlightError('');
         setHighlightSuccess('');
-        const parsed = parseMarkdownHighlights(highlightMarkdown);
+        const parsed = parseHighlightsFromContent(highlightMarkdown);
         if (parsed.length === 0) {
             setHighlightPreview([]);
-            setHighlightError('No unordered list items found in the markdown.');
+            setHighlightError('No highlights found in the file or pasted content.');
             return;
         }
         setHighlightPreview(parsed);
@@ -144,7 +155,7 @@ const Dashboard = ({ onBack }) => {
         reader.onload = () => {
             const content = typeof reader.result === 'string' ? reader.result : '';
             setHighlightMarkdown(content);
-            const parsed = parseMarkdownHighlights(content);
+            const parsed = parseHighlightsFromContent(content);
             setHighlightPreview(parsed);
         };
         reader.readAsText(file);
@@ -542,10 +553,10 @@ const Dashboard = ({ onBack }) => {
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Upload Markdown File (.md)</label>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Upload Highlights File (.md or .html)</label>
                                 <input
                                     type="file"
-                                    accept=".md,text/markdown"
+                                    accept=".md,.html,text/markdown,text/html"
                                     onChange={handleHighlightFileChange}
                                     style={{ width: '100%' }}
                                 />
