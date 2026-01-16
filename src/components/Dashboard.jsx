@@ -42,6 +42,16 @@ const Dashboard = ({ onBack }) => {
     // Action State (Edit)
     const [editingBook, setEditingBook] = useState(null);
 
+    // --- Highlights Upload State ---
+    const [highlightBookId, setHighlightBookId] = useState('');
+    const [highlightMarkdown, setHighlightMarkdown] = useState('');
+    const [highlightFileName, setHighlightFileName] = useState('');
+    const [highlightPreview, setHighlightPreview] = useState([]);
+    const [highlightReplaceExisting, setHighlightReplaceExisting] = useState(false);
+    const [highlightBusy, setHighlightBusy] = useState(false);
+    const [highlightError, setHighlightError] = useState('');
+    const [highlightSuccess, setHighlightSuccess] = useState('');
+
     // --- Authentication ---
     const handleLogin = (e) => {
         e.preventDefault();
@@ -86,6 +96,107 @@ const Dashboard = ({ onBack }) => {
     const stringToArray = (str) => {
         if (!str) return [];
         return str.split(',').map(s => s.trim()).filter(Boolean);
+    };
+
+    const parseHighlightsField = (value) => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        try {
+            const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    };
+
+    const parseMarkdownHighlights = (mdContent) => {
+        if (!mdContent) return [];
+        const lines = mdContent.split('\n');
+        const highlights = [];
+        for (const line of lines) {
+            const match = line.match(/^\s*[-*+]\s+(.*)$/);
+            if (!match) continue;
+            const cleaned = match[1].replace(/\s*\(location.*?\)\s*$/i, '').trim();
+            if (cleaned) highlights.push(cleaned);
+        }
+        return highlights;
+    };
+
+    const handleParseHighlights = () => {
+        setHighlightError('');
+        setHighlightSuccess('');
+        const parsed = parseMarkdownHighlights(highlightMarkdown);
+        if (parsed.length === 0) {
+            setHighlightPreview([]);
+            setHighlightError('No unordered list items found in the markdown.');
+            return;
+        }
+        setHighlightPreview(parsed);
+    };
+
+    const handleHighlightFileChange = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        setHighlightError('');
+        setHighlightSuccess('');
+        setHighlightFileName(file.name);
+        const reader = new FileReader();
+        reader.onload = () => {
+            const content = typeof reader.result === 'string' ? reader.result : '';
+            setHighlightMarkdown(content);
+            const parsed = parseMarkdownHighlights(content);
+            setHighlightPreview(parsed);
+        };
+        reader.readAsText(file);
+    };
+
+    const handleUploadHighlights = async () => {
+        setHighlightError('');
+        setHighlightSuccess('');
+        if (!highlightBookId) {
+            setHighlightError('Select a book before uploading highlights.');
+            return;
+        }
+        if (highlightPreview.length === 0) {
+            setHighlightError('Parse the markdown to preview highlights before uploading.');
+            return;
+        }
+        const selectedBook = books.find(book => book.id === highlightBookId);
+        const existingHighlights = highlightReplaceExisting ? [] : parseHighlightsField(selectedBook?.highlights);
+        const mergedHighlights = highlightReplaceExisting ? highlightPreview : existingHighlights.concat(highlightPreview);
+
+        setHighlightBusy(true);
+        try {
+            const res = await fetch('/api/books', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password,
+                    action: 'update',
+                    data: {
+                        id: highlightBookId,
+                        highlights: mergedHighlights,
+                        hasHighlights: mergedHighlights.length > 0 ? 1 : 0
+                    }
+                })
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to upload highlights');
+            }
+
+            setHighlightSuccess(`Uploaded ${highlightPreview.length} highlight${highlightPreview.length === 1 ? '' : 's'}.`);
+            setHighlightMarkdown('');
+            setHighlightFileName('');
+            setHighlightPreview([]);
+            setHighlightReplaceExisting(false);
+            fetchBooks();
+        } catch (e) {
+            setHighlightError(e.message);
+        } finally {
+            setHighlightBusy(false);
+        }
     };
 
     // --- OpenLibrary Search ---
@@ -390,6 +501,107 @@ const Dashboard = ({ onBack }) => {
                         )}
                         {searchResults.length === 0 && !isSearching && searchQuery && (
                             <div style={{ fontStyle: 'italic', color: '#666', marginTop: '10px' }}>Search above to find books.</div>
+                        )}
+                    </div>
+
+                    {/* NEW: HIGHLIGHTS UPLOAD SECTION */}
+                    <div style={{ backgroundColor: '#f9f9f9', padding: '15px', border: '1px solid #999', marginBottom: '30px' }}>
+                        <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', borderBottom: '1px dotted #999', paddingBottom: '5px' }}>
+                            <Plus size={14} style={{ display: 'inline' }} /> Upload Highlights (Markdown)
+                        </h3>
+                        <div style={{ fontSize: '12px', color: '#555', marginBottom: '10px' }}>
+                            Each unordered list item is treated as a highlight. Example:
+                            <pre style={{ margin: '8px 0', padding: '8px', backgroundColor: '#fff', border: '1px solid #ddd' }}>
+                                - First highlight{'\n'}- Second highlight
+                            </pre>
+                        </div>
+
+                        {highlightError && <div style={{ backgroundColor: '#ffe6e6', color: '#d00', padding: '8px', border: '1px solid #d00', marginBottom: '10px' }}>{highlightError}</div>}
+                        {highlightSuccess && <div style={{ backgroundColor: '#e6fffa', color: '#006600', padding: '8px', border: '1px solid #006600', marginBottom: '10px' }}>{highlightSuccess}</div>}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Target Book</label>
+                                <select
+                                    value={highlightBookId}
+                                    onChange={e => setHighlightBookId(e.target.value)}
+                                    style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+                                >
+                                    <option value="">Select a book...</option>
+                                    {books.map(book => (
+                                        <option key={book.id} value={book.id}>
+                                            {book.title}
+                                        </option>
+                                    ))}
+                                </select>
+                                {highlightBookId && (
+                                    <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
+                                        Existing highlights: {parseHighlightsField(books.find(book => book.id === highlightBookId)?.highlights).length}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Upload Markdown File (.md)</label>
+                                <input
+                                    type="file"
+                                    accept=".md,text/markdown"
+                                    onChange={handleHighlightFileChange}
+                                    style={{ width: '100%' }}
+                                />
+                                {highlightFileName && (
+                                    <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>Loaded: {highlightFileName}</div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Or Paste Markdown</label>
+                                <textarea
+                                    value={highlightMarkdown}
+                                    onChange={e => setHighlightMarkdown(e.target.value)}
+                                    rows="6"
+                                    placeholder="- Highlight one\n- Highlight two"
+                                    style={{ width: '100%', padding: '6px', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                                <label style={{ fontSize: '12px' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={highlightReplaceExisting}
+                                        onChange={e => setHighlightReplaceExisting(e.target.checked)}
+                                        style={{ marginRight: '6px' }}
+                                    />
+                                    Replace existing highlights
+                                </label>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button type="button" onClick={handleParseHighlights} style={{ padding: '6px 12px', backgroundColor: '#fff', border: '1px solid #000', cursor: 'pointer' }}>
+                                        Parse Highlights
+                                    </button>
+                                    <button type="button" disabled={highlightBusy} onClick={handleUploadHighlights} style={{ padding: '6px 12px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                                        {highlightBusy ? 'UPLOADING...' : 'Upload Highlights'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {highlightPreview.length > 0 && (
+                            <div style={{ marginTop: '12px', borderTop: '1px dashed #ccc', paddingTop: '10px' }}>
+                                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}>
+                                    Preview ({highlightPreview.length})
+                                </div>
+                                <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: '#333' }}>
+                                    {highlightPreview.slice(0, 8).map((highlight, index) => (
+                                        <li key={`${highlight}-${index}`}>{highlight}</li>
+                                    ))}
+                                </ul>
+                                {highlightPreview.length > 8 && (
+                                    <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
+                                        Showing first 8 highlights.
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
 

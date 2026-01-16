@@ -43,11 +43,11 @@ function parseMDHighlights(mdContent) {
     }
     const lines = mdContent.split('\n');
     for (const line of lines) {
-        if (line.trim().startsWith('- ')) {
-            const highlightText = line.trim().substring(2).replace(/\s*\(location.*?\)\s*$/, '').trim();
-            if (highlightText) {
-                highlights.push(highlightText);
-            }
+        const match = line.match(/^\s*[-*+]\s+(.*)$/);
+        if (!match) continue;
+        const highlightText = match[1].replace(/\s*\(location.*?\)\s*$/i, '').trim();
+        if (highlightText) {
+            highlights.push(highlightText);
         }
     }
     return { title, highlights };
