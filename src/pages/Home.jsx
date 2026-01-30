@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BookListItem from '../components/BookListItem';
 import RandomHighlight from '../components/RandomHighlight';
+import HomeStats from '../components/HomeStats';
 
 const LIMIT = 50;
 
@@ -111,33 +112,33 @@ const Home = ({ tagsMap }) => {
     });
 
     return (
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-6">
             
             {/* --- LEFT COLUMN: NAVIGATION / SEARCH --- */}
-            <div className="w-full md:w-1/5 flex flex-col gap-4">
+            <div className="w-full md:w-1/5 flex flex-col gap-6">
                 <div className="border border-gray-400 p-2 bg-gray-50">
-                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-sm">Search</div>
+                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-base">Search</div>
                     <input 
                         type="text" 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full border border-gray-400 p-1 text-sm"
+                        className="w-full border border-gray-400 p-2 text-base"
                         placeholder="Keywords..."
                     />
                 </div>
 
                 <div className="border border-gray-400 p-2">
-                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-sm">Shelves</div>
-                    <ul className="text-sm list-square pl-4 space-y-1">
+                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-base">Shelves</div>
+                    <ul className="text-sm list-square pl-5 space-y-1">
                         <li><a href="#reading">Reading Now</a> ({shelves.currentlyReading.length})</li>
-                        <li><a href="#watchlist">To Read</a> ({shelves.watchlist.length})</li>
                         <li><a href="#finished">Finished</a> ({shelves.read.length})</li>
+                        <li><a href="#watchlist">To Read</a> ({shelves.watchlist.length})</li>
                     </ul>
                 </div>
 
                 {/* Tag Cloud Sim */}
                 <div className="border border-gray-400 p-2">
-                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-sm">Tags</div>
+                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-base">Tags</div>
                     <div className="flex flex-wrap gap-1 text-xs">
                          {Array.from(tagsMap.values()).slice(0, 20).map(tag => (
                              <span key={tag.id} className="border border-gray-300 px-1 bg-white text-gray-700">{tag.name}</span>
@@ -148,13 +149,13 @@ const Home = ({ tagsMap }) => {
 
             {/* --- CENTER COLUMN: FEED --- */}
             <div className="w-full md:w-1/2">
-                {error && <div className="bg-red-100 border border-red-500 text-red-700 p-2 mb-2 text-sm">{error}</div>}
+                {error && <div className="bg-red-100 border border-red-500 text-red-700 p-3 mb-4 text-sm">{error}</div>}
                 
                 {/* Reading Now Section */}
                 {shelves.currentlyReading.length > 0 && (
-                    <div className="mb-4">
-                        <h2 className="bg-black text-white px-2 py-1 font-bold text-sm mb-0" id="reading">READING NOW</h2>
-                        <div className="border border-black border-t-0 p-2 grid grid-cols-1 gap-2 bg-white">
+                    <div className="mb-6">
+                        <h2 className="bg-black text-white px-2 py-1 font-bold text-base mb-0" id="reading">READING NOW</h2>
+                        <div className="border border-black border-t-0 p-2 grid grid-cols-1 gap-3 bg-white">
                              {shelves.currentlyReading.map(book => (
                                  <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
                              ))}
@@ -162,24 +163,24 @@ const Home = ({ tagsMap }) => {
                     </div>
                 )}
 
-                {/* To Read Section */}
-                {shelves.watchlist.length > 0 && (
-                    <div className="mb-4">
-                        <h2 className="bg-gray-300 text-black border border-gray-400 px-2 py-1 font-bold text-sm mb-0" id="watchlist">TO READ</h2>
-                        <div className="border border-gray-400 border-t-0 p-2 grid grid-cols-1 gap-2 bg-white">
-                             {shelves.watchlist.map(book => (
+                {/* Finished Section (Moved Up) */}
+                {shelves.read.length > 0 && (
+                    <div className="mb-6">
+                        <h2 className="bg-gray-300 text-black border border-gray-400 px-2 py-1 font-bold text-base mb-0" id="finished">RECENTLY FINISHED</h2>
+                        <div className="border border-gray-400 border-t-0 p-2 grid grid-cols-1 gap-3 bg-white">
+                             {shelves.read.map(book => (
                                  <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
                              ))}
                         </div>
                     </div>
                 )}
 
-                {/* Finished Section */}
-                {shelves.read.length > 0 && (
-                    <div className="mb-4">
-                        <h2 className="bg-gray-300 text-black border border-gray-400 px-2 py-1 font-bold text-sm mb-0" id="finished">RECENTLY FINISHED</h2>
-                        <div className="border border-gray-400 border-t-0 p-2 grid grid-cols-1 gap-2 bg-white">
-                             {shelves.read.map(book => (
+                {/* To Read Section (Moved to End) */}
+                {shelves.watchlist.length > 0 && (
+                    <div className="mb-6">
+                        <h2 className="bg-gray-300 text-black border border-gray-400 px-2 py-1 font-bold text-base mb-0" id="watchlist">TO READ</h2>
+                        <div className="border border-gray-400 border-t-0 p-2 grid grid-cols-1 gap-3 bg-white">
+                             {shelves.watchlist.map(book => (
                                  <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
                              ))}
                         </div>
@@ -190,7 +191,7 @@ const Home = ({ tagsMap }) => {
                     <button 
                         onClick={() => fetchBookList(offset)} 
                         disabled={loadingList}
-                        className="w-full border border-black bg-gray-100 p-2 font-bold text-sm hover:bg-gray-200"
+                        className="w-full border border-black bg-gray-100 p-3 font-bold text-sm hover:bg-gray-200"
                     >
                         {loadingList ? 'Loading...' : '[ Load More Entries ]'}
                     </button>
@@ -198,20 +199,22 @@ const Home = ({ tagsMap }) => {
             </div>
 
             {/* --- RIGHT COLUMN: EXTRAS --- */}
-            <div className="w-full md:w-1/4 flex flex-col gap-4">
+            <div className="w-full md:w-1/4 flex flex-col gap-6">
                 <RandomHighlight />
+                
+                <HomeStats />
 
                 <div className="border border-gray-400 p-2 bg-yellow-50">
-                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-sm">Site News</div>
-                    <div className="text-xs space-y-2">
+                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-base">Site News</div>
+                    <div className="text-sm space-y-2">
                         <p><strong>Jan 30</strong> - Updated site design to text-heavy layout.</p>
                         <p><strong>Jan 22</strong> - Added Hugo Export API support.</p>
                     </div>
                 </div>
 
                 <div className="border border-gray-400 p-2">
-                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-sm">Links</div>
-                    <ul className="text-xs list-disc pl-4">
+                    <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-base">Links</div>
+                    <ul className="text-sm list-disc pl-5">
                         <li><a href="https://openlibrary.org">OpenLibrary</a></li>
                         <li><a href="https://gutenberg.org">Project Gutenberg</a></li>
                         <li><a href="https://standardebooks.org">Standard Ebooks</a></li>

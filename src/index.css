@@ -5,8 +5,8 @@
 :root {
   /* System fonts for high density */
   font-family: "MS PGothic", "Arial", sans-serif; 
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 16px; /* Increased from 13px */
+  line-height: 1.5;
   color: #333;
 }
 
@@ -41,18 +41,18 @@ a:visited {
 .dense-header {
   background-color: #eee;
   border-bottom: 1px solid #999;
-  padding: 4px 8px;
+  padding: 6px 10px; /* Increased padding */
   font-weight: bold;
-  font-size: 13px;
+  font-size: 15px; /* Increased from 13px */
 }
 
 .dense-block {
-  margin-bottom: 10px;
+  margin-bottom: 15px; /* Increased margin */
 }
 
 /* Utilities */
-.text-tiny { font-size: 11px; }
-.text-small { font-size: 12px; }
+.text-tiny { font-size: 12px; } /* Increased */
+.text-small { font-size: 14px; } /* Increased */
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
