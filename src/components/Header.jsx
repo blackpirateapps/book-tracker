@@ -1,66 +1,45 @@
 import React from 'react';
-import { Library, LayoutDashboard, TrendingUp, Github, Globe, Moon, Sun } from 'lucide-react';
 
-const Header = ({ onStatsClick, onHomeClick, onDashboardClick, isDarkMode, toggleTheme }) => {
+const Header = ({ onStatsClick, onHomeClick, onDashboardClick }) => {
     return (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 px-1">
-            <div 
-                className="flex items-center gap-3 cursor-pointer group" 
-                onClick={onHomeClick}
-            >
-                <div className="p-1.5 rounded-lg bg-slate-900 dark:bg-slate-800 text-white shadow-sm group-hover:bg-slate-800 dark:group-hover:bg-slate-700 transition-colors">
-                    <Library size={20} />
-                </div>
+        <div className="border-b-2 border-black pb-2 mb-2">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-end">
                 <div>
-                    <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100 leading-none">
-                        Book Tracker
+                    <h1 className="text-xl font-bold font-serif leading-none">
+                        <a href="#" onClick={(e) => { e.preventDefault(); onHomeClick(); }} className="no-underline text-black hover:text-black">
+                            SUDIP'S BOOK TRACKER
+                        </a>
                     </h1>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-wide uppercase mt-0.5">
-                        Library
-                    </p>
+                    <div className="text-xs text-gray-600 mt-1">
+                        Index of digital & physical library assets.
+                    </div>
                 </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-                <nav className="flex items-center gap-1 md:gap-3 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-                    <NavButton onClick={onDashboardClick} icon={LayoutDashboard} label="Dashboard" />
-                    <NavButton onClick={onStatsClick} icon={TrendingUp} label="Stats" />
-                    <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-                    <SocialLink href="https://github.com/yourusername/repo" icon={Github} />
-                    <SocialLink href="https://yourwebsite.com" icon={Globe} />
-                </nav>
-
-                <button 
-                    onClick={toggleTheme}
-                    className="p-1.5 rounded-md text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
-                    aria-label="Toggle Theme"
-                >
-                    {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
+                
+                <div className="mt-2 md:mt-0 text-sm">
+                    <nav className="flex gap-1 flex-wrap">
+                        <span>[</span>
+                        <a href="#" onClick={(e) => { e.preventDefault(); onHomeClick(); }}>Home</a>
+                        <span>]</span>
+                        
+                        <span>[</span>
+                        <a href="#" onClick={(e) => { e.preventDefault(); onDashboardClick(); }}>Dashboard</a>
+                        <span>]</span>
+                        
+                        <span>[</span>
+                        <a href="#" onClick={(e) => { e.preventDefault(); onStatsClick(); }}>Statistics</a>
+                        <span>]</span>
+                        
+                        <span className="ml-2 text-gray-400">|</span>
+                        
+                        <span className="ml-2">External: </span>
+                        <a href="https://github.com/yourusername/repo" target="_blank" rel="noreferrer">Source</a>
+                        <span>, </span>
+                        <a href="https://yourwebsite.com" target="_blank" rel="noreferrer">Website</a>
+                    </nav>
+                </div>
             </div>
         </div>
     );
 };
-
-const NavButton = ({ onClick, icon: Icon, label }) => (
-    <button 
-        onClick={onClick}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 text-xs font-semibold whitespace-nowrap"
-    >
-        <Icon size={14} />
-        {label}
-    </button>
-);
-
-const SocialLink = ({ href, icon: Icon }) => (
-    <a 
-        href={href} 
-        target="_blank" 
-        rel="noreferrer"
-        className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-all duration-200"
-    >
-        <Icon size={16} />
-    </a>
-);
 
 export default Header;

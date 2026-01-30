@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Quote } from 'lucide-react';
 
 const RandomHighlight = () => {
     const [highlight, setHighlight] = useState(null);
@@ -25,27 +24,17 @@ const RandomHighlight = () => {
         fetchHighlight();
     }, []);
 
-    if (loading) return null;
+    if (loading) return <div className="border border-gray-400 p-2 text-xs italic">Loading quote...</div>;
     if (!highlight) return null;
 
     return (
-        <div className="minimal-card p-5 mb-8 relative group">
-            <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-slate-400">
-                    <Quote size={14} className="text-slate-300 dark:text-slate-600" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                        Daily Inspiration
-                    </span>
-                </div>
-                
-                <p className="font-serif text-base text-slate-700 dark:text-slate-300 italic leading-relaxed px-1">
-                    "{highlight.highlight}"
-                </p>
-                
-                <div className="text-right mt-1">
-                    <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">{highlight.author}</div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500">{highlight.title}</div>
-                </div>
+        <div className="border border-gray-400 p-2 bg-white">
+            <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-sm bg-gray-100 px-1">Quote of Day</div>
+            <div className="font-serif italic text-sm text-gray-800 mb-2 px-1">
+                "{highlight.highlight}"
+            </div>
+            <div className="text-right text-xs text-gray-600 px-1">
+                &mdash; {highlight.author}, <cite>{highlight.title}</cite>
             </div>
         </div>
     );
