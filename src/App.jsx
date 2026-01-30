@@ -37,36 +37,29 @@ function App() {
     const handleDashboardClick = () => navigate('/dashboard');
 
     return (
-        <div style={{ 
-            fontFamily: '"Times New Roman", Times, serif', 
-            maxWidth: '750px', 
-            width: '100%', 
-            boxSizing: 'border-box',
-            margin: '0 auto', 
-            padding: '15px', 
-            color: '#000',
-            backgroundColor: '#fff',
-            minHeight: '100vh'
-        }}>
-            {/* Header is global */}
-            <Header 
-                onHomeClick={handleHomeClick}
-                onStatsClick={handleStatsClick}
-                onDashboardClick={handleDashboardClick}
-            />
+        <div className="min-h-screen w-full flex flex-col items-center py-6 px-4 sm:px-6 lg:px-8">
+            <div className="w-full max-w-3xl glass-panel rounded-3xl p-6 sm:p-8 min-h-[85vh] flex flex-col">
+                {/* Header is global */}
+                <Header 
+                    onHomeClick={handleHomeClick}
+                    onStatsClick={handleStatsClick}
+                    onDashboardClick={handleDashboardClick}
+                />
 
-            <Routes>
-                <Route path="/" element={<Home tagsMap={tagsMap} />} />
-                <Route path="/book/:id" element={<BookDetailsPage tagsMap={tagsMap} />} />
-                <Route path="/stats" element={<StatsPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-            </Routes>
+                <main className="flex-grow mt-6">
+                    <Routes>
+                        <Route path="/" element={<Home tagsMap={tagsMap} />} />
+                        <Route path="/book/:id" element={<BookDetailsPage tagsMap={tagsMap} />} />
+                        <Route path="/stats" element={<StatsPage />} />
+                        <Route path="/dashboard" element={<DashboardPage />} />
+                    </Routes>
+                </main>
 
-            <div style={{ borderTop: '1px solid #000', marginTop: '40px', paddingTop: '10px', textAlign: 'center' }}>
-                <small style={{ fontSize: '11px', color: '#666' }}>
-                    Page generated at {new Date().toLocaleTimeString()} <br/>
-                    &copy; 2026 Sudip's Library • <a href="#" style={{ color: '#0000AA' }}>Contact Webmaster</a>
-                </small>
+                <div className="mt-10 pt-6 border-t border-black/5 text-center">
+                    <small className="text-xs text-slate-500">
+                        &copy; 2026 Sudip's Library
+                    </small>
+                </div>
             </div>
         </div>
     );

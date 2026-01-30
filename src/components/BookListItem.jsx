@@ -5,78 +5,74 @@ import TagBadge from './TagBadge';
 const BookListItem = ({ book, shelf, tagsMap, onClick, isPartial }) => {
     const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/80x120?text=No+Cover`;
     
-    // Handle Partial Data Gracefully
     const authors = isPartial ? 'Loading...' : (book.authors ? book.authors.join(', ') : 'Unknown');
     const resolvedTags = (!isPartial && book.tags) ? book.tags.map(id => tagsMap.get(id)).filter(Boolean) : [];
 
-    // Skeleton style for text if partial
-    const textSkeletonStyle = isPartial ? { backgroundColor: '#eee', color: 'transparent', borderRadius: '3px' } : {};
-
-    const containerStyle = {
-        borderBottom: '1px solid #ddd',
-        marginBottom: '10px',
-        paddingBottom: '10px',
-        backgroundColor: 'transparent',
-        display: 'flex',
-        gap: '15px',
-        alignItems: 'flex-start',
-        cursor: 'pointer',
-        minHeight: '80px' 
-    };
-
     return (
-        <div style={containerStyle} onClick={() => onClick(book.id)}>
-            <div style={{ flexShrink: 0 }}>
-                <div style={{ width: '45px', height: '68px', backgroundColor: '#f4f4f4', border: '1px solid #999' }}>
-                    <img 
-                        src={coverUrl} 
-                        alt={book.title} 
-                        width="45" height="68"
-                        loading="lazy"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} 
-                    />
-                </div>
+        <div 
+            onClick={() => onClick(book.id)}
+            className="group relative glass-card rounded-2xl p-3 mb-4 flex gap-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg cursor-pointer overflow-hidden"
+        >
+            {/* Hover Glow Effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-500 pointer-events-none" />
+
+            {/* Cover Image */}
+            <div className="flex-shrink-0 w-[60px] sm:w-[70px] h-[90px] sm:h-[105px] rounded-lg overflow-hidden shadow-md border border-white/20 relative z-10 bg-slate-100">
+                <img 
+                    src={coverUrl} 
+                    alt={book.title} 
+                    loading="lazy"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
             </div>
 
-            <div style={{ flexGrow: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '16px', color: '#0000AA', lineHeight: '1.2' }}>
-                    <b style={{ textDecoration: 'underline' }}>{book.title}</b>
-                </div>
+            {/* Content */}
+            <div className="flex-grow min-w-0 flex flex-col justify-center z-10">
+                <h3 className="text-base sm:text-lg font-bold text-slate-800 leading-tight mb-1 group-hover:text-indigo-600 transition-colors truncate pr-6">
+                    {book.title}
+                </h3>
                 
-                {/* Author Line */}
-                <div style={{ fontSize: '12px', color: '#444', marginBottom: '6px', ...textSkeletonStyle, display: 'inline-block', minWidth: isPartial ? '100px' : 'auto' }}>
-                    by {authors}
-                </div>
+                <p className={`text-xs text-slate-500 font-medium mb-2 ${isPartial ? 'animate-pulse bg-slate-200/50 w-24 h-4 rounded' : ''}`}>
+                    {isPartial ? '' : `by ${authors}`}
+                </p>
                 
                 {shelf === 'currentlyReading' && !isPartial && (
-                    <div style={{ marginBottom: '5px', fontSize: '12px' }}>
-                        Progress: {book.readingProgress}%
-                        <br/>
-                        <div style={{ width: '100%', maxWidth: '150px', border: '1px solid #666', height: '8px', display: 'inline-block', marginTop: '2px' }}>
-                            <div style={{ width: `${book.readingProgress}%`, background: '#000080', height: '100%' }}></div>
+                    <div className="mb-2">
+                        <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                            <span>Progress</span>
+                            <span>{book.readingProgress}%</span>
+                        </div>
+                        <div className="w-full max-w-[140px] h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div 
+                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" 
+                                style={{ width: `${book.readingProgress}%` }}
+                            />
                         </div>
                     </div>
                 )}
 
                 {shelf === 'read' && book.finishedOn && !isPartial && (
-                    <div style={{ fontSize: '12px', color: '#666' }}>
-                        <CheckCircle2 size={10} style={{ display: 'inline', marginRight: '3px' }} /> 
-                        Read on: {book.finishedOn}
+                    <div className="flex items-center text-[11px] text-emerald-600 font-medium mb-1">
+                        <CheckCircle2 size={12} className="mr-1" /> 
+                        Finished on {book.finishedOn}
                     </div>
                 )}
                 
-                <div style={{ marginTop: '4px', minHeight: '16px' }}>
-                    {book.readingMedium && !isPartial && <span style={{ fontSize: '10px', color: '#666', marginRight: '5px' }}>[{book.readingMedium}]</span>}
+                <div className="flex flex-wrap gap-1 mt-auto">
+                    {book.readingMedium && !isPartial && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200/50 text-slate-500 uppercase tracking-wider">
+                            {book.readingMedium}
+                        </span>
+                    )}
                     {resolvedTags.map(tag => (
                         <TagBadge key={tag.id} tag={tag} />
                     ))}
                 </div>
             </div>
 
-            <div style={{ flexShrink: 0 }}>
-                 <div style={{ color: '#000' }}>
-                    <MoreHorizontal size={16} />
-                 </div>
+            {/* Action Icon */}
+            <div className="absolute top-3 right-3 text-slate-300 group-hover:text-indigo-500 transition-colors">
+                <MoreHorizontal size={20} />
             </div>
         </div>
     );

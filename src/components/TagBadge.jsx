@@ -1,22 +1,8 @@
 import React from 'react';
 
 const TagBadge = ({ tag }) => {
-    const style = {
-        border: '1px solid #ccc',
-        padding: '1px 4px',
-        fontSize: '10px',
-        marginRight: '4px',
-        backgroundColor: '#f4f4f4',
-        color: '#333',
-        textTransform: 'uppercase',
-        fontFamily: 'monospace',
-        borderRadius: '2px',
-        display: 'inline-block',
-        marginTop: '2px'
-    };
-
     return (
-        <span style={style}>
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200 mr-1.5 mt-1 tracking-wide uppercase">
             {tag.name}
         </span>
     );
