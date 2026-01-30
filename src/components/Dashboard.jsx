@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    ArrowLeft, 
-    Plus, 
-    Trash2, 
-    Edit, 
-    Save, 
-    X, 
+import {
+    Plus,
+    Trash2,
+    Edit,
+    Save,
+    X,
     Search,
     Lock,
     LogOut,
@@ -14,32 +13,26 @@ import {
     BookOpen,
     CheckCircle2,
     Clock,
-    Loader2
+    ArrowLeft
 } from 'lucide-react';
 import TagsManager from './TagsManager';
 
 const Dashboard = ({ onBack }) => {
-    // Auth State
     const [password, setPassword] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    
-    // View State
-    const [activeTab, setActiveTab] = useState('books'); // 'books' or 'tags'
+    const [activeTab, setActiveTab] = useState('books'); 
 
-    // Data State (Books)
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [successMsg, setSuccessMsg] = useState('');
     const [filter, setFilter] = useState('');
 
-    // --- Search & Add State ---
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [addingBookId, setAddingBookId] = useState(null); 
 
-    // Action State (Edit)
     const [editingBook, setEditingBook] = useState(null);
 
     // --- Highlights Upload State ---
@@ -52,17 +45,14 @@ const Dashboard = ({ onBack }) => {
     const [highlightError, setHighlightError] = useState('');
     const [highlightSuccess, setHighlightSuccess] = useState('');
 
-    // --- Authentication ---
     const handleLogin = (e) => {
         e.preventDefault();
-        // Simple client-side check to persist session temporarily
         if (password) {
             setIsAuthenticated(true);
             fetchBooks();
         }
     };
 
-    // --- Book Fetching ---
     const fetchBooks = async () => {
         setLoading(true);
         setError(null);
@@ -72,7 +62,7 @@ const Dashboard = ({ onBack }) => {
                 const data = await res.json();
                 setBooks(data);
             } else {
-                setError('Failed to fetch books. Check your connection.');
+                setError('Failed to fetch books.');
             }
         } catch (e) {
             setError(e.message);
@@ -81,7 +71,6 @@ const Dashboard = ({ onBack }) => {
         }
     };
 
-    // --- Helpers for Data Transformation ---
     const arrayToString = (data) => {
         if (!data) return '';
         try {
@@ -117,9 +106,7 @@ const Dashboard = ({ onBack }) => {
             const parser = new DOMParser();
             const doc = parser.parseFromString(content, 'text/html');
             const nodes = Array.from(doc.querySelectorAll('div.noteText'));
-            return nodes
-                .map(node => node.textContent.trim())
-                .filter(Boolean);
+            return nodes.map(node => node.textContent.trim()).filter(Boolean);
         }
 
         const lines = content.split('\n');
@@ -139,7 +126,7 @@ const Dashboard = ({ onBack }) => {
         const parsed = parseHighlightsFromContent(highlightMarkdown);
         if (parsed.length === 0) {
             setHighlightPreview([]);
-            setHighlightError('No highlights found in the file or pasted content.');
+            setHighlightError('No highlights found.');
             return;
         }
         setHighlightPreview(parsed);
@@ -165,11 +152,11 @@ const Dashboard = ({ onBack }) => {
         setHighlightError('');
         setHighlightSuccess('');
         if (!highlightBookId) {
-            setHighlightError('Select a book before uploading highlights.');
+            setHighlightError('Select a book first.');
             return;
         }
         if (highlightPreview.length === 0) {
-            setHighlightError('Parse the markdown to preview highlights before uploading.');
+            setHighlightError('Parse the markdown first.');
             return;
         }
         const selectedBook = books.find(book => book.id === highlightBookId);
@@ -194,10 +181,10 @@ const Dashboard = ({ onBack }) => {
 
             if (!res.ok) {
                 const data = await res.json();
-                throw new Error(data.error || 'Failed to upload highlights');
+                throw new Error(data.error || 'Failed to upload');
             }
 
-            setHighlightSuccess(`Uploaded ${highlightPreview.length} highlight${highlightPreview.length === 1 ? '' : 's'}.`);
+            setHighlightSuccess(`Uploaded ${highlightPreview.length} highlights.`);
             setHighlightMarkdown('');
             setHighlightFileName('');
             setHighlightPreview([]);
@@ -210,54 +197,39 @@ const Dashboard = ({ onBack }) => {
         }
     };
 
-    // --- OpenLibrary Search ---
     const handleSearch = async (e) => {
         e.preventDefault();
         if (!searchQuery.trim()) return;
-
         setIsSearching(true);
         setSearchResults([]);
         setError(null);
-
         try {
-            // Using the proxy API to avoid CORS and normalize data
             const res = await fetch(`/api/openlibrary-search?q=${encodeURIComponent(searchQuery)}`);
-            
             if (!res.ok) throw new Error('Search failed');
-            
             const results = await res.json();
             setSearchResults(results);
         } catch (e) {
             console.error(e);
-            setError("Could not fetch results from OpenLibrary.");
+            setError("Could not fetch results.");
         } finally {
             setIsSearching(false);
         }
     };
 
-    // --- Book Actions ---
     const handleAddBook = async (olid, shelf) => {
         setAddingBookId(olid);
         setError(null);
         setSuccessMsg('');
-
         try {
             const res = await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    password,
-                    action: 'add',
-                    data: { olid, shelf }
-                })
+                body: JSON.stringify({ password, action: 'add', data: { olid, shelf } })
             });
-
             const data = await res.json();
-            
             if (!res.ok) throw new Error(data.error || 'Failed to add book');
-            
-            setSuccessMsg(`Successfully added: "${data.book.title}"`);
-            fetchBooks(); // Refresh local list
+            setSuccessMsg(`Added: "${data.book.title}"`);
+            fetchBooks();
         } catch (e) {
             setError(e.message);
         } finally {
@@ -266,24 +238,14 @@ const Dashboard = ({ onBack }) => {
     };
 
     const handleDeleteBook = async (id, title) => {
-        if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
-
+        if (!window.confirm(`Delete "${title}"?`)) return;
         try {
             const res = await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    password,
-                    action: 'delete',
-                    data: { id }
-                })
+                body: JSON.stringify({ password, action: 'delete', data: { id } })
             });
-
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Failed to delete');
-            }
-            
+            if (!res.ok) throw new Error('Failed to delete');
             setSuccessMsg(`Deleted "${title}"`);
             fetchBooks();
         } catch (e) {
@@ -295,33 +257,23 @@ const Dashboard = ({ onBack }) => {
         e.preventDefault();
         setError(null);
         setSuccessMsg('');
-        
         try {
-            const updatedData = { 
+            const updatedData = {
                 ...editingBook,
                 authors: stringToArray(editingBook.authorsInput),
                 tags: stringToArray(editingBook.tagsInput)
             };
-            
             delete updatedData.authorsInput;
             delete updatedData.tagsInput;
 
             const res = await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    password,
-                    action: 'update',
-                    data: updatedData
-                })
+                body: JSON.stringify({ password, action: 'update', data: updatedData })
             });
 
-            if (!res.ok) {
-                const data = await res.json();
-                throw new Error(data.error || 'Update failed');
-            }
-
-            setSuccessMsg('Book updated successfully');
+            if (!res.ok) throw new Error('Update failed');
+            setSuccessMsg('Updated successfully');
             setEditingBook(null);
             fetchBooks();
         } catch (e) {
@@ -342,30 +294,28 @@ const Dashboard = ({ onBack }) => {
         (b.authors && String(b.authors).toLowerCase().includes(filter.toLowerCase()))
     );
 
-    // --- LOGIN VIEW ---
     if (!isAuthenticated) {
         return (
-            <div style={{ maxWidth: '400px', margin: '60px auto', border: '1px solid #000', padding: '20px', backgroundColor: '#fff' }}>
-                <div style={{ borderBottom: '1px solid #000', paddingBottom: '10px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Lock size={16} />
-                    <h2 style={{ margin: 0, fontSize: '18px' }}>Admin Dashboard</h2>
-                </div>
-                
-                <form onSubmit={handleLogin}>
-                    <label style={{ display: 'block', marginBottom: '5px', fontSize: '13px', fontWeight: 'bold' }}>Password:</label>
-                    <input 
-                        type="password" 
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        style={{ width: '100%', padding: '8px', marginBottom: '15px', boxSizing: 'border-box', border: '1px solid #999' }}
-                        autoFocus
-                    />
-                    <button type="submit" style={{ width: '100%', padding: '10px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                        ENTER
-                    </button>
-                </form>
-                <div style={{ marginTop: '15px', textAlign: 'center' }}>
-                    <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#0000AA', textDecoration: 'underline', cursor: 'pointer', fontSize: '13px' }}>
+            <div className="flex justify-center items-center min-h-[50vh]">
+                <div className="minimal-card p-6 w-full max-w-sm">
+                    <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">
+                        <Lock size={16} className="text-slate-500" />
+                        <h2 className="font-bold text-slate-800 dark:text-slate-200">Admin Access</h2>
+                    </div>
+                    <form onSubmit={handleLogin}>
+                        <label className="block text-xs font-bold text-slate-500 mb-2">PASSWORD</label>
+                        <input 
+                            type="password" 
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            className="minimal-input px-3 py-2 mb-4 text-sm"
+                            autoFocus
+                        />
+                        <button type="submit" className="w-full bg-slate-900 dark:bg-slate-700 text-white py-2 rounded-md text-sm font-bold hover:bg-slate-800 transition-colors">
+                            ENTER
+                        </button>
+                    </form>
+                    <button onClick={onBack} className="w-full mt-4 text-xs text-blue-600 dark:text-blue-400 hover:underline">
                         &larr; Return to Library
                     </button>
                 </div>
@@ -373,135 +323,102 @@ const Dashboard = ({ onBack }) => {
         );
     }
 
-    // --- MAIN DASHBOARD VIEW ---
     return (
-        <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '10px', fontFamily: '"Times New Roman", serif', color: '#000' }}>
-            
+        <div className="w-full max-w-5xl mx-auto p-4 animate-fadeIn">
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid black', paddingBottom: '10px' }}>
-                <h1 style={{ margin: 0, fontSize: '24px' }}>Library Dashboard</h1>
-                <div style={{ display: 'flex', gap: '15px' }}>
-                    <button onClick={fetchBooks} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <RefreshCw size={14} /> Refresh
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboard</h1>
+                <div className="flex gap-3">
+                    <button onClick={fetchBooks} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <RefreshCw size={14} /> REFRESH
                     </button>
-                    <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', color: '#0000AA' }}>
-                        <LogOut size={14} /> Exit
+                    <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-700">
+                        <LogOut size={14} /> EXIT
                     </button>
                 </div>
             </div>
 
-            {/* Navigation Tabs */}
-            <div style={{ display: 'flex', marginBottom: '20px', borderBottom: '1px solid #ccc' }}>
+            {/* Tabs */}
+            <div className="flex gap-1 mb-6 border-b border-slate-200 dark:border-slate-700">
                 <button 
                     onClick={() => setActiveTab('books')}
-                    style={{ 
-                        padding: '10px 20px', 
-                        border: '1px solid #ccc', 
-                        borderBottom: 'none', 
-                        backgroundColor: activeTab === 'books' ? '#fff' : '#f4f4f4',
-                        fontWeight: activeTab === 'books' ? 'bold' : 'normal',
-                        cursor: 'pointer',
-                        marginBottom: '-1px'
-                    }}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === 'books' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
                 >
                     Books Management
                 </button>
                 <button 
                     onClick={() => setActiveTab('tags')}
-                    style={{ 
-                        padding: '10px 20px', 
-                        border: '1px solid #ccc', 
-                        borderBottom: 'none', 
-                        backgroundColor: activeTab === 'tags' ? '#fff' : '#f4f4f4',
-                        fontWeight: activeTab === 'tags' ? 'bold' : 'normal',
-                        cursor: 'pointer',
-                        marginBottom: '-1px',
-                        display: 'flex', alignItems: 'center', gap: '5px'
-                    }}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'tags' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'}`}
                 >
-                    <Tag size={14} /> Tags Manager
+                    <Tag size={14} /> Tags
                 </button>
             </div>
 
-            {/* Content Switch */}
             {activeTab === 'tags' ? (
                 <TagsManager password={password} onBack={() => setActiveTab('books')} />
             ) : (
-                <>
-                    {/* --- BOOKS MANAGEMENT UI --- */}
-                    {error && <div style={{ backgroundColor: '#ffe6e6', color: '#d00', padding: '10px', border: '1px solid #d00', marginBottom: '15px' }}>Error: {error}</div>}
-                    {successMsg && <div style={{ backgroundColor: '#e6fffa', color: '#006600', padding: '10px', border: '1px solid #006600', marginBottom: '15px' }}>{successMsg}</div>}
+                <div className="space-y-6">
+                    {(error || highlightError) && (
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 p-3 rounded-md text-sm">
+                            {error || highlightError}
+                        </div>
+                    )}
+                    {(successMsg || highlightSuccess) && (
+                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 p-3 rounded-md text-sm">
+                            {successMsg || highlightSuccess}
+                        </div>
+                    )}
 
-                    {/* NEW: SEARCH & ADD SECTION */}
-                    <div style={{ backgroundColor: '#f4f4f4', padding: '15px', border: '1px solid #999', marginBottom: '30px' }}>
-                        <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', borderBottom: '1px dotted #999', paddingBottom: '5px' }}>
-                            <Plus size={14} style={{ display: 'inline' }} /> Add New Books
+                    {/* Add Books */}
+                    <div className="minimal-card p-5">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-2">
+                            <Plus size={16} /> Add New Books
                         </h3>
-                        
-                        {/* Search Input */}
-                        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-                            <div style={{ flex: 1, position: 'relative' }}>
-                                <Search size={16} style={{ position: 'absolute', left: '8px', top: '8px', color: '#666' }} />
+                        <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+                            <div className="relative flex-grow">
+                                <Search size={16} className="absolute left-3 top-2.5 text-slate-400" />
                                 <input 
                                     type="text" 
                                     value={searchQuery}
                                     onChange={e => setSearchQuery(e.target.value)}
                                     placeholder="Search by Title, Author, or OLID..."
-                                    style={{ width: '100%', padding: '8px 8px 8px 30px', border: '1px solid #999', boxSizing: 'border-box' }}
+                                    className="minimal-input pl-9 py-2 text-sm"
                                 />
                             </div>
-                            <button type="submit" disabled={isSearching} style={{ padding: '8px 20px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold' }}>
-                                {isSearching ? 'SEARCHING...' : 'SEARCH'}
+                            <button type="submit" disabled={isSearching} className="bg-slate-900 dark:bg-slate-700 text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-slate-800 transition-colors">
+                                {isSearching ? '...' : 'SEARCH'}
                             </button>
                         </form>
 
-                        {/* Search Results */}
                         {searchResults.length > 0 && (
-                            <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ccc', backgroundColor: 'white' }}>
+                            <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-800/50">
                                 {searchResults.map(result => {
-                                    // Check if book exists in local library
                                     const existingBook = books.find(b => b.id === result.key);
-                                    
-                                    const coverUrl = result.cover_i 
-                                        ? `https://covers.openlibrary.org/b/id/${result.cover_i}-S.jpg` 
-                                        : null;
+                                    const coverUrl = result.cover_i ? `https://covers.openlibrary.org/b/id/${result.cover_i}-S.jpg` : null;
 
                                     return (
-                                        <div key={result.key} style={{ display: 'flex', padding: '10px', borderBottom: '1px solid #eee', alignItems: 'center', gap: '15px' }}>
-                                            {/* Cover */}
-                                            <div style={{ width: '40px', height: '60px', backgroundColor: '#eee', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                {coverUrl ? <img src={coverUrl} alt="" style={{ maxWidth: '100%', maxHeight: '100%' }} /> : <span style={{ fontSize: '10px' }}>No Img</span>}
+                                        <div key={result.key} className="flex items-center gap-3 p-3 border-b border-slate-200 dark:border-slate-700 last:border-0 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                            <div className="w-10 h-14 bg-slate-200 dark:bg-slate-700 flex-shrink-0 flex items-center justify-center overflow-hidden rounded">
+                                                {coverUrl ? <img src={coverUrl} alt="" className="w-full h-full object-cover" /> : <span className="text-[10px] text-slate-500">No Img</span>}
                                             </div>
-
-                                            {/* Info */}
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{result.title}</div>
-                                                <div style={{ fontSize: '12px', color: '#666' }}>
-                                                    {result.author_name ? result.author_name.join(', ') : 'Unknown Author'} 
-                                                    {result.first_publish_year && ` (${result.first_publish_year})`}
+                                            <div className="flex-grow min-w-0">
+                                                <div className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{result.title}</div>
+                                                <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                                    {result.author_name ? result.author_name.join(', ') : 'Unknown'}
                                                 </div>
-                                                <div style={{ fontSize: '10px', color: '#999', marginTop: '2px' }}>OLID: {result.key}</div>
                                             </div>
-
-                                            {/* Actions */}
-                                            <div style={{ textAlign: 'right' }}>
+                                            <div className="flex-shrink-0">
                                                 {existingBook ? (
-                                                    <span style={{ fontSize: '12px', color: 'green', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                                        <CheckCircle2 size={14} /> Added ({existingBook.shelf})
+                                                    <span className="flex items-center gap-1 text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                                                        <CheckCircle2 size={12} /> Added
                                                     </span>
                                                 ) : addingBookId === result.key ? (
-                                                    <span style={{ fontSize: '12px', color: '#666' }}>Adding...</span>
+                                                    <span className="text-xs text-slate-500">Adding...</span>
                                                 ) : (
-                                                    <div style={{ display: 'flex', gap: '5px' }}>
-                                                        <button onClick={() => handleAddBook(result.key, 'watchlist')} title="Add to Watchlist" style={{ cursor: 'pointer', padding: '5px', background: '#fff', border: '1px solid #ccc' }}>
-                                                            <Clock size={16} />
-                                                        </button>
-                                                        <button onClick={() => handleAddBook(result.key, 'currentlyReading')} title="Add to Reading" style={{ cursor: 'pointer', padding: '5px', background: '#fff', border: '1px solid #ccc' }}>
-                                                            <BookOpen size={16} />
-                                                        </button>
-                                                        <button onClick={() => handleAddBook(result.key, 'read')} title="Add to Finished" style={{ cursor: 'pointer', padding: '5px', background: '#fff', border: '1px solid #ccc' }}>
-                                                            <CheckCircle2 size={16} />
-                                                        </button>
+                                                    <div className="flex gap-1">
+                                                        <button onClick={() => handleAddBook(result.key, 'watchlist')} className="p-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded hover:bg-slate-50 text-slate-600 dark:text-slate-300" title="Watchlist"><Clock size={16}/></button>
+                                                        <button onClick={() => handleAddBook(result.key, 'currentlyReading')} className="p-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded hover:bg-slate-50 text-slate-600 dark:text-slate-300" title="Reading"><BookOpen size={16}/></button>
+                                                        <button onClick={() => handleAddBook(result.key, 'read')} className="p-1.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded hover:bg-slate-50 text-slate-600 dark:text-slate-300" title="Finished"><CheckCircle2 size={16}/></button>
                                                     </div>
                                                 )}
                                             </div>
@@ -510,317 +427,150 @@ const Dashboard = ({ onBack }) => {
                                 })}
                             </div>
                         )}
-                        {searchResults.length === 0 && !isSearching && searchQuery && (
-                            <div style={{ fontStyle: 'italic', color: '#666', marginTop: '10px' }}>Search above to find books.</div>
-                        )}
                     </div>
 
-                    {/* NEW: HIGHLIGHTS UPLOAD SECTION */}
-                    <div style={{ backgroundColor: '#f9f9f9', padding: '15px', border: '1px solid #999', marginBottom: '30px' }}>
-                        <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', borderBottom: '1px dotted #999', paddingBottom: '5px' }}>
-                            <Plus size={14} style={{ display: 'inline' }} /> Upload Highlights (Markdown)
+                    {/* Upload Highlights */}
+                    <div className="minimal-card p-5">
+                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2 border-b border-slate-100 dark:border-slate-700 pb-2">
+                            <BookOpen size={16} /> Upload Highlights
                         </h3>
-                        <div style={{ fontSize: '12px', color: '#555', marginBottom: '10px' }}>
-                            Each unordered list item is treated as a highlight. Example:
-                            <pre style={{ margin: '8px 0', padding: '8px', backgroundColor: '#fff', border: '1px solid #ddd' }}>
-                                - First highlight{'\n'}- Second highlight
-                            </pre>
-                        </div>
-
-                        {highlightError && <div style={{ backgroundColor: '#ffe6e6', color: '#d00', padding: '8px', border: '1px solid #d00', marginBottom: '10px' }}>{highlightError}</div>}
-                        {highlightSuccess && <div style={{ backgroundColor: '#e6fffa', color: '#006600', padding: '8px', border: '1px solid #006600', marginBottom: '10px' }}>{highlightSuccess}</div>}
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Target Book</label>
-                                <select
+                                <label className="block text-xs font-bold text-slate-500 mb-1">BOOK</label>
+                                <select 
                                     value={highlightBookId}
                                     onChange={e => setHighlightBookId(e.target.value)}
-                                    style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
+                                    className="minimal-input py-2 px-2 text-sm"
                                 >
                                     <option value="">Select a book...</option>
-                                    {books.map(book => (
-                                        <option key={book.id} value={book.id}>
-                                            {book.title}
-                                        </option>
-                                    ))}
+                                    {books.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
                                 </select>
-                                {highlightBookId && (
-                                    <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>
-                                        Existing highlights: {parseHighlightsField(books.find(book => book.id === highlightBookId)?.highlights).length}
-                                    </div>
-                                )}
                             </div>
-
                             <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Upload Highlights File (.md or .html)</label>
-                                <input
-                                    type="file"
-                                    accept=".md,.html,text/markdown,text/html"
-                                    onChange={handleHighlightFileChange}
-                                    style={{ width: '100%' }}
-                                />
-                                {highlightFileName && (
-                                    <div style={{ fontSize: '11px', color: '#666', marginTop: '4px' }}>Loaded: {highlightFileName}</div>
-                                )}
+                                <label className="block text-xs font-bold text-slate-500 mb-1">FILE (.md/.html)</label>
+                                <input type="file" accept=".md,.html" onChange={handleHighlightFileChange} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 dark:file:bg-slate-700 dark:file:text-slate-300" />
                             </div>
-
-                            <div>
-                                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>Or Paste Markdown</label>
-                                <textarea
-                                    value={highlightMarkdown}
-                                    onChange={e => setHighlightMarkdown(e.target.value)}
-                                    rows="6"
-                                    placeholder="- Highlight one\n- Highlight two"
-                                    style={{ width: '100%', padding: '6px', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                            <div className="md:col-span-2">
+                                <label className="block text-xs font-bold text-slate-500 mb-1">PASTE MARKDOWN</label>
+                                <textarea 
+                                    value={highlightMarkdown} 
+                                    onChange={e => setHighlightMarkdown(e.target.value)} 
+                                    rows="4" 
+                                    className="minimal-input p-2 text-sm font-mono" 
+                                    placeholder="- Highlight 1..."
                                 />
-                            </div>
-
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                                <label style={{ fontSize: '12px' }}>
-                                    <input
-                                        type="checkbox"
-                                        checked={highlightReplaceExisting}
-                                        onChange={e => setHighlightReplaceExisting(e.target.checked)}
-                                        style={{ marginRight: '6px' }}
-                                    />
-                                    Replace existing highlights
-                                </label>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <button type="button" onClick={handleParseHighlights} style={{ padding: '6px 12px', backgroundColor: '#fff', border: '1px solid #000', cursor: 'pointer' }}>
-                                        Parse Highlights
-                                    </button>
-                                    <button type="button" disabled={highlightBusy} onClick={handleUploadHighlights} style={{ padding: '6px 12px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                                        {highlightBusy ? 'UPLOADING...' : 'Upload Highlights'}
-                                    </button>
-                                </div>
                             </div>
                         </div>
-
+                        <div className="flex justify-between items-center mt-4">
+                            <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                <input type="checkbox" checked={highlightReplaceExisting} onChange={e => setHighlightReplaceExisting(e.target.checked)} />
+                                Replace existing
+                            </label>
+                            <div className="flex gap-2">
+                                <button onClick={handleParseHighlights} className="px-3 py-1.5 text-xs font-bold border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200">
+                                    Preview
+                                </button>
+                                <button onClick={handleUploadHighlights} disabled={highlightBusy} className="px-3 py-1.5 text-xs font-bold rounded bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800">
+                                    {highlightBusy ? '...' : 'Upload'}
+                                </button>
+                            </div>
+                        </div>
                         {highlightPreview.length > 0 && (
-                            <div style={{ marginTop: '12px', borderTop: '1px dashed #ccc', paddingTop: '10px' }}>
-                                <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '6px' }}>
-                                    Preview ({highlightPreview.length})
-                                </div>
-                                <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: '#333' }}>
-                                    {highlightPreview.slice(0, 8).map((highlight, index) => (
-                                        <li key={`${highlight}-${index}`}>{highlight}</li>
-                                    ))}
+                            <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded border border-slate-100 dark:border-slate-700">
+                                <div className="text-xs font-bold mb-2">Preview ({highlightPreview.length})</div>
+                                <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1 pl-4 list-disc">
+                                    {highlightPreview.slice(0,5).map((h,i) => <li key={i}>{h.substring(0, 100)}...</li>)}
                                 </ul>
-                                {highlightPreview.length > 8 && (
-                                    <div style={{ fontSize: '11px', color: '#666', marginTop: '6px' }}>
-                                        Showing first 8 highlights.
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>
 
-                    {/* Filter Local List */}
-                    <div style={{ marginBottom: '10px', textAlign: 'right' }}>
-                        <Search size={12} style={{ display: 'inline', marginRight: '5px' }} />
-                        <input 
-                            type="text" 
-                            value={filter}
-                            onChange={e => setFilter(e.target.value)}
-                            placeholder="Filter existing library..."
-                            style={{ padding: '4px', border: '1px solid #ccc' }}
-                        />
-                    </div>
-
-                    {/* Books Table */}
-                    <div style={{ overflowX: 'auto' }}>
-                        <table width="100%" cellPadding="8" cellSpacing="0" style={{ borderCollapse: 'collapse', border: '1px solid #999', fontSize: '14px' }}>
-                            <thead>
-                                <tr style={{ backgroundColor: '#eee', borderBottom: '1px solid #000', textAlign: 'left' }}>
-                                    <th width="40">Cover</th>
-                                    <th>Title / Author</th>
-                                    <th>Tags</th>
-                                    <th>Shelf</th>
-                                    <th align="center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredBooks.map(book => {
-                                    let cover = null;
-                                    try {
-                                        const links = typeof book.imageLinks === 'string' ? JSON.parse(book.imageLinks) : book.imageLinks;
-                                        cover = links?.thumbnail;
-                                    } catch(e){}
-
-                                    return (
-                                        <tr key={book.id} style={{ borderBottom: '1px solid #ddd' }}>
-                                            <td>
-                                                {cover && <img src={cover} alt="" style={{ width: '30px', height: '45px', border: '1px solid #999' }} />}
-                                            </td>
-                                            <td>
-                                                <div style={{ fontWeight: 'bold' }}>{book.title}</div>
-                                                <div style={{ fontSize: '12px', color: '#555' }}>
-                                                    {arrayToString(book.authors)}
-                                                </div>
-                                            </td>
-                                            <td style={{ fontSize: '12px', color: '#444' }}>
-                                                {arrayToString(book.tags)}
-                                            </td>
-                                            <td>
-                                                <span style={{ 
-                                                    border: '1px solid #ccc', padding: '2px 5px', fontSize: '11px',
-                                                    backgroundColor: book.shelf === 'currentlyReading' ? '#e6f7ff' : book.shelf === 'read' ? '#f6ffed' : '#fff'
-                                                }}>
-                                                    {book.shelf}
-                                                </span>
-                                            </td>
-                                            <td align="center">
-                                                <button onClick={() => startEditing(book)} style={{ marginRight: '8px', cursor: 'pointer', background: 'none', border: 'none', color: 'blue' }} title="Edit">
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button onClick={() => handleDeleteBook(book.id, book.title)} style={{ cursor: 'pointer', background: 'none', border: 'none', color: 'red' }} title="Delete">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
+                    {/* Manage Books */}
+                    <div>
+                        <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-sm font-bold text-slate-500 uppercase">Library ({filteredBooks.length})</h3>
+                            <input 
+                                type="text" 
+                                value={filter}
+                                onChange={e => setFilter(e.target.value)}
+                                placeholder="Filter..."
+                                className="minimal-input py-1 px-2 text-xs w-48"
+                            />
+                        </div>
+                        <div className="minimal-card overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+                                        <tr>
+                                            <th className="px-4 py-3">Book</th>
+                                            <th className="px-4 py-3">Status</th>
+                                            <th className="px-4 py-3 text-right">Actions</th>
                                         </tr>
-                                    );
-                                })}
-                                {filteredBooks.length === 0 && (
-                                    <tr><td colSpan="5" align="center" style={{ padding: '20px', fontStyle: 'italic' }}>No books found in library.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Edit Modal */}
-                    {editingBook && (
-                        <div style={{ 
-                            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-                            backgroundColor: 'rgba(0,0,0,0.6)', 
-                            display: 'flex', justifyContent: 'center', alignItems: 'center', 
-                            zIndex: 1000 
-                        }}>
-                            <div style={{ 
-                                backgroundColor: '#fff', 
-                                padding: '20px', 
-                                width: '90%', 
-                                maxWidth: '600px', 
-                                maxHeight: '90vh', 
-                                overflowY: 'auto', 
-                                border: '2px solid black',
-                                boxShadow: '10px 10px 0px rgba(0,0,0,0.5)'
-                            }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-                                    <h2 style={{ margin: 0, fontSize: '20px' }}>Edit: {editingBook.title}</h2>
-                                    <button onClick={() => setEditingBook(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
-                                </div>
-                                
-                                <form onSubmit={handleUpdateBook} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                    
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Title</label>
-                                        <input 
-                                            type="text" 
-                                            value={editingBook.title} 
-                                            onChange={e => setEditingBook({...editingBook, title: e.target.value})}
-                                            style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Authors (comma separated)</label>
-                                        <input 
-                                            type="text" 
-                                            value={editingBook.authorsInput} 
-                                            onChange={e => setEditingBook({...editingBook, authorsInput: e.target.value})}
-                                            style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-                                        />
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Shelf</label>
-                                            <select 
-                                                value={editingBook.shelf}
-                                                onChange={e => setEditingBook({...editingBook, shelf: e.target.value})}
-                                                style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-                                            >
-                                                <option value="watchlist">Watchlist</option>
-                                                <option value="currentlyReading">Reading Now</option>
-                                                <option value="read">Finished</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Progress (%)</label>
-                                            <input 
-                                                type="number" 
-                                                min="0" max="100"
-                                                value={editingBook.readingProgress} 
-                                                onChange={e => setEditingBook({...editingBook, readingProgress: e.target.value})}
-                                                style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Reading Medium</label>
-                                            <input 
-                                                type="text" 
-                                                value={editingBook.readingMedium || ''} 
-                                                onChange={e => setEditingBook({...editingBook, readingMedium: e.target.value})}
-                                                placeholder="e.g. Kindle"
-                                                style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Started</label>
-                                            <input 
-                                                type="date" 
-                                                value={editingBook.startedOn || ''} 
-                                                onChange={e => setEditingBook({...editingBook, startedOn: e.target.value})}
-                                                style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Finished</label>
-                                            <input 
-                                                type="date" 
-                                                value={editingBook.finishedOn || ''} 
-                                                onChange={e => setEditingBook({...editingBook, finishedOn: e.target.value})}
-                                                style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Tags (comma separated)</label>
-                                        <input 
-                                            type="text" 
-                                            value={editingBook.tagsInput} 
-                                            onChange={e => setEditingBook({...editingBook, tagsInput: e.target.value})}
-                                            placeholder="e.g. Fiction, History, Tech"
-                                            style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>Description</label>
-                                        <textarea 
-                                            value={editingBook.bookDescription || ''} 
-                                            onChange={e => setEditingBook({...editingBook, bookDescription: e.target.value})}
-                                            rows="4"
-                                            style={{ width: '100%', padding: '6px', boxSizing: 'border-box', fontFamily: 'inherit' }}
-                                        />
-                                    </div>
-
-                                    <div style={{ borderTop: '1px solid #eee', paddingTop: '15px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                        <button type="button" onClick={() => setEditingBook(null)} style={{ padding: '8px 15px', background: '#eee', border: '1px solid #ccc', cursor: 'pointer' }}>Cancel</button>
-                                        <button type="submit" style={{ padding: '8px 20px', backgroundColor: '#000', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                            <Save size={16} /> Save Changes
-                                        </button>
-                                    </div>
-                                </form>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                        {filteredBooks.map(book => (
+                                            <tr key={book.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+                                                <td className="px-4 py-3">
+                                                    <div className="font-bold text-slate-900 dark:text-slate-100">{book.title}</div>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">{arrayToString(book.authors)}</div>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${book.shelf === 'currentlyReading' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:border-blue-800' : book.shelf === 'read' ? 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/20 dark:border-green-800' : 'bg-slate-50 text-slate-500 border-slate-100 dark:bg-slate-700 dark:border-slate-600'}`}>
+                                                        {book.shelf}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right space-x-2">
+                                                    <button onClick={() => startEditing(book)} className="text-blue-600 dark:text-blue-400 hover:text-blue-800"><Edit size={16} /></button>
+                                                    <button onClick={() => handleDeleteBook(book.id, book.title)} className="text-red-500 hover:text-red-700"><Trash2 size={16} /></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    )}
-                </>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {editingBook && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                    <div className="minimal-card w-full max-w-lg max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6 border-b border-slate-100 dark:border-slate-700 pb-3">
+                            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit Book</h2>
+                            <button onClick={() => setEditingBook(null)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+                        </div>
+                        <form onSubmit={handleUpdateBook} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">TITLE</label>
+                                <input type="text" value={editingBook.title} onChange={e => setEditingBook({...editingBook, title: e.target.value})} className="minimal-input px-3 py-2 text-sm" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 mb-1">AUTHORS</label>
+                                <input type="text" value={editingBook.authorsInput} onChange={e => setEditingBook({...editingBook, authorsInput: e.target.value})} className="minimal-input px-3 py-2 text-sm" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">SHELF</label>
+                                    <select value={editingBook.shelf} onChange={e => setEditingBook({...editingBook, shelf: e.target.value})} className="minimal-input px-3 py-2 text-sm">
+                                        <option value="watchlist">Watchlist</option>
+                                        <option value="currentlyReading">Reading Now</option>
+                                        <option value="read">Finished</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 mb-1">PROGRESS %</label>
+                                    <input type="number" min="0" max="100" value={editingBook.readingProgress} onChange={e => setEditingBook({...editingBook, readingProgress: e.target.value})} className="minimal-input px-3 py-2 text-sm" />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button type="button" onClick={() => setEditingBook(null)} className="px-4 py-2 rounded border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
+                                <button type="submit" className="px-4 py-2 rounded bg-slate-900 dark:bg-slate-700 text-white text-sm font-bold hover:bg-slate-800">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );

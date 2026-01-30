@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, CheckCircle2, Clock, Search, Loader2, LayoutGrid, List as ListIcon } from 'lucide-react';
-import { Virtuoso, VirtuosoGrid } from 'react-virtuoso';
+import { Virtuoso } from 'react-virtuoso';
 import RandomHighlight from '../components/RandomHighlight';
 import BookListItem from '../components/BookListItem';
 
@@ -57,7 +57,7 @@ const Home = ({ tagsMap }) => {
                 }
 
             } else {
-                if (isReset && allBooks.length === 0) { /* Handle empty state if needed */ }
+                if (isReset && allBooks.length === 0) { /* Handle empty state */ }
             }
         } catch (e) {
             console.error(e);
@@ -119,16 +119,11 @@ const Home = ({ tagsMap }) => {
     const handleBookClick = (book) => navigate(`/book/${book.id}`, { state: { book } });
 
     // --- Grouping Logic ---
-    const getFlattenedData = () => {
-        // If Grid View, we don't use headers in the data array because VirtuosoGrid doesn't support heterogeneous items easily like Virtuoso
-        // So for Grid, we just return the books.
-        // For List, we keep headers.
-        
-        if (viewMode === 'grid') {
-            return allBooks;
+    // Returns an array of sections: { title, count, books: [] }
+    const getShelvesData = () => {
+        if (searchQuery) {
+            return [{ title: 'Search Results', count: allBooks.length, books: allBooks }];
         }
-
-        if (searchQuery) return allBooks; 
 
         const shelves = { currentlyReading: [], read: [], watchlist: [] };
         allBooks.forEach(b => {
@@ -136,35 +131,45 @@ const Home = ({ tagsMap }) => {
             else shelves.watchlist.push(b);
         });
 
-        const flatList = [];
+        const sections = [];
         if (shelves.currentlyReading.length > 0) {
-            flatList.push({ type: 'header', title: 'Reading Now', count: shelves.currentlyReading.length });
-            flatList.push(...shelves.currentlyReading);
+            sections.push({ title: 'Reading Now', count: shelves.currentlyReading.length, books: shelves.currentlyReading });
         }
         if (shelves.read.length > 0) {
-            flatList.push({ type: 'header', title: 'Recently Finished', count: shelves.read.length });
-            flatList.push(...shelves.read);
+            sections.push({ title: 'Recently Finished', count: shelves.read.length, books: shelves.read });
         }
         if (shelves.watchlist.length > 0) {
-            flatList.push({ type: 'header', title: 'To Read', count: shelves.watchlist.length });
-            flatList.push(...shelves.watchlist);
+            sections.push({ title: 'To Read', count: shelves.watchlist.length, books: shelves.watchlist });
         }
-        return flatList;
+        return sections;
     };
 
-    const displayData = getFlattenedData();
+    // For Virtuoso (List View), we still need the flat structure
+    const getFlatData = () => {
+        const sections = getShelvesData();
+        const flat = [];
+        sections.forEach(section => {
+            flat.push({ type: 'header', ...section });
+            flat.push(...section.books);
+        });
+        return flat;
+    };
+
+    const flatData = getFlatData();
+    const shelfSections = getShelvesData();
+
+    // --- Renderers ---
+    const renderHeader = (title, count) => (
+        <div className="flex items-center gap-2 mt-8 mb-3 px-1">
+            <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">{title}</h2>
+            <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[20px] text-center">
+                {count}
+            </span>
+        </div>
+    );
 
     const renderListItem = (index, item) => {
-        if (item.type === 'header') {
-            return (
-                <div className="flex items-center gap-2 mt-8 mb-3 px-1">
-                    <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">{item.title}</h2>
-                    <span className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[20px] text-center">
-                        {item.count}
-                    </span>
-                </div>
-            );
-        }
+        if (item.type === 'header') return renderHeader(item.title, item.count);
         return (
             <BookListItem 
                 key={item.id} 
@@ -175,23 +180,6 @@ const Home = ({ tagsMap }) => {
                 isPartial={item._isPartial} 
                 viewMode="list"
             />
-        );
-    };
-    
-    const renderGridItem = (index) => {
-        const item = displayData[index];
-        return (
-            <div className="p-1.5 pb-3"> {/* Wrapper for spacing */}
-                <BookListItem 
-                    key={item.id} 
-                    book={item} 
-                    shelf={item.shelf} 
-                    tagsMap={tagsMap} 
-                    onClick={() => handleBookClick(item)} 
-                    isPartial={item._isPartial} 
-                    viewMode="grid"
-                />
-            </div>
         );
     };
 
@@ -239,11 +227,11 @@ const Home = ({ tagsMap }) => {
                 </div>
             )}
 
-            <div className="flex-grow min-h-0"> {/* min-h-0 is crucial for flex child scroll */}
+            <div className="flex-grow min-h-0">
                 {viewMode === 'list' ? (
                     <Virtuoso
                         useWindowScroll
-                        data={displayData}
+                        data={flatData}
                         endReached={loadMore}
                         itemContent={renderListItem}
                         components={{
@@ -255,20 +243,53 @@ const Home = ({ tagsMap }) => {
                         }}
                     />
                 ) : (
-                    <VirtuosoGrid
-                        useWindowScroll
-                        totalCount={displayData.length}
-                        endReached={loadMore}
-                        itemContent={renderGridItem}
-                        listClassName="grid grid-cols-2 sm:grid-cols-3 gap-2"
-                        components={{
-                            Footer: () => loadingList ? (
-                                <div className="py-8 col-span-full text-center text-slate-400 flex items-center justify-center gap-2 text-sm">
-                                    <Loader2 size={16} className="animate-spin" />
+                    <div className="pb-10">
+                        {shelfSections.map((section, idx) => (
+                            <div key={idx} className="mb-6">
+                                {renderHeader(section.title, section.count)}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 px-1">
+                                    {section.books.map(book => (
+                                        <BookListItem 
+                                            key={book.id} 
+                                            book={book} 
+                                            shelf={book.shelf} 
+                                            tagsMap={tagsMap} 
+                                            onClick={() => handleBookClick(book)} 
+                                            isPartial={book._isPartial} 
+                                            viewMode="grid"
+                                        />
+                                    ))}
                                 </div>
-                            ) : <div className="h-10 col-span-full" />
-                        }}
-                    />
+                            </div>
+                        ))}
+                        
+                        {loadingList && (
+                            <div className="py-8 text-center text-slate-400 flex items-center justify-center gap-2 text-sm">
+                                <Loader2 size={16} className="animate-spin" /> Loading more...
+                            </div>
+                        )}
+                        
+                        {/* Intersection Observer Target for Infinite Scroll in Grid Mode */}
+                        {!loadingList && hasMore && (
+                            <div 
+                                style={{ height: '20px' }}
+                                ref={(el) => {
+                                    if (el) {
+                                        const observer = new IntersectionObserver(
+                                            (entries) => {
+                                                if (entries[0].isIntersecting) {
+                                                    loadMore();
+                                                }
+                                            },
+                                            { threshold: 1.0 }
+                                        );
+                                        observer.observe(el);
+                                        return () => observer.disconnect();
+                                    }
+                                }}
+                            />
+                        )}
+                    </div>
                 )}
             </div>
         </div>
