@@ -224,7 +224,7 @@ const Dashboard = ({ onBack }) => {
                             <input type="text" value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Filter..." className="border border-gray-400 p-1 text-xs" />
                         </div>
                         <div className="border border-black overflow-x-auto">
-                            <table className="w-full text-xs text-left collapse">
+                            <table className="w-full text-xs text-left border-collapse">
                                 <thead className="bg-gray-300 font-bold border-b border-black">
                                     <tr>
                                         <th className="p-1 border-r border-gray-400">Title</th>
