@@ -64,7 +64,7 @@ const Dashboard = ({ onBack }) => {
         const highlights = [];
         for (const line of lines) {
             const match = line.match(/^\s*[-*+]\s+(.*)$/);
-            if (match) highlights.push(match[1].replace(/\s*\(location.*?)\s*$/i, '').trim());
+            if (match) highlights.push(match[1].replace(/\s*\(location.*?\)\s*$/i, '').trim());
         }
         return highlights;
     };
