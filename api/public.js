@@ -44,9 +44,9 @@ export default async function handler(req, res) {
       let args = [];
 
       if (q) {
-        query += " WHERE title LIKE ? OR authors LIKE ?";
+        query += " WHERE title LIKE ? OR authors LIKE ? OR highlights LIKE ? OR bookDescription LIKE ?";
         const searchPattern = `%${q}%`;
-        args = [searchPattern, searchPattern];
+        args = [searchPattern, searchPattern, searchPattern, searchPattern];
         // Lower cache for search
         res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=59');
       } else {
