@@ -46,7 +46,7 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
     );
 
     if (error) return (
-        <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-lg text-sm text-center">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 p-4 rounded-lg text-sm text-center">
             {error}
         </div>
     );
@@ -67,7 +67,7 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
             {/* Back Button */}
             <button 
                 onClick={onBack}
-                className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-8 group text-xs font-semibold uppercase tracking-wide"
+                className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors mb-8 group text-xs font-semibold uppercase tracking-wide"
             >
                 <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
                 Back
@@ -77,7 +77,7 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
             <div className="minimal-card p-6 sm:p-8 mb-6 flex flex-col md:flex-row gap-8 items-start">
                 {/* Cover Image */}
                 <div className="flex-shrink-0 mx-auto md:mx-0">
-                    <div className="w-[120px] shadow-sm rounded border border-slate-200 overflow-hidden">
+                    <div className="w-[120px] shadow-sm rounded border border-slate-200 dark:border-slate-700 overflow-hidden bg-slate-100 dark:bg-slate-700">
                         <img 
                             src={coverUrl} 
                             alt={book.title} 
@@ -88,20 +88,20 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
 
                 {/* Info */}
                 <div className="flex-grow text-center md:text-left">
-                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100 leading-tight mb-2">
                         {book.title}
                     </h1>
-                    <div className="text-base text-slate-500 mb-6">
-                        by <span className="text-slate-800 font-medium">{authors}</span>
+                    <div className="text-base text-slate-500 dark:text-slate-400 mb-6">
+                        by <span className="text-slate-800 dark:text-slate-200 font-medium">{authors}</span>
                     </div>
                     
                     {book.shelf === 'currentlyReading' && (
-                        <div className="bg-slate-50 rounded-lg p-4 mb-5 border border-slate-100 inline-block md:block w-full max-w-md">
-                            <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                        <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 mb-5 border border-slate-100 dark:border-slate-700 inline-block md:block w-full max-w-md">
+                            <div className="flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
                                 <span>Progress</span>
                                 <span>{book.readingProgress}%</span>
                             </div>
-                            <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
                                 <div 
                                     className="h-full bg-blue-500 rounded-full" 
                                     style={{ width: `${book.readingProgress}%` }}
@@ -120,41 +120,41 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
                 {/* Left Column (Metadata) */}
                 <div className="md:col-span-1 flex flex-col gap-4">
                     <div className="minimal-card p-5">
-                        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-4">
                             <Clock size={12} /> Reading Log
                         </div>
                         <ul className="space-y-3 text-sm">
                             <li className="flex justify-between items-baseline">
-                                <span className="text-slate-400 text-xs">Medium</span>
-                                <span className="font-medium text-slate-700">{book.readingMedium || '—'}</span>
+                                <span className="text-slate-400 dark:text-slate-500 text-xs">Medium</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{book.readingMedium || '—'}</span>
                             </li>
                             <li className="flex justify-between items-baseline">
-                                <span className="text-slate-400 text-xs">Started</span>
-                                <span className="font-medium text-slate-700">{formatDate(book.startedOn)}</span>
+                                <span className="text-slate-400 dark:text-slate-500 text-xs">Started</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{formatDate(book.startedOn)}</span>
                             </li>
                             <li className="flex justify-between items-baseline">
-                                <span className="text-slate-400 text-xs">Finished</span>
-                                <span className="font-medium text-slate-700">{formatDate(book.finishedOn)}</span>
+                                <span className="text-slate-400 dark:text-slate-500 text-xs">Finished</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{formatDate(book.finishedOn)}</span>
                             </li>
                         </ul>
                     </div>
 
                     <div className="minimal-card p-5">
-                         <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                         <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-4">
                             <Info size={12} /> Metadata
                         </div>
                         <ul className="space-y-3 text-sm">
                             <li className="flex flex-col gap-0.5">
-                                <span className="text-slate-400 text-[10px] uppercase">Publisher</span>
-                                <span className="font-medium text-slate-700">{book.publisher || '—'}</span>
+                                <span className="text-slate-400 dark:text-slate-500 text-[10px] uppercase">Publisher</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{book.publisher || '—'}</span>
                             </li>
                             <li className="flex flex-col gap-0.5">
-                                <span className="text-slate-400 text-[10px] uppercase">Published</span>
-                                <span className="font-medium text-slate-700">{formatDate(book.fullPublishDate || book.publishedDate)}</span>
+                                <span className="text-slate-400 dark:text-slate-500 text-[10px] uppercase">Published</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{formatDate(book.fullPublishDate || book.publishedDate)}</span>
                             </li>
-                            <li className="flex justify-between items-baseline pt-2 border-t border-slate-50 mt-1">
-                                <span className="text-slate-400 text-xs">Pages</span>
-                                <span className="font-medium text-slate-700">{book.pageCount || '—'}</span>
+                            <li className="flex justify-between items-baseline pt-2 border-t border-slate-50 dark:border-slate-700/50 mt-1">
+                                <span className="text-slate-400 dark:text-slate-500 text-xs">Pages</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{book.pageCount || '—'}</span>
                             </li>
                         </ul>
                     </div>
@@ -164,19 +164,19 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
                 <div className="md:col-span-2 flex flex-col gap-6">
                     {/* Description */}
                     <div className="minimal-card p-6">
-                        <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm mb-4">
-                            <FileText size={16} className="text-slate-400" /> Description
+                        <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-sm mb-4">
+                            <FileText size={16} className="text-slate-400 dark:text-slate-500" /> Description
                         </div>
-                        <div className="text-slate-600 leading-relaxed text-sm">
+                        <div className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm">
                             {book.bookDescription || <span className="italic text-slate-400">No description available.</span>}
                         </div>
                     </div>
 
                     {/* Highlights */}
                     <div className="minimal-card p-6">
-                        <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm mb-6">
-                            <MessageSquareQuote size={16} className="text-slate-400" /> 
-                            Highlights <span className="text-xs font-normal text-slate-400 ml-auto bg-slate-50 px-2 py-0.5 rounded-full">{book.highlights?.length || 0}</span>
+                        <div className="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-semibold text-sm mb-6">
+                            <MessageSquareQuote size={16} className="text-slate-400 dark:text-slate-500" /> 
+                            Highlights <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-auto bg-slate-50 dark:bg-slate-700 px-2 py-0.5 rounded-full">{book.highlights?.length || 0}</span>
                         </div>
                         
                         {book.highlights && book.highlights.length > 0 ? (
@@ -184,16 +184,16 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
                                 {book.highlights.map((highlight, index) => (
                                     <div 
                                         key={index} 
-                                        className="relative pl-4 border-l-2 border-slate-100 hover:border-blue-300 transition-colors"
+                                        className="relative pl-4 border-l-2 border-slate-100 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors"
                                     >
-                                        <p className="font-serif text-slate-700 leading-relaxed text-sm">
+                                        <p className="font-serif text-slate-700 dark:text-slate-300 leading-relaxed text-sm">
                                             "{highlight}"
                                         </p>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-8 text-slate-400 italic text-sm border border-dashed border-slate-200 rounded-lg">
+                            <div className="text-center py-8 text-slate-400 dark:text-slate-500 italic text-sm border border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
                                 No highlights recorded.
                             </div>
                         )}
