@@ -2,8 +2,26 @@ import React from 'react';
 
 const BookListItem = ({ book, tagsMap, onClick, isPartial }) => {
     const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/40x60?text=No+Cover`;
-    const authors = isPartial ? '...' : (book.authors ? book.authors.join(', ') : 'Unknown');
-    const resolvedTags = (!isPartial && book.tags) ? book.tags.map(id => tagsMap.get(id)).filter(Boolean) : [];
+    
+    // Safety check for authors
+    let authors = 'Unknown';
+    if (!isPartial) {
+        if (Array.isArray(book.authors)) {
+            authors = book.authors.join(', ');
+        } else if (typeof book.authors === 'string') {
+            try {
+                const parsed = JSON.parse(book.authors);
+                if (Array.isArray(parsed)) authors = parsed.join(', ');
+                else authors = book.authors;
+            } catch (e) {
+                authors = book.authors;
+            }
+        }
+    } else {
+        authors = '...';
+    }
+
+    const resolvedTags = (!isPartial && book.tags) ? (Array.isArray(book.tags) ? book.tags : []).map(id => tagsMap.get(id)).filter(Boolean) : [];
 
     return (
         <div onClick={() => onClick(book.id)} className="flex gap-2 cursor-pointer hover:bg-yellow-100 transition-colors p-1 border-b border-dotted border-gray-300 last:border-0">
