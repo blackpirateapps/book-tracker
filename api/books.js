@@ -186,10 +186,15 @@ async function handleAdd(data, res) {
 }
 
 async function handleUpdate(data, res) {
-  const { id, ...updates } = data;
+  const { id, originalId, ...updates } = data;
   
   if (!id) {
     return res.status(400).json({ error: 'Book ID is required' });
+  }
+  
+  const targetId = originalId || id;
+  if (id !== targetId) {
+    updates.id = id;
   }
   
   const fields = [];
@@ -209,7 +214,7 @@ async function handleUpdate(data, res) {
     return res.status(400).json({ error: 'No fields to update' });
   }
   
-  values.push(id);
+  values.push(targetId);
   
   await client.execute({
     sql: `UPDATE books SET ${fields.join(', ')} WHERE id = ?`,

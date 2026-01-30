@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import Home from './pages/Home';
 import BookDetailsPage from './pages/BookDetailsPage';
+import EditBookPage from './pages/EditBookPage';
 import StatsPage from './pages/StatsPage';
 import DashboardPage from './pages/DashboardPage';
 
@@ -50,6 +51,7 @@ function App() {
                     <Route path="/book/:id" element={<BookDetailsPage tagsMap={tagsMap} />} />
                     <Route path="/stats" element={<StatsPage />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/dashboard/edit/:id" element={<EditBookPage />} />
                 </Routes>
             </main>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TagsManager from './TagsManager';
 
-const Dashboard = ({ onBack }) => {
+const Dashboard = ({ onBack, onEdit }) => {
     const [password, setPassword] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [activeTab, setActiveTab] = useState('books'); 
@@ -16,8 +16,6 @@ const Dashboard = ({ onBack }) => {
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     
-    // Edit state
-    const [editingBook, setEditingBook] = useState(null);
 
     // --- Highlights Upload State ---
     const [highlightBookId, setHighlightBookId] = useState('');
@@ -55,7 +53,6 @@ const Dashboard = ({ onBack }) => {
             return Array.isArray(parsed) ? parsed.join(', ') : String(parsed);
         } catch (e) { return String(data); }
     };
-    const stringToArray = (str) => str ? str.split(',').map(s => s.trim()).filter(Boolean) : [];
     
     // Highlight Parsing Logic (Simplified for brevity)
     const parseHighlightsFromContent = (content) => {
@@ -125,16 +122,6 @@ const Dashboard = ({ onBack }) => {
         fetchBooks();
     };
 
-    const handleUpdate = async (e) => {
-        e.preventDefault();
-        const updated = { ...editingBook, authors: stringToArray(editingBook.authorsInput), tags: stringToArray(editingBook.tagsInput) };
-        delete updated.authorsInput; delete updated.tagsInput;
-        await fetch('/api/books', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password, action: 'update', data: updated })
-        });
-        setEditingBook(null); fetchBooks();
-    };
 
     const filteredBooks = books.filter(b => (b.title || '').toLowerCase().includes(filter.toLowerCase()));
 
@@ -240,40 +227,24 @@ const Dashboard = ({ onBack }) => {
                                             <td className="p-1 border-r border-gray-300">{arrayToString(b.authors)}</td>
                                             <td className="p-1 border-r border-gray-300">{b.shelf}</td>
                                             <td className="p-1 text-center space-x-1">
-                                                <button onClick={() => setEditingBook({...b, authorsInput: arrayToString(b.authors), tagsInput: arrayToString(b.tags)})} className="text-blue-800 font-bold">E</button>
-                                                <button onClick={() => handleDelete(b.id)} className="text-red-700 font-bold">X</button>
+                                                <button
+                                                    onClick={() => onEdit(b.id, b, password)}
+                                                    className="border border-black bg-black text-white px-2 py-1 text-[10px] font-bold"
+                                                >
+                                                    EDIT
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(b.id)}
+                                                    className="border border-black px-1 text-[10px] font-bold text-red-800"
+                                                >
+                                                    X
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Edit Modal (Raw HTML style) */}
-            {editingBook && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="bg-white border-2 border-black p-4 w-96 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                        <div className="font-bold border-b border-black mb-4 flex justify-between">
-                            <span>EDIT BOOK</span>
-                            <button onClick={()=>setEditingBook(null)}>X</button>
-                        </div>
-                        <form onSubmit={handleUpdate} className="text-xs space-y-2">
-                            <div>Title: <input type="text" value={editingBook.title} onChange={e=>setEditingBook({...editingBook, title: e.target.value})} className="w-full border border-gray-400 p-1"/></div>
-                            <div>Authors: <input type="text" value={editingBook.authorsInput} onChange={e=>setEditingBook({...editingBook, authorsInput: e.target.value})} className="w-full border border-gray-400 p-1"/></div>
-                            <div>Shelf: <select value={editingBook.shelf} onChange={e=>setEditingBook({...editingBook, shelf: e.target.value})} className="w-full border border-gray-400 p-1">
-                                <option value="watchlist">Watchlist</option>
-                                <option value="currentlyReading">Reading</option>
-                                <option value="read">Finished</option>
-                            </select></div>
-                            <div>Progress: <input type="number" value={editingBook.readingProgress} onChange={e=>setEditingBook({...editingBook, readingProgress: e.target.value})} className="w-full border border-gray-400 p-1"/></div>
-                            <div className="pt-2 text-right space-x-2">
-                                <button type="button" onClick={()=>setEditingBook(null)} className="border border-black px-2 bg-gray-200">Cancel</button>
-                                <button type="submit" className="border border-black px-2 bg-black text-white">Save</button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             )}
