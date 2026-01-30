@@ -11,40 +11,33 @@ const BookListItem = ({ book, shelf, tagsMap, onClick, isPartial }) => {
     return (
         <div 
             onClick={() => onClick(book.id)}
-            className="group relative glass-card rounded-2xl p-3 mb-4 flex gap-4 transition-all duration-300 hover:scale-[1.01] hover:shadow-lg cursor-pointer overflow-hidden"
+            className="group minimal-card p-3 mb-3 flex gap-4 cursor-pointer"
         >
-            {/* Hover Glow Effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/5 group-hover:via-purple-500/5 group-hover:to-pink-500/5 transition-all duration-500 pointer-events-none" />
-
             {/* Cover Image */}
-            <div className="flex-shrink-0 w-[60px] sm:w-[70px] h-[90px] sm:h-[105px] rounded-lg overflow-hidden shadow-md border border-white/20 relative z-10 bg-slate-100">
+            <div className="flex-shrink-0 w-[50px] sm:w-[60px] h-[75px] sm:h-[90px] rounded overflow-hidden bg-slate-100 border border-slate-100">
                 <img 
                     src={coverUrl} 
                     alt={book.title} 
                     loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover"
                 />
             </div>
 
             {/* Content */}
-            <div className="flex-grow min-w-0 flex flex-col justify-center z-10">
-                <h3 className="text-base sm:text-lg font-bold text-slate-800 leading-tight mb-1 group-hover:text-indigo-600 transition-colors truncate pr-6">
+            <div className="flex-grow min-w-0 flex flex-col justify-center">
+                <h3 className="text-sm sm:text-base font-semibold text-slate-900 leading-tight mb-0.5 truncate pr-6">
                     {book.title}
                 </h3>
                 
-                <p className={`text-xs text-slate-500 font-medium mb-2 ${isPartial ? 'animate-pulse bg-slate-200/50 w-24 h-4 rounded' : ''}`}>
-                    {isPartial ? '' : `by ${authors}`}
+                <p className={`text-xs text-slate-500 mb-1.5 ${isPartial ? 'animate-pulse bg-slate-100 w-24 h-4 rounded' : ''}`}>
+                    {isPartial ? '' : authors}
                 </p>
                 
                 {shelf === 'currentlyReading' && !isPartial && (
-                    <div className="mb-2">
-                        <div className="flex justify-between text-[10px] text-slate-400 mb-1">
-                            <span>Progress</span>
-                            <span>{book.readingProgress}%</span>
-                        </div>
-                        <div className="w-full max-w-[140px] h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div className="mb-1.5">
+                        <div className="w-full max-w-[120px] h-1 bg-slate-100 rounded-full overflow-hidden">
                             <div 
-                                className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" 
+                                className="h-full bg-blue-500 rounded-full" 
                                 style={{ width: `${book.readingProgress}%` }}
                             />
                         </div>
@@ -52,15 +45,15 @@ const BookListItem = ({ book, shelf, tagsMap, onClick, isPartial }) => {
                 )}
 
                 {shelf === 'read' && book.finishedOn && !isPartial && (
-                    <div className="flex items-center text-[11px] text-emerald-600 font-medium mb-1">
-                        <CheckCircle2 size={12} className="mr-1" /> 
-                        Finished on {book.finishedOn}
+                    <div className="flex items-center text-[10px] text-slate-400 mb-1">
+                        <CheckCircle2 size={10} className="mr-1 text-emerald-500" /> 
+                        {book.finishedOn}
                     </div>
                 )}
                 
                 <div className="flex flex-wrap gap-1 mt-auto">
                     {book.readingMedium && !isPartial && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200/50 text-slate-500 uppercase tracking-wider">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-100 text-slate-500 uppercase tracking-wider border border-slate-200">
                             {book.readingMedium}
                         </span>
                     )}
@@ -71,8 +64,8 @@ const BookListItem = ({ book, shelf, tagsMap, onClick, isPartial }) => {
             </div>
 
             {/* Action Icon */}
-            <div className="absolute top-3 right-3 text-slate-300 group-hover:text-indigo-500 transition-colors">
-                <MoreHorizontal size={20} />
+            <div className="text-slate-300 group-hover:text-slate-500 transition-colors">
+                <MoreHorizontal size={16} />
             </div>
         </div>
     );

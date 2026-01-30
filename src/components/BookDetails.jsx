@@ -5,7 +5,6 @@ import {
     MessageSquareQuote,
     FileText,
     Info,
-    Calendar,
     BookOpen
 } from 'lucide-react';
 import TagBadge from './TagBadge';
@@ -40,15 +39,15 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
     }, [bookId]);
 
     if (loading) return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500 animate-pulse">
-            <BookOpen size={48} className="mb-4 opacity-50" />
-            <div className="text-sm font-medium tracking-widest">LOADING BOOK DETAILS...</div>
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 animate-pulse">
+            <BookOpen size={32} className="mb-3 opacity-50" />
+            <div className="text-xs font-medium tracking-widest uppercase">Loading...</div>
         </div>
     );
 
     if (error) return (
-        <div className="bg-red-50 border border-red-200 text-red-600 p-6 rounded-xl text-center">
-            Error: {error}
+        <div className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-lg text-sm text-center">
+            {error}
         </div>
     );
     
@@ -59,28 +58,26 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
     const resolvedTags = book.tags ? book.tags.map(id => tagsMap.get(id)).filter(Boolean) : [];
 
     const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+        if (!dateString) return '—';
+        return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     };
 
     return (
-        <div className="w-full max-w-4xl mx-auto animate-fadeIn">
+        <div className="w-full max-w-4xl mx-auto animate-fadeIn pb-12">
             {/* Back Button */}
             <button 
                 onClick={onBack}
-                className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors mb-6 group text-sm font-medium"
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors mb-8 group text-xs font-semibold uppercase tracking-wide"
             >
-                <div className="p-1.5 rounded-full bg-white/50 group-hover:bg-indigo-50 transition-colors">
-                    <ArrowLeft size={16} />
-                </div>
-                Back to Library
+                <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                Back
             </button>
 
             {/* Header Section */}
-            <div className="glass-card rounded-3xl p-6 sm:p-8 mb-8 flex flex-col md:flex-row gap-8 items-start">
+            <div className="minimal-card p-6 sm:p-8 mb-6 flex flex-col md:flex-row gap-8 items-start">
                 {/* Cover Image */}
                 <div className="flex-shrink-0 mx-auto md:mx-0">
-                    <div className="w-[140px] shadow-2xl rounded-lg overflow-hidden border-4 border-white/30 transform transition-transform hover:scale-105 duration-500">
+                    <div className="w-[120px] shadow-sm rounded border border-slate-200 overflow-hidden">
                         <img 
                             src={coverUrl} 
                             alt={book.title} 
@@ -91,29 +88,29 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
 
                 {/* Info */}
                 <div className="flex-grow text-center md:text-left">
-                    <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-800 leading-tight mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-2">
                         {book.title}
                     </h1>
-                    <div className="text-lg text-slate-500 font-medium mb-4">
-                        by <span className="text-slate-700">{authors}</span>
+                    <div className="text-base text-slate-500 mb-6">
+                        by <span className="text-slate-800 font-medium">{authors}</span>
                     </div>
                     
                     {book.shelf === 'currentlyReading' && (
-                        <div className="bg-indigo-50/50 rounded-xl p-4 mb-4 border border-indigo-100 inline-block md:block w-full">
-                            <div className="flex justify-between text-xs font-bold text-indigo-900 uppercase tracking-wider mb-2">
-                                <span>Reading Progress</span>
+                        <div className="bg-slate-50 rounded-lg p-4 mb-5 border border-slate-100 inline-block md:block w-full max-w-md">
+                            <div className="flex justify-between text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                <span>Progress</span>
                                 <span>{book.readingProgress}%</span>
                             </div>
-                            <div className="h-2.5 bg-indigo-100 rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
                                 <div 
-                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full" 
+                                    className="h-full bg-blue-500 rounded-full" 
                                     style={{ width: `${book.readingProgress}%` }}
                                 ></div>
                             </div>
                         </div>
                     )}
 
-                    <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
+                    <div className="flex flex-wrap justify-center md:justify-start gap-2">
                         {resolvedTags.map(tag => <TagBadge key={tag.id} tag={tag} />)}
                     </div>
                 </div>
@@ -121,43 +118,43 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Left Column (Metadata) */}
-                <div className="md:col-span-1 flex flex-col gap-6">
-                    <div className="glass-panel p-5 rounded-2xl">
-                        <div className="flex items-center gap-2 text-indigo-600 font-bold uppercase text-xs tracking-widest mb-4 border-b border-indigo-100 pb-2">
-                            <Clock size={14} /> Reading Log
+                <div className="md:col-span-1 flex flex-col gap-4">
+                    <div className="minimal-card p-5">
+                        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                            <Clock size={12} /> Reading Log
                         </div>
                         <ul className="space-y-3 text-sm">
-                            <li className="flex justify-between">
-                                <span className="text-slate-400">Medium</span>
-                                <span className="font-medium text-slate-700">{book.readingMedium || 'Not set'}</span>
+                            <li className="flex justify-between items-baseline">
+                                <span className="text-slate-400 text-xs">Medium</span>
+                                <span className="font-medium text-slate-700">{book.readingMedium || '—'}</span>
                             </li>
-                            <li className="flex justify-between">
-                                <span className="text-slate-400">Started</span>
+                            <li className="flex justify-between items-baseline">
+                                <span className="text-slate-400 text-xs">Started</span>
                                 <span className="font-medium text-slate-700">{formatDate(book.startedOn)}</span>
                             </li>
-                            <li className="flex justify-between">
-                                <span className="text-slate-400">Finished</span>
+                            <li className="flex justify-between items-baseline">
+                                <span className="text-slate-400 text-xs">Finished</span>
                                 <span className="font-medium text-slate-700">{formatDate(book.finishedOn)}</span>
                             </li>
                         </ul>
                     </div>
 
-                    <div className="glass-panel p-5 rounded-2xl">
-                         <div className="flex items-center gap-2 text-indigo-600 font-bold uppercase text-xs tracking-widest mb-4 border-b border-indigo-100 pb-2">
-                            <Info size={14} /> Metadata
+                    <div className="minimal-card p-5">
+                         <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                            <Info size={12} /> Metadata
                         </div>
                         <ul className="space-y-3 text-sm">
-                            <li className="flex flex-col">
-                                <span className="text-slate-400 text-xs">Publisher</span>
-                                <span className="font-medium text-slate-700">{book.publisher || 'N/A'}</span>
+                            <li className="flex flex-col gap-0.5">
+                                <span className="text-slate-400 text-[10px] uppercase">Publisher</span>
+                                <span className="font-medium text-slate-700">{book.publisher || '—'}</span>
                             </li>
-                            <li className="flex flex-col">
-                                <span className="text-slate-400 text-xs">Published Date</span>
+                            <li className="flex flex-col gap-0.5">
+                                <span className="text-slate-400 text-[10px] uppercase">Published</span>
                                 <span className="font-medium text-slate-700">{formatDate(book.fullPublishDate || book.publishedDate)}</span>
                             </li>
-                            <li className="flex justify-between">
-                                <span className="text-slate-400">Pages</span>
-                                <span className="font-medium text-slate-700">{book.pageCount || 'N/A'}</span>
+                            <li className="flex justify-between items-baseline pt-2 border-t border-slate-50 mt-1">
+                                <span className="text-slate-400 text-xs">Pages</span>
+                                <span className="font-medium text-slate-700">{book.pageCount || '—'}</span>
                             </li>
                         </ul>
                     </div>
@@ -166,39 +163,38 @@ const BookDetails = ({ bookId, onBack, tagsMap }) => {
                 {/* Right Column (Description & Highlights) */}
                 <div className="md:col-span-2 flex flex-col gap-6">
                     {/* Description */}
-                    <div className="glass-card p-6 rounded-2xl">
-                        <div className="flex items-center gap-2 text-slate-800 font-bold text-lg mb-4">
-                            <FileText size={20} className="text-indigo-500" /> Description
+                    <div className="minimal-card p-6">
+                        <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm mb-4">
+                            <FileText size={16} className="text-slate-400" /> Description
                         </div>
-                        <div className="text-slate-600 leading-relaxed text-sm md:text-base">
+                        <div className="text-slate-600 leading-relaxed text-sm">
                             {book.bookDescription || <span className="italic text-slate-400">No description available.</span>}
                         </div>
                     </div>
 
                     {/* Highlights */}
-                    <div className="glass-card p-6 rounded-2xl">
-                        <div className="flex items-center gap-2 text-slate-800 font-bold text-lg mb-4">
-                            <MessageSquareQuote size={20} className="text-pink-500" /> 
-                            Highlights <span className="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">({book.highlights?.length || 0})</span>
+                    <div className="minimal-card p-6">
+                        <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm mb-6">
+                            <MessageSquareQuote size={16} className="text-slate-400" /> 
+                            Highlights <span className="text-xs font-normal text-slate-400 ml-auto bg-slate-50 px-2 py-0.5 rounded-full">{book.highlights?.length || 0}</span>
                         </div>
                         
                         {book.highlights && book.highlights.length > 0 ? (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 {book.highlights.map((highlight, index) => (
                                     <div 
                                         key={index} 
-                                        className="relative pl-6 py-2 group"
+                                        className="relative pl-4 border-l-2 border-slate-100 hover:border-blue-300 transition-colors"
                                     >
-                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-400 to-purple-400 rounded-full opacity-30 group-hover:opacity-100 transition-opacity"></div>
-                                        <p className="font-serif italic text-slate-700 leading-loose">
+                                        <p className="font-serif text-slate-700 leading-relaxed text-sm">
                                             "{highlight}"
                                         </p>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-8 text-slate-400 italic text-sm border-2 border-dashed border-slate-200 rounded-xl">
-                                No highlights recorded yet.
+                            <div className="text-center py-8 text-slate-400 italic text-sm border border-dashed border-slate-200 rounded-lg">
+                                No highlights recorded.
                             </div>
                         )}
                     </div>

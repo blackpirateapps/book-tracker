@@ -38,7 +38,7 @@ function App() {
 
     return (
         <div className="min-h-screen w-full flex flex-col items-center py-6 px-4 sm:px-6 lg:px-8">
-            <div className="w-full max-w-3xl glass-panel rounded-3xl p-6 sm:p-8 min-h-[85vh] flex flex-col">
+            <div className="w-full max-w-3xl min-h-[85vh] flex flex-col">
                 {/* Header is global */}
                 <Header 
                     onHomeClick={handleHomeClick}
@@ -55,8 +55,8 @@ function App() {
                     </Routes>
                 </main>
 
-                <div className="mt-10 pt-6 border-t border-black/5 text-center">
-                    <small className="text-xs text-slate-500">
+                <div className="mt-12 pt-8 border-t border-slate-200 text-center">
+                    <small className="text-xs text-slate-400 font-medium">
                         &copy; 2026 Sudip's Library
                     </small>
                 </div>

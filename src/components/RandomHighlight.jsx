@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Quote, Sparkles } from 'lucide-react';
+import { Quote } from 'lucide-react';
 
 const RandomHighlight = () => {
     const [highlight, setHighlight] = useState(null);
@@ -25,39 +25,26 @@ const RandomHighlight = () => {
         fetchHighlight();
     }, []);
 
-    if (loading) return (
-        <div className="glass-card rounded-2xl p-6 mb-8 animate-pulse flex flex-col items-center justify-center h-32">
-            <Sparkles size={20} className="text-slate-300 mb-2" />
-            <div className="text-xs text-slate-400 font-medium tracking-wider">LOADING INSPIRATION...</div>
-        </div>
-    );
-    
+    if (loading) return null;
     if (!highlight) return null;
 
     return (
-        <div className="glass-card rounded-2xl p-6 mb-8 relative overflow-hidden group">
-            {/* Decoration */}
-            <div className="absolute -top-10 -right-10 w-32 h-32 bg-yellow-200/30 rounded-full blur-2xl pointer-events-none group-hover:bg-yellow-300/40 transition-colors duration-700"></div>
-            
-            <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-3">
-                    <div className="p-1.5 bg-yellow-100 rounded-lg text-yellow-600">
-                        <Quote size={14} />
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                        Quote of the Day
+        <div className="minimal-card p-5 mb-8 relative group">
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-slate-400">
+                    <Quote size={14} className="text-slate-300" />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                        Daily Inspiration
                     </span>
                 </div>
                 
-                <p className="font-serif text-lg md:text-xl text-slate-700 italic leading-relaxed mb-4 text-center px-4">
+                <p className="font-serif text-base text-slate-700 italic leading-relaxed px-1">
                     "{highlight.highlight}"
                 </p>
                 
-                <div className="flex justify-end items-center gap-2 border-t border-slate-200/50 pt-3 mt-2">
-                    <div className="text-right">
-                        <div className="text-sm font-bold text-slate-800">{highlight.author}</div>
-                        <div className="text-xs text-slate-500 font-medium italic">{highlight.title}</div>
-                    </div>
+                <div className="text-right mt-1">
+                    <div className="text-xs font-semibold text-slate-800">{highlight.author}</div>
+                    <div className="text-[10px] text-slate-400">{highlight.title}</div>
                 </div>
             </div>
         </div>
