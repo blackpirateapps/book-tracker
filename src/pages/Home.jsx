@@ -206,9 +206,17 @@ const Home = ({ tagsMap }) => {
 
                 <div className="border border-gray-400 p-2 bg-yellow-50">
                     <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-base">Site News</div>
-                    <div className="text-sm space-y-2">
-                        <p><strong>Jan 30</strong> - Updated site design to text-heavy layout.</p>
-                        <p><strong>Jan 22</strong> - Added Hugo Export API support.</p>
+                    <div className="text-xs space-y-2 max-h-60 overflow-y-auto">
+                        <p><strong>2026-01-30</strong> - fix: implement advanced search and resolve book details/dashboard visibility issues</p>
+                        <p><strong>2026-01-30</strong> - fix: resolve authors.join error and dashboard visibility</p>
+                        <p><strong>2026-01-30</strong> - fix: dashboard table visibility and redesign book details page to match theme</p>
+                        <p><strong>2026-01-30</strong> - feat: increase font size, reorder homepage sections, and add stats graph</p>
+                        <p><strong>2026-01-30</strong> - fix: correct regex syntax error in dashboard component</p>
+                        <p><strong>2026-01-30</strong> - refactor: complete redesign to text-heavy old-school dense layout</p>
+                        <p><strong>2026-01-30</strong> - refactor: implement separated shelves in grid view and update dashboard/stats theme</p>
+                        <p><strong>2026-01-30</strong> - feat: add dark mode support and grid view toggle</p>
+                        <p><strong>2026-01-30</strong> - refactor: redesign to minimal Things 3 style for better performance</p>
+                        <p><strong>2026-01-30</strong> - chore: add tailwindcss dependencies to package.json</p>
                     </div>
                 </div>
 
