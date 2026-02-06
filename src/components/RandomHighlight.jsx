@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Quote } from 'lucide-react';
 
 const RandomHighlight = () => {
     const [highlight, setHighlight] = useState(null);
@@ -12,7 +13,7 @@ const RandomHighlight = () => {
                     const data = await res.json();
                     setHighlight(data);
                 } else {
-                    setHighlight(null); 
+                    setHighlight(null);
                 }
             } catch (e) {
                 console.error("Failed to fetch highlight", e);
@@ -24,17 +25,30 @@ const RandomHighlight = () => {
         fetchHighlight();
     }, []);
 
-    if (loading) return <div className="border border-gray-400 p-2 text-xs italic">Loading quote...</div>;
+    if (loading) {
+        return (
+            <div className="glass-panel p-4">
+                <div className="animate-pulse flex items-center gap-2 text-muted text-sm">
+                    <Quote className="w-4 h-4" />
+                    Loading quote...
+                </div>
+            </div>
+        );
+    }
+
     if (!highlight) return null;
 
     return (
-        <div className="border border-gray-400 p-2 bg-white">
-            <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-sm bg-gray-100 px-1">Quote of Day</div>
-            <div className="font-serif italic text-sm text-gray-800 mb-2 px-1">
-                "{highlight.highlight}"
+        <div className="glass-panel p-4">
+            <div className="flex items-center gap-2 mb-3">
+                <Quote className="w-4 h-4 text-purple-400" />
+                <span className="font-medium text-sm">Quote of the Day</span>
             </div>
-            <div className="text-right text-xs text-gray-600 px-1">
-                &mdash; {highlight.author}, <cite>{highlight.title}</cite>
+            <blockquote className="text-sm italic text-white/80 leading-relaxed mb-3 pl-3 border-l-2 border-purple-400/50">
+                "{highlight.highlight}"
+            </blockquote>
+            <div className="text-right text-xs text-muted">
+                — {highlight.author}, <cite className="text-accent">{highlight.title}</cite>
             </div>
         </div>
     );

@@ -38,14 +38,14 @@ function App() {
     const handleDashboardClick = () => navigate('/dashboard');
 
     return (
-        <div className="dense-container py-2">
+        <div className="min-h-screen flex flex-col">
             <Header 
                 onHomeClick={handleHomeClick}
                 onStatsClick={handleStatsClick}
                 onDashboardClick={handleDashboardClick}
             />
 
-            <main className="mt-2">
+            <main className="flex-1 app-container py-6">
                 <Routes>
                     <Route path="/" element={<Home tagsMap={tagsMap} />} />
                     <Route path="/book/:id" element={<BookDetailsPage tagsMap={tagsMap} />} />
@@ -55,9 +55,11 @@ function App() {
                 </Routes>
             </main>
 
-            <div className="mt-8 pt-4 border-t border-gray-400 text-center text-tiny text-gray-600">
-                [ Generated: {new Date().toLocaleString()} ] &bull; [ &copy; 2026 Sudip's Library ]
-            </div>
+            <footer className="glass-header py-4 mt-auto">
+                <div className="app-container text-center text-sm text-muted">
+                    Generated: {new Date().toLocaleString()} &bull; © 2026 Sudip's Library
+                </div>
+            </footer>
         </div>
     );
 }
