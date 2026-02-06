@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import {
     BarChart,
     Bar,
@@ -9,12 +10,31 @@ import {
     ResponsiveContainer,
     Cell
 } from 'recharts';
-import { BookOpen, Calendar, Clock, User, ChevronDown } from 'lucide-react';
+import { BookOpen, Calendar, Clock, User, ChevronDown, Download } from 'lucide-react';
 
 const Stats = ({ onBack }) => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [selectedYear, setSelectedYear] = useState('all');
+    const booksGridRef = useRef(null);
+
+    const handleDownloadScreenshot = async () => {
+        if (!booksGridRef.current) return;
+        try {
+            const canvas = await html2canvas(booksGridRef.current, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                scale: 2
+            });
+            const link = document.createElement('a');
+            link.download = `books-${selectedYear === 'all' ? 'all-years' : selectedYear}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } catch (err) {
+            console.error('Screenshot failed:', err);
+        }
+    };
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -196,11 +216,20 @@ const Stats = ({ onBack }) => {
 
             {/* Books Grid */}
             <div className="mb-6">
-                <h3 className="font-bold bg-gray-200 border border-black border-b-0 px-2 py-1 text-xs uppercase flex items-center gap-2">
-                    <BookOpen className="w-3 h-3" />
-                    Books {selectedYear !== 'all' ? `(${selectedYear})` : '(All Years)'}
+                <h3 className="font-bold bg-gray-200 border border-black border-b-0 px-2 py-1 text-xs uppercase flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                        <BookOpen className="w-3 h-3" />
+                        Books {selectedYear !== 'all' ? `(${selectedYear})` : '(All Years)'}
+                    </span>
+                    <button
+                        onClick={handleDownloadScreenshot}
+                        className="flex items-center gap-1 text-gray-600 hover:text-black transition-colors p-1 hover:bg-gray-300 rounded"
+                        title="Download as image"
+                    >
+                        <Download className="w-3 h-3" />
+                    </button>
                 </h3>
-                <div className="border border-black p-4 bg-white">
+                <div ref={booksGridRef} className="border border-black p-4 bg-white">
                     {filteredBooks.length === 0 ? (
                         <div className="text-center text-gray-500 italic py-8">No books found for this selection.</div>
                     ) : (
