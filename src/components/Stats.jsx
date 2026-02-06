@@ -277,29 +277,29 @@ const Stats = ({ onBack }) => {
                                                 {book.title}
                                             </h4>
 
-                                            <div className="flex items-center gap-1 text-xs text-gray-600 mb-2">
-                                                <User className="w-3 h-3 flex-shrink-0" />
+                                            <div className="flex items-start gap-1.5 text-xs text-gray-600 mb-2">
+                                                <User className="w-3 h-3 flex-shrink-0 mt-0.5" />
                                                 <span className="truncate">{authors}</span>
                                             </div>
 
                                             <div className="mt-auto space-y-1">
                                                 {book.pageCount && (
-                                                    <div className="flex items-center gap-1 text-tiny text-gray-500">
-                                                        <BookOpen className="w-3 h-3" />
+                                                    <div className="flex items-start gap-1.5 text-tiny text-gray-500">
+                                                        <BookOpen className="w-3 h-3 flex-shrink-0 mt-0.5" />
                                                         <span>{book.pageCount} pages</span>
                                                     </div>
                                                 )}
 
                                                 {finishDate && (
-                                                    <div className="flex items-center gap-1 text-tiny text-gray-500">
-                                                        <Calendar className="w-3 h-3" />
+                                                    <div className="flex items-start gap-1.5 text-tiny text-gray-500">
+                                                        <Calendar className="w-3 h-3 flex-shrink-0 mt-0.5" />
                                                         <span>{finishDate}</span>
                                                     </div>
                                                 )}
 
                                                 {duration && (
-                                                    <div className="flex items-center gap-1 text-tiny text-blue-700 font-medium">
-                                                        <Clock className="w-3 h-3" />
+                                                    <div className="flex items-start gap-1.5 text-tiny text-blue-700 font-medium">
+                                                        <Clock className="w-3 h-3 flex-shrink-0 mt-0.5" />
                                                         <span>{duration}</span>
                                                     </div>
                                                 )}
