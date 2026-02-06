@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { TrendingUp } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const HomeStats = () => {
     const [data, setData] = useState([]);
@@ -26,59 +25,20 @@ const HomeStats = () => {
 
     if (data.length === 0) return null;
 
-    const CustomTooltip = ({ active, payload, label }) => {
-        if (active && payload && payload.length) {
-            return (
-                <div className="glass-panel-dark px-3 py-2 text-sm">
-                    <p className="text-white font-medium">{label}</p>
-                    <p className="text-muted">{payload[0].value} books</p>
-                </div>
-            );
-        }
-        return null;
-    };
-
     return (
-        <div className="glass-panel p-4">
-            <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="w-4 h-4 text-blue-400" />
-                <span className="font-medium text-sm">Reading Activity</span>
-            </div>
-            <div style={{ width: '100%', height: 140 }}>
+        <div className="border border-gray-400 p-2 bg-white mb-4">
+            <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-sm bg-gray-100 px-1">Reading Activity</div>
+            <div style={{ width: '100%', height: 150 }}>
                 <ResponsiveContainer>
-                    <BarChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                        <XAxis
-                            dataKey="name"
-                            fontSize={11}
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: 'rgba(255,255,255,0.5)' }}
-                        />
-                        <YAxis
-                            fontSize={11}
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: 'rgba(255,255,255,0.5)' }}
-                        />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-                        <Bar dataKey="books" radius={[6, 6, 0, 0]}>
-                            {data.map((entry, index) => (
-                                <Cell
-                                    key={`cell-${index}`}
-                                    fill={`url(#barGradient)`}
-                                />
-                            ))}
-                        </Bar>
-                        <defs>
-                            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#3b82f6" />
-                                <stop offset="100%" stopColor="#8b5cf6" />
-                            </linearGradient>
-                        </defs>
+                    <BarChart data={data}>
+                        <XAxis dataKey="name" fontSize={10} />
+                        <YAxis fontSize={10} />
+                        <Tooltip />
+                        <Bar dataKey="books" fill="#333" />
                     </BarChart>
                 </ResponsiveContainer>
             </div>
-            <div className="text-center text-xs text-muted mt-2">Books read per year</div>
+            <div className="text-center text-xs text-gray-500 mt-1">Books read per year</div>
         </div>
     );
 };

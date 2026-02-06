@@ -2,252 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========================================
-   iOS GLASSMORPHISM THEME - BOOK TRACKER
-   ======================================== */
-
 :root {
-  /* System font stack mimicking SF Pro */
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* System fonts for high density */
+  font-family: "MS PGothic", "Arial", sans-serif; 
+  font-size: 16px; /* Increased from 13px */
+  line-height: 1.5;
+  color: #333;
 }
 
-/* ----------------------------------------
-   MESH GRADIENT BACKGROUND
-   ---------------------------------------- */
 body {
   margin: 0;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-  background-attachment: fixed;
-  color: #f1f5f9;
-}
-
-/* Add animated gradient orbs for depth */
-body::before {
-  content: '';
-  position: fixed;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: 
-    radial-gradient(ellipse at 20% 30%, rgba(56, 189, 248, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 80% 70%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 60% 20%, rgba(251, 113, 133, 0.1) 0%, transparent 40%);
-  z-index: -1;
-  animation: float 30s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  33% { transform: translate(2%, 2%) rotate(2deg); }
-  66% { transform: translate(-1%, 1%) rotate(-1deg); }
-}
-
-/* ----------------------------------------
-   GLASS PANEL UTILITIES
-   ---------------------------------------- */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-}
-
-.glass-panel-dark {
-  background: rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-}
-
-.glass-header {
-  background: rgba(15, 12, 41, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  transition: all 0.3s ease;
-}
-
-.glass-card:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-}
-
-/* ----------------------------------------
-   CONTAINER
-   ---------------------------------------- */
-.app-container {
-  width: 95%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-/* ----------------------------------------
-   TYPOGRAPHY
-   ---------------------------------------- */
-h1, h2, h3 {
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #ffffff;
+  background-color: #fff;
+  color: #000;
 }
 
 a {
-  color: #60a5fa;
+  color: #0000EE;
   text-decoration: none;
-  transition: color 0.2s ease;
 }
-
 a:hover {
-  color: #93c5fd;
+  text-decoration: underline;
+}
+a:visited {
+  color: #551A8B;
 }
 
-/* ----------------------------------------
-   LINKS & BUTTONS
-   ---------------------------------------- */
-.btn-glass {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 10px 20px;
-  color: #fff;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+/* Dense Utilities */
+.dense-container {
+  width: 98%;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-.btn-glass:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
+.dense-border {
+  border: 1px solid #999;
 }
 
-.btn-glass-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  border: none;
-  border-radius: 12px;
-  padding: 10px 20px;
-  color: #fff;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+.dense-header {
+  background-color: #eee;
+  border-bottom: 1px solid #999;
+  padding: 6px 10px; /* Increased padding */
+  font-weight: bold;
+  font-size: 15px; /* Increased from 13px */
 }
 
-.btn-glass-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+.dense-block {
+  margin-bottom: 15px; /* Increased margin */
 }
 
-/* ----------------------------------------
-   FORM INPUTS
-   ---------------------------------------- */
-input[type="text"],
-input[type="search"],
-input[type="email"],
-input[type="number"],
-textarea,
-select {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 12px 16px;
-  color: #f1f5f9;
-  font-size: 14px;
-  transition: all 0.2s ease;
-}
+/* Utilities */
+.text-tiny { font-size: 12px; } /* Increased */
+.text-small { font-size: 14px; } /* Increased */
 
-input::placeholder,
-textarea::placeholder {
-  color: rgba(241, 245, 249, 0.4);
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  border-color: rgba(96, 165, 250, 0.5);
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
-}
-
-/* ----------------------------------------
-   TAGS / BADGES
-   ---------------------------------------- */
-.tag-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* ----------------------------------------
-   SCROLLBAR
-   ---------------------------------------- */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* ----------------------------------------
-   SECTION HEADERS
-   ---------------------------------------- */
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, transparent 100%);
-  border-radius: 12px 12px 0 0;
-  font-weight: 600;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-/* ----------------------------------------
-   UTILITY CLASSES
-   ---------------------------------------- */
-.text-muted {
-  color: rgba(241, 245, 249, 0.6);
-}
-
-.text-accent {
-  color: #60a5fa;
-}
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar-thumb { background: #888; border: 1px solid #fff; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
