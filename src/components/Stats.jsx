@@ -21,12 +21,29 @@ const Stats = ({ onBack }) => {
     const handleDownloadScreenshot = async () => {
         if (!booksGridRef.current) return;
         try {
-            const canvas = await html2canvas(booksGridRef.current, {
+            // Temporarily remove text truncation for full capture
+            const container = booksGridRef.current;
+            const truncatedElements = container.querySelectorAll('.line-clamp-2, .truncate');
+            truncatedElements.forEach(el => {
+                el.dataset.originalClass = el.className;
+                el.className = el.className.replace(/line-clamp-\d+/g, '').replace(/truncate/g, '');
+            });
+
+            const canvas = await html2canvas(container, {
                 useCORS: true,
                 allowTaint: true,
                 backgroundColor: '#ffffff',
                 scale: 2
             });
+
+            // Restore original classes
+            truncatedElements.forEach(el => {
+                if (el.dataset.originalClass) {
+                    el.className = el.dataset.originalClass;
+                    delete el.dataset.originalClass;
+                }
+            });
+
             const link = document.createElement('a');
             link.download = `books-${selectedYear === 'all' ? 'all-years' : selectedYear}.png`;
             link.href = canvas.toDataURL('image/png');
