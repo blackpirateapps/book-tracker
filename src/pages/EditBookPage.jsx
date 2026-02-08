@@ -195,6 +195,7 @@ const EditBookPage = () => {
                 <option value="watchlist">Watchlist</option>
                 <option value="currentlyReading">Reading</option>
                 <option value="read">Finished</option>
+                <option value="abandoned">Abandoned</option>
               </select>
             </div>
             <div>
@@ -217,11 +218,11 @@ const EditBookPage = () => {
           <div className="grid md:grid-cols-2 gap-3">
             <div>
               <div className="font-bold mb-1">Started On</div>
-              <input type="text" value={form.startedOn} onChange={e => setForm({ ...form, startedOn: e.target.value })} className="w-full border border-gray-400 p-1" placeholder="YYYY-MM-DD" />
+              <input type="date" value={form.startedOn} onChange={e => setForm({ ...form, startedOn: e.target.value })} className="w-full border border-gray-400 p-1" />
             </div>
             <div>
               <div className="font-bold mb-1">Finished On</div>
-              <input type="text" value={form.finishedOn} onChange={e => setForm({ ...form, finishedOn: e.target.value })} className="w-full border border-gray-400 p-1" placeholder="YYYY-MM-DD" />
+              <input type="date" value={form.finishedOn} onChange={e => setForm({ ...form, finishedOn: e.target.value })} className="w-full border border-gray-400 p-1" />
             </div>
           </div>
 

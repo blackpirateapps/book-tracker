@@ -9,10 +9,10 @@ const LIMIT = 50;
 const Home = ({ tagsMap }) => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
-    
+
     // Books State
     const [allBooks, setAllBooks] = useState([]);
-    
+
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [loadingList, setLoadingList] = useState(false);
@@ -23,19 +23,19 @@ const Home = ({ tagsMap }) => {
     const fetchBookList = async (currentOffset, isReset = false) => {
         if (loadingList) return;
         setLoadingList(true);
-        
+
         try {
-            const endpoint = searchQuery 
+            const endpoint = searchQuery
                 ? `/api/public?q=${encodeURIComponent(searchQuery)}&limit=${LIMIT}&offset=${currentOffset}`
                 : `/api/list-books?limit=${LIMIT}&offset=${currentOffset}`;
 
             const res = await fetch(endpoint);
-            
+
             if (res.ok) {
                 const newBooks = await res.json();
                 const parsedBooks = newBooks.map(book => {
                     let imageLinks = {};
-                    if (typeof book.imageLinks === 'string') try { imageLinks = JSON.parse(book.imageLinks); } catch(e) {}
+                    if (typeof book.imageLinks === 'string') try { imageLinks = JSON.parse(book.imageLinks); } catch (e) { }
                     return { ...book, imageLinks, _isPartial: !searchQuery };
                 });
 
@@ -45,16 +45,16 @@ const Home = ({ tagsMap }) => {
                 setAllBooks(prev => {
                     const combined = isReset ? parsedBooks : [...prev, ...parsedBooks];
                     // Dedup
-                    return combined.filter((v,i,a)=>a.findIndex(v2=>(v2.id===v.id))===i);
+                    return combined.filter((v, i, a) => a.findIndex(v2 => (v2.id === v.id)) === i);
                 });
                 setOffset(currentOffset + LIMIT);
-                
+
                 if (!searchQuery && parsedBooks.length > 0) {
                     fetchDetailsInBackground(parsedBooks.map(b => b.id));
                 }
 
             } else {
-                if (isReset && allBooks.length === 0) {}
+                if (isReset && allBooks.length === 0) { }
             }
         } catch (e) {
             console.error(e);
@@ -68,7 +68,7 @@ const Home = ({ tagsMap }) => {
         if (ids.length === 0) return;
         setBackgroundLoading(true);
         try {
-            const res = await fetch(`/api/public?limit=${ids.length}&offset=${Math.max(0, offset - LIMIT)}`); 
+            const res = await fetch(`/api/public?limit=${ids.length}&offset=${Math.max(0, offset - LIMIT)}`);
             if (res.ok) {
                 const details = await res.json();
                 setAllBooks(prevBooks => {
@@ -76,9 +76,9 @@ const Home = ({ tagsMap }) => {
                     return prevBooks.map(book => {
                         if (updateMap.has(book.id)) {
                             const fullData = updateMap.get(book.id);
-                            try { fullData.authors = JSON.parse(fullData.authors); } catch(e) { fullData.authors = []; }
-                            try { fullData.tags = JSON.parse(fullData.tags); } catch(e) { fullData.tags = []; }
-                            try { fullData.imageLinks = JSON.parse(fullData.imageLinks); } catch(e) { fullData.imageLinks = {}; }
+                            try { fullData.authors = JSON.parse(fullData.authors); } catch (e) { fullData.authors = []; }
+                            try { fullData.tags = JSON.parse(fullData.tags); } catch (e) { fullData.tags = []; }
+                            try { fullData.imageLinks = JSON.parse(fullData.imageLinks); } catch (e) { fullData.imageLinks = {}; }
                             return { ...fullData, _isPartial: false };
                         }
                         return book;
@@ -105,7 +105,7 @@ const Home = ({ tagsMap }) => {
     const handleBookClick = (book) => navigate(`/book/${book.id}`, { state: { book } });
 
     // --- Categorization ---
-    const shelves = { currentlyReading: [], read: [], watchlist: [] };
+    const shelves = { currentlyReading: [], read: [], watchlist: [], abandoned: [] };
     allBooks.forEach(b => {
         if (shelves[b.shelf]) shelves[b.shelf].push(b);
         else shelves.watchlist.push(b);
@@ -113,13 +113,13 @@ const Home = ({ tagsMap }) => {
 
     return (
         <div className="flex flex-col md:flex-row gap-6">
-            
+
             {/* --- LEFT COLUMN: NAVIGATION / SEARCH --- */}
             <div className="w-full md:w-1/5 flex flex-col gap-6">
                 <div className="border border-gray-400 p-2 bg-gray-50">
                     <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-base">Search</div>
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full border border-gray-400 p-2 text-base"
@@ -133,6 +133,7 @@ const Home = ({ tagsMap }) => {
                         <li><a href="#reading">Reading Now</a> ({shelves.currentlyReading.length})</li>
                         <li><a href="#finished">Finished</a> ({shelves.read.length})</li>
                         <li><a href="#watchlist">To Read</a> ({shelves.watchlist.length})</li>
+                        <li><a href="#abandoned">Abandoned</a> ({shelves.abandoned.length})</li>
                     </ul>
                 </div>
 
@@ -140,9 +141,9 @@ const Home = ({ tagsMap }) => {
                 <div className="border border-gray-400 p-2">
                     <div className="font-bold border-b border-gray-300 mb-2 pb-1 text-base">Tags</div>
                     <div className="flex flex-wrap gap-1 text-xs">
-                         {Array.from(tagsMap.values()).slice(0, 20).map(tag => (
-                             <span key={tag.id} className="border border-gray-300 px-1 bg-white text-gray-700">{tag.name}</span>
-                         ))}
+                        {Array.from(tagsMap.values()).slice(0, 20).map(tag => (
+                            <span key={tag.id} className="border border-gray-300 px-1 bg-white text-gray-700">{tag.name}</span>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -150,15 +151,15 @@ const Home = ({ tagsMap }) => {
             {/* --- CENTER COLUMN: FEED --- */}
             <div className="w-full md:w-1/2">
                 {error && <div className="bg-red-100 border border-red-500 text-red-700 p-3 mb-4 text-sm">{error}</div>}
-                
+
                 {/* Reading Now Section */}
                 {shelves.currentlyReading.length > 0 && (
                     <div className="mb-6">
                         <h2 className="bg-black text-white px-2 py-1 font-bold text-base mb-0" id="reading">READING NOW</h2>
                         <div className="border border-black border-t-0 p-2 grid grid-cols-1 gap-3 bg-white">
-                             {shelves.currentlyReading.map(book => (
-                                 <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
-                             ))}
+                            {shelves.currentlyReading.map(book => (
+                                <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
+                            ))}
                         </div>
                     </div>
                 )}
@@ -168,9 +169,9 @@ const Home = ({ tagsMap }) => {
                     <div className="mb-6">
                         <h2 className="bg-gray-300 text-black border border-gray-400 px-2 py-1 font-bold text-base mb-0" id="finished">RECENTLY FINISHED</h2>
                         <div className="border border-gray-400 border-t-0 p-2 grid grid-cols-1 gap-3 bg-white">
-                             {shelves.read.map(book => (
-                                 <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
-                             ))}
+                            {shelves.read.map(book => (
+                                <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
+                            ))}
                         </div>
                     </div>
                 )}
@@ -180,16 +181,28 @@ const Home = ({ tagsMap }) => {
                     <div className="mb-6">
                         <h2 className="bg-gray-300 text-black border border-gray-400 px-2 py-1 font-bold text-base mb-0" id="watchlist">TO READ</h2>
                         <div className="border border-gray-400 border-t-0 p-2 grid grid-cols-1 gap-3 bg-white">
-                             {shelves.watchlist.map(book => (
-                                 <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
-                             ))}
+                            {shelves.watchlist.map(book => (
+                                <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Abandoned Section */}
+                {shelves.abandoned.length > 0 && (
+                    <div className="mb-6">
+                        <h2 className="bg-red-200 text-black border border-red-400 px-2 py-1 font-bold text-base mb-0" id="abandoned">ABANDONED</h2>
+                        <div className="border border-red-400 border-t-0 p-2 grid grid-cols-1 gap-3 bg-white">
+                            {shelves.abandoned.map(book => (
+                                <BookListItem key={book.id} book={book} tagsMap={tagsMap} onClick={() => handleBookClick(book)} isPartial={book._isPartial} />
+                            ))}
                         </div>
                     </div>
                 )}
 
                 {hasMore && (
-                    <button 
-                        onClick={() => fetchBookList(offset)} 
+                    <button
+                        onClick={() => fetchBookList(offset)}
                         disabled={loadingList}
                         className="w-full border border-black bg-gray-100 p-3 font-bold text-sm hover:bg-gray-200"
                     >
@@ -201,7 +214,7 @@ const Home = ({ tagsMap }) => {
             {/* --- RIGHT COLUMN: EXTRAS --- */}
             <div className="w-full md:w-1/4 flex flex-col gap-6">
                 <RandomHighlight />
-                
+
                 <HomeStats />
 
                 <div className="border border-gray-400 p-2 bg-yellow-50">
