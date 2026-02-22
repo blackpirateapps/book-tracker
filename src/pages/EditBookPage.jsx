@@ -135,12 +135,14 @@ const EditBookPage = () => {
         body: JSON.stringify({ password, action: 'update', data: updated })
       });
 
+      const payload = await res.json().catch(() => ({}));
+      console.log('[DEBUG] handleSave response:', payload);
+
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
         throw new Error(payload.error || 'Failed to save changes.');
       }
 
-      setSuccessMsg('Saved changes.');
+      setSuccessMsg(`Saved changes. (Rows affected: ${payload.rowsAffected ?? '?'})`);
     } catch (e) {
       setError(e.message);
     } finally {
