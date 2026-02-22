@@ -27,6 +27,9 @@ export default async function handler(req, res) {
       args: [limit, offset]
     });
 
+    console.log(`[BACKEND DEBUG] list-books: returning ${result.rows.length} rows`);
+    result.rows.forEach(r => console.log(` - ID: ${r.id}, Shelf: ${r.shelf}`));
+
     // Reduced cache for better responsiveness (10 seconds)
     res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=60');
 

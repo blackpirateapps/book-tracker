@@ -60,6 +60,9 @@ export default async function handler(req, res) {
 
       const result = await client.execute({ sql: query, args });
 
+      console.log(`[BACKEND DEBUG] public: returning ${result.rows.length} rows`);
+      result.rows.forEach(r => console.log(` - ID: ${r.id}, Shelf: ${r.shelf}`));
+
       return res.status(200).json(result.rows);
     } catch (e) {
       console.error("Public API Error:", e);

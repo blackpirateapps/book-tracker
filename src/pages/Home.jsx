@@ -39,6 +39,7 @@ const Home = ({ tagsMap }) => {
                     return { ...book, imageLinks, _isPartial: !searchQuery };
                 });
 
+                console.log(`[DEBUG] fetchBookList: Received ${newBooks.length} books.`, newBooks);
                 if (newBooks.length < LIMIT) setHasMore(false);
                 else setHasMore(true);
 
@@ -79,6 +80,7 @@ const Home = ({ tagsMap }) => {
                             try { fullData.authors = JSON.parse(fullData.authors); } catch (e) { fullData.authors = []; }
                             try { fullData.tags = JSON.parse(fullData.tags); } catch (e) { fullData.tags = []; }
                             try { fullData.imageLinks = JSON.parse(fullData.imageLinks); } catch (e) { fullData.imageLinks = {}; }
+                            console.log(`[DEBUG] Enrichment for ${book.id}:`, fullData);
                             return { ...fullData, _isPartial: false };
                         }
                         return book;
@@ -243,6 +245,14 @@ const Home = ({ tagsMap }) => {
                 </div>
             </div>
 
+            {/* DEBUG SECTION */}
+            <div className="mt-8 p-4 border-2 border-dashed border-red-500 bg-red-50 text-[10px] font-mono overflow-auto max-h-64">
+                <h3 className="font-bold text-red-600 mb-2">DEBUG: RAW SHELVES DATA</h3>
+                <pre>{JSON.stringify({
+                    currentlyReading: shelves.currentlyReading.map(b => ({ id: b.id, title: b.title, shelf: b.shelf })),
+                    abandoned: shelves.abandoned.map(b => ({ id: b.id, title: b.title, shelf: b.shelf }))
+                }, null, 2)}</pre>
+            </div>
         </div>
     );
 };
