@@ -18,7 +18,12 @@ export default async function handler(req, res) {
     const query = `
       SELECT id, title, imageLinks, shelf 
       FROM books 
-      ORDER BY finishedOn DESC, title ASC 
+      ORDER BY 
+        CASE WHEN shelf = 'currentlyReading' THEN 0 
+             WHEN shelf = 'abandoned' THEN 1 
+             ELSE 2 END,
+        finishedOn DESC, 
+        title ASC 
       LIMIT ? OFFSET ?
     `;
 

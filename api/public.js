@@ -55,7 +55,15 @@ export default async function handler(req, res) {
       }
 
       // Consistent ordering is crucial for pagination
-      query += " ORDER BY finishedOn DESC, title ASC LIMIT ? OFFSET ?";
+      query += `
+        ORDER BY 
+          CASE WHEN shelf = 'currentlyReading' THEN 0 
+               WHEN shelf = 'abandoned' THEN 1 
+               ELSE 2 END,
+          finishedOn DESC, 
+          title ASC 
+        LIMIT ? OFFSET ?
+      `;
       args.push(limitVal, offsetVal);
 
       const result = await client.execute({ sql: query, args });
