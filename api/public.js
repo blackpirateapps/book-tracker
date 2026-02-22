@@ -40,7 +40,7 @@ export default async function handler(req, res) {
           readingProgress 
         FROM books
       `;
-      
+
       let args = [];
 
       if (q) {
@@ -50,8 +50,8 @@ export default async function handler(req, res) {
         // Lower cache for search
         res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=59');
       } else {
-        // High cache for browsing
-        res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=300');
+        // Reduced cache for browsing (10 seconds)
+        res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=60');
       }
 
       // Consistent ordering is crucial for pagination

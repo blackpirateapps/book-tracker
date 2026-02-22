@@ -22,14 +22,14 @@ export default async function handler(req, res) {
       LIMIT ? OFFSET ?
     `;
 
-    const result = await client.execute({ 
-        sql: query, 
-        args: [limit, offset] 
+    const result = await client.execute({
+      sql: query,
+      args: [limit, offset]
     });
 
-    // Aggressive caching for this lightweight list (1 hour)
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate=86400');
-    
+    // Reduced cache for better responsiveness (10 seconds)
+    res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=60');
+
     return res.status(200).json(result.rows);
   } catch (e) {
     console.error(e);
