@@ -15,7 +15,7 @@ const TagsManager = ({ password, onBack }) => {
     const [editingTag, setEditingTag] = useState(null);
     const [selectedTagForBulk, setSelectedTagForBulk] = useState(null);
     const [selectedBooks, setSelectedBooks] = useState([]);
-    
+
     // Form Data
     const [tagName, setTagName] = useState('');
     const [tagColor, setTagColor] = useState(TAG_COLORS[0]);
@@ -28,14 +28,14 @@ const TagsManager = ({ password, onBack }) => {
         setLoading(true);
         try {
             // Fetch Tags
-            const tagsRes = await fetch('/api/tags');
+            const tagsRes = await fetch('/api/public?action=tags');
             if (tagsRes.ok) setTags(await tagsRes.json());
 
             // Fetch Books (needed for bulk add)
             // Using public endpoint as it is lighter, or books endpoint if we need all fields
             const booksRes = await fetch('/api/public?limit=1000'); // Fetch mostly all for management
             if (booksRes.ok) setBooks(await booksRes.json());
-            
+
         } catch (e) {
             setError('Failed to load data');
         } finally {
@@ -48,18 +48,18 @@ const TagsManager = ({ password, onBack }) => {
         if (!tagName) return;
 
         try {
-            const res = await fetch('/api/tags', {
+            const res = await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     password,
-                    action: 'create',
+                    action: 'tag-create',
                     data: { name: tagName, color: tagColor }
                 })
             });
 
             if (!res.ok) throw new Error('Failed to create tag');
-            
+
             setSuccessMsg('Tag created!');
             setTagName('');
             setView('list');
@@ -72,18 +72,18 @@ const TagsManager = ({ password, onBack }) => {
     const handleUpdateTag = async (e) => {
         e.preventDefault();
         try {
-            const res = await fetch('/api/tags', {
+            const res = await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     password,
-                    action: 'update',
+                    action: 'tag-update',
                     data: { id: editingTag.id, name: tagName, color: tagColor }
                 })
             });
 
             if (!res.ok) throw new Error('Failed to update tag');
-            
+
             setSuccessMsg('Tag updated!');
             setEditingTag(null);
             setView('list');
@@ -96,18 +96,18 @@ const TagsManager = ({ password, onBack }) => {
     const handleDeleteTag = async (id) => {
         if (!window.confirm('Delete this tag?')) return;
         try {
-            const res = await fetch('/api/tags', {
+            const res = await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     password,
-                    action: 'delete',
+                    action: 'tag-delete',
                     data: { id }
                 })
             });
 
             if (!res.ok) throw new Error('Failed to delete tag');
-            
+
             setSuccessMsg('Tag deleted');
             loadData();
         } catch (e) {
@@ -118,18 +118,18 @@ const TagsManager = ({ password, onBack }) => {
     const handleBulkAdd = async () => {
         if (selectedBooks.length === 0) return;
         try {
-            const res = await fetch('/api/tags', {
+            const res = await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     password,
-                    action: 'bulkAddToBooks',
+                    action: 'tag-bulk-add',
                     data: { tagId: selectedTagForBulk.id, bookIds: selectedBooks }
                 })
             });
 
             if (!res.ok) throw new Error('Bulk add failed');
-            
+
             setSuccessMsg(`Added tag to ${selectedBooks.length} books`);
             setView('list');
             setSelectedBooks([]);
@@ -154,7 +154,7 @@ const TagsManager = ({ password, onBack }) => {
     };
 
     const toggleBookSelection = (id) => {
-        setSelectedBooks(prev => 
+        setSelectedBooks(prev =>
             prev.includes(id) ? prev.filter(bId => bId !== id) : [...prev, id]
         );
     };
@@ -163,7 +163,7 @@ const TagsManager = ({ password, onBack }) => {
 
     return (
         <div style={{ fontFamily: '"Times New Roman", serif', padding: '10px' }}>
-            
+
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid black', paddingBottom: '10px' }}>
                 <h2 style={{ margin: 0 }}>Tags Manager</h2>
@@ -188,10 +188,10 @@ const TagsManager = ({ password, onBack }) => {
                     <form onSubmit={view === 'create' ? handleCreateTag : handleUpdateTag}>
                         <div style={{ marginBottom: '15px' }}>
                             <label style={{ display: 'block', fontWeight: 'bold' }}>Name:</label>
-                            <input 
-                                type="text" 
-                                value={tagName} 
-                                onChange={e => setTagName(e.target.value)} 
+                            <input
+                                type="text"
+                                value={tagName}
+                                onChange={e => setTagName(e.target.value)}
                                 style={{ width: '100%', padding: '8px', border: '1px solid #999' }}
                                 required
                             />
@@ -200,11 +200,11 @@ const TagsManager = ({ password, onBack }) => {
                             <label style={{ display: 'block', fontWeight: 'bold' }}>Color:</label>
                             <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
                                 {TAG_COLORS.map(color => (
-                                    <div 
+                                    <div
                                         key={color}
                                         onClick={() => setTagColor(color)}
-                                        style={{ 
-                                            width: '25px', height: '25px', backgroundColor: color === 'white' ? '#eee' : color, 
+                                        style={{
+                                            width: '25px', height: '25px', backgroundColor: color === 'white' ? '#eee' : color,
                                             border: tagColor === color ? '2px solid black' : '1px solid #ccc',
                                             cursor: 'pointer'
                                         }}
@@ -232,8 +232,8 @@ const TagsManager = ({ password, onBack }) => {
                     <div style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #ccc', backgroundColor: 'white', padding: '10px', marginBottom: '15px' }}>
                         {books.map(book => (
                             <div key={book.id} style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                                <input 
-                                    type="checkbox" 
+                                <input
+                                    type="checkbox"
                                     id={`book_${book.id}`}
                                     checked={selectedBooks.includes(book.id)}
                                     onChange={() => toggleBookSelection(book.id)}
@@ -268,9 +268,9 @@ const TagsManager = ({ password, onBack }) => {
                         {tags.map(tag => (
                             <tr key={tag.id} style={{ borderBottom: '1px solid #ddd' }}>
                                 <td>
-                                    <span style={{ 
-                                        backgroundColor: '#f4f4f4', border: '1px solid #ccc', 
-                                        padding: '2px 6px', fontSize: '12px', fontFamily: 'monospace', textTransform: 'uppercase' 
+                                    <span style={{
+                                        backgroundColor: '#f4f4f4', border: '1px solid #ccc',
+                                        padding: '2px 6px', fontSize: '12px', fontFamily: 'monospace', textTransform: 'uppercase'
                                     }}>
                                         {tag.name}
                                     </span>

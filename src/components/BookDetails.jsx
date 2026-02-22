@@ -8,15 +8,15 @@ const BookDetails = ({ bookId, onBack, tagsMap, initialData }) => {
     useEffect(() => {
         const fetchDetails = async () => {
             try {
-                const res = await fetch(`/api/highlights?id=${bookId}`);
+                const res = await fetch(`/api/books?id=${bookId}`);
                 if (!res.ok) throw new Error('Book not found');
                 const data = await res.json();
-                
+
                 // Parse JSON fields
-                if (typeof data.authors === 'string') try { data.authors = JSON.parse(data.authors); } catch(e) { data.authors = [data.authors]; }
-                if (typeof data.imageLinks === 'string') try { data.imageLinks = JSON.parse(data.imageLinks); } catch(e) { data.imageLinks = {}; }
-                if (typeof data.highlights === 'string') try { data.highlights = JSON.parse(data.highlights); } catch(e) { data.highlights = []; }
-                if (typeof data.tags === 'string') try { data.tags = JSON.parse(data.tags); } catch(e) { data.tags = []; }
+                if (typeof data.authors === 'string') try { data.authors = JSON.parse(data.authors); } catch (e) { data.authors = [data.authors]; }
+                if (typeof data.imageLinks === 'string') try { data.imageLinks = JSON.parse(data.imageLinks); } catch (e) { data.imageLinks = {}; }
+                if (typeof data.highlights === 'string') try { data.highlights = JSON.parse(data.highlights); } catch (e) { data.highlights = []; }
+                if (typeof data.tags === 'string') try { data.tags = JSON.parse(data.tags); } catch (e) { data.tags = []; }
 
                 setBook(data);
             } catch (err) {
@@ -35,7 +35,7 @@ const BookDetails = ({ bookId, onBack, tagsMap, initialData }) => {
     if (!book) return null;
 
     const coverUrl = book.imageLinks?.thumbnail || `https://placehold.co/200x300?text=No+Cover`;
-    
+
     // Improved Authors Display
     let authors = 'Unknown';
     if (Array.isArray(book.authors)) authors = book.authors.join(', ');
@@ -149,7 +149,7 @@ const BookDetails = ({ bookId, onBack, tagsMap, initialData }) => {
                             <span className="text-xs uppercase">HIGHLIGHTS</span>
                             <span className="text-tiny font-normal text-gray-600">COUNT: {book.highlights?.length || 0}</span>
                         </div>
-                        
+
                         {book.highlights && book.highlights.length > 0 ? (
                             <div className="flex flex-col gap-4 p-2">
                                 {book.highlights.map((highlight, index) => (

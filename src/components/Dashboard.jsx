@@ -4,7 +4,7 @@ import TagsManager from './TagsManager';
 const Dashboard = ({ onBack, onEdit }) => {
     const [password, setPassword] = useState('');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [activeTab, setActiveTab] = useState('books'); 
+    const [activeTab, setActiveTab] = useState('books');
 
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -15,7 +15,7 @@ const Dashboard = ({ onBack, onEdit }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
-    
+
 
     // --- Highlights Upload State ---
     const [highlightBookId, setHighlightBookId] = useState('');
@@ -38,11 +38,38 @@ const Dashboard = ({ onBack, onEdit }) => {
     const fetchBooks = async () => {
         setLoading(true);
         try {
-            const res = await fetch('/api/books'); 
+            const res = await fetch('/api/books');
             if (res.ok) setBooks(await res.json());
             else setError('Failed to fetch books.');
-        } catch (e) { setError(e.message); } 
+        } catch (e) { setError(e.message); }
         finally { setLoading(false); }
+    };
+
+    const handleExport = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/books?action=export-hugo');
+            if (res.ok) {
+                // Assuming export means downloading a file, not updating the book list
+                // For now, let's just log success or trigger a download
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'hugo_highlights.md'; // Or whatever the filename should be
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                setSuccessMsg('Export successful!');
+            } else {
+                setError('Failed to export highlights.');
+            }
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Helpers
@@ -53,7 +80,7 @@ const Dashboard = ({ onBack, onEdit }) => {
             return Array.isArray(parsed) ? parsed.join(', ') : String(parsed);
         } catch (e) { return String(data); }
     };
-    
+
     // Highlight Parsing Logic (Simplified for brevity)
     const parseHighlightsFromContent = (content) => {
         if (!content) return [];
@@ -65,20 +92,40 @@ const Dashboard = ({ onBack, onEdit }) => {
         }
         return highlights;
     };
-    
+
     const handleParseHighlights = () => {
         const parsed = parseHighlightsFromContent(highlightMarkdown);
         setHighlightPreview(parsed);
     };
 
     const handleUploadHighlights = async () => {
-        if (!highlightBookId || highlightPreview.length === 0) return;
+        if (!highlightBookId || highlightMarkdown.length === 0) return; // Changed from highlightPreview.length to highlightMarkdown.length
         setHighlightBusy(true);
+        setHighlightError('');
+        setHighlightSuccess('');
         try {
+            // First, parse highlights via API
+            const parseRes = await fetch('/api/books?action=parse-highlights', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    password,
+                    fileContent: highlightMarkdown,
+                    fileName: highlightFileName || 'upload.md'
+                })
+            });
+
+            if (!parseRes.ok) {
+                const errorData = await parseRes.json();
+                throw new Error(errorData.error || 'Failed to parse highlights.');
+            }
+            const parsedHighlights = await parseRes.json();
+
+            // Then, update the book with the parsed highlights
             const selectedBook = books.find(b => b.id === highlightBookId);
             const existing = highlightReplaceExisting ? [] : (typeof selectedBook.highlights === 'string' ? JSON.parse(selectedBook.highlights) : selectedBook.highlights || []);
-            const merged = existing.concat(highlightPreview);
-            
+            const merged = existing.concat(parsedHighlights);
+
             await fetch('/api/books', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -87,7 +134,7 @@ const Dashboard = ({ onBack, onEdit }) => {
                     data: { id: highlightBookId, highlights: merged, hasHighlights: 1 }
                 })
             });
-            setHighlightSuccess(`Uploaded ${highlightPreview.length} items.`);
+            setHighlightSuccess(`Uploaded ${parsedHighlights.length} items.`);
             setHighlightPreview([]); setHighlightMarkdown(''); fetchBooks();
         } catch (e) { setHighlightError(e.message); }
         finally { setHighlightBusy(false); }
@@ -98,9 +145,9 @@ const Dashboard = ({ onBack, onEdit }) => {
         setIsSearching(true);
         setSearchResults([]);
         try {
-            const res = await fetch(`/api/openlibrary-search?q=${encodeURIComponent(searchQuery)}`);
+            const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
             if (res.ok) setSearchResults(await res.json());
-        } catch(e) {} finally { setIsSearching(false); }
+        } catch (e) { } finally { setIsSearching(false); }
     };
 
     const handleAddBook = async (olid, shelf) => {
@@ -131,7 +178,7 @@ const Dashboard = ({ onBack, onEdit }) => {
                 <div className="border border-black p-4 w-64 bg-gray-100">
                     <h3 className="font-bold border-b border-black mb-2">ADMIN LOGIN</h3>
                     <form onSubmit={handleLogin}>
-                        <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full border border-gray-500 p-1 mb-2" autoFocus placeholder="Password" />
+                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border border-gray-500 p-1 mb-2" autoFocus placeholder="Password" />
                         <button type="submit" className="w-full bg-black text-white p-1 text-sm font-bold">ENTER</button>
                     </form>
                 </div>
@@ -145,6 +192,7 @@ const Dashboard = ({ onBack, onEdit }) => {
                 <h2 className="font-bold text-lg">DASHBOARD</h2>
                 <div className="space-x-2 text-sm">
                     <button onClick={fetchBooks} className="underline text-blue-800">Refresh</button>
+                    <button onClick={handleExport} className="underline text-blue-800">Export Hugo</button>
                     <button onClick={onBack} className="underline text-blue-800">Exit</button>
                 </div>
             </div>
@@ -160,7 +208,7 @@ const Dashboard = ({ onBack, onEdit }) => {
                 <div className="flex flex-col md:flex-row gap-4">
                     {/* Left Column: Tools */}
                     <div className="w-full md:w-1/3 flex flex-col gap-4">
-                        
+
                         {/* Search & Add */}
                         <div className="border border-black p-2 bg-gray-50">
                             <h3 className="font-bold text-sm bg-black text-white px-1 mb-2">ADD BOOK (OPENLIBRARY)</h3>
@@ -188,13 +236,13 @@ const Dashboard = ({ onBack, onEdit }) => {
                         <div className="border border-black p-2 bg-gray-50">
                             <h3 className="font-bold text-sm bg-black text-white px-1 mb-2">UPLOAD HIGHLIGHTS</h3>
                             <div className="text-xs mb-2">
-                                Book: 
-                                <select value={highlightBookId} onChange={e=>setHighlightBookId(e.target.value)} className="w-full border border-gray-400 mb-1">
+                                Book:
+                                <select value={highlightBookId} onChange={e => setHighlightBookId(e.target.value)} className="w-full border border-gray-400 mb-1">
                                     <option value="">Select...</option>
                                     {books.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
                                 </select>
                                 Paste Markdown:
-                                <textarea value={highlightMarkdown} onChange={e=>setHighlightMarkdown(e.target.value)} className="w-full border border-gray-400 h-20" />
+                                <textarea value={highlightMarkdown} onChange={e => setHighlightMarkdown(e.target.value)} className="w-full border border-gray-400 h-20" />
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={handleParseHighlights} className="border border-black bg-white px-2 text-xs">Preview</button>
@@ -208,7 +256,7 @@ const Dashboard = ({ onBack, onEdit }) => {
                     <div className="w-full md:w-2/3">
                         <div className="flex justify-between items-end mb-1">
                             <h3 className="font-bold text-sm">EXISTING LIBRARY</h3>
-                            <input type="text" value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Filter..." className="border border-gray-400 p-1 text-xs" />
+                            <input type="text" value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter..." className="border border-gray-400 p-1 text-xs" />
                         </div>
                         <div className="border border-black overflow-x-auto">
                             <table className="w-full text-xs text-left border-collapse">

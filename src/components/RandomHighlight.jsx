@@ -7,12 +7,12 @@ const RandomHighlight = () => {
     useEffect(() => {
         const fetchHighlight = async () => {
             try {
-                const res = await fetch('/api/random-highlight');
+                const res = await fetch('/api/public?action=randomHighlight');
                 if (res.ok) {
                     const data = await res.json();
                     setHighlight(data);
                 } else {
-                    setHighlight(null); 
+                    setHighlight(null);
                 }
             } catch (e) {
                 console.error("Failed to fetch highlight", e);

@@ -60,12 +60,56 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
+    const { id, action } = req.query;
+
     try {
-      const result = await client.execute('SELECT * FROM books');
+      if (id) {
+        const result = await client.execute({
+          sql: "SELECT * FROM books WHERE id = ?",
+          args: [id],
+        });
+        if (result.rows.length === 0) return res.status(404).json({ error: 'Book not found' });
+        res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=60');
+        return res.status(200).json(result.rows[0]);
+      }
+
+      if (action === 'export-hugo') {
+        const bookResult = await client.execute("SELECT * FROM books WHERE shelf = 'read' ORDER BY finishedOn DESC, title ASC");
+        const tagResult = await client.execute("SELECT * FROM tags ORDER BY name ASC");
+
+        const books = bookResult.rows.map(row => ({
+          ...row,
+          authors: parseJson(row.authors, []),
+          imageLinks: parseJson(row.imageLinks, {}),
+          industryIdentifiers: parseJson(row.industryIdentifiers, []),
+          highlights: parseJson(row.highlights, []),
+          subjects: parseJson(row.subjects, []),
+          tags: parseJson(row.tags, []),
+        }));
+
+        const highlights = [];
+        books.forEach(book => {
+          const authorsStr = Array.isArray(book.authors) ? book.authors.join(', ') : '';
+          book.highlights.forEach(text => {
+            highlights.push({
+              bookId: book.id, title: book.title, author: authorsStr || 'Unknown Author',
+              highlight: text, finishedOn: book.finishedOn || null
+            });
+          });
+        });
+
+        // Simplified buildStats for the export
+        const stats = buildExportStats(books);
+
+        res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=60');
+        return res.status(200).json({ generatedAt: new Date().toISOString(), books, tags: tagResult.rows, highlights, stats });
+      }
+
+      const result = await client.execute('SELECT * FROM books ORDER BY title ASC');
       return res.status(200).json(result.rows);
     } catch (error) {
-      console.error('Error fetching books:', error);
-      return res.status(500).json({ error: 'Failed to fetch books' });
+      console.error('API Error:', error);
+      return res.status(500).json({ error: 'Operation failed' });
     }
   }
 
@@ -78,16 +122,15 @@ export default async function handler(req, res) {
 
     try {
       switch (action) {
-        case 'add':
-          return await handleAdd(data, res);
-        case 'update':
-          return await handleUpdate(data, res);
-        case 'delete':
-          return await handleDelete(data, res);
-        case 'export':
-          return await handleExport(res);
-        default:
-          return res.status(400).json({ error: 'Invalid action' });
+        case 'add': return await handleAdd(data, res);
+        case 'update': return await handleUpdate(data, res);
+        case 'delete': return await handleDelete(data, res);
+        case 'parse-highlights': return await handleParseHighlights(data, res);
+        case 'tag-create': return await handleTagCreate(data, res);
+        case 'tag-update': return await handleTagUpdate(data, res);
+        case 'tag-delete': return await handleTagDelete(data, res);
+        case 'tag-bulk-add': return await handleTagBulkAdd(data, res);
+        default: return res.status(400).json({ error: 'Invalid action' });
       }
     } catch (error) {
       console.error(`Error during ${action}:`, error);
@@ -98,155 +141,147 @@ export default async function handler(req, res) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
+function parseJson(val, fallback) {
+  if (!val) return fallback;
+  try { return JSON.parse(val); } catch (e) { return fallback; }
+}
+
+function buildExportStats(books) {
+  const booksByYear = {};
+  books.forEach(b => {
+    const year = b.finishedOn ? new Date(b.finishedOn).getFullYear().toString() : 'Unknown';
+    if (!booksByYear[year]) booksByYear[year] = [];
+    booksByYear[year].push(b);
+  });
+  return { totals: { books: books.length }, booksByYear };
+}
+
+async function handleParseHighlights(data, res) {
+  const { fileContent, fileName } = data;
+  if (!fileContent || !fileName) return res.status(400).json({ error: "Missing content" });
+  if (fileName.endsWith('.md')) return res.status(200).json(parseMDHighlights(fileContent));
+  if (fileName.endsWith('.html')) return res.status(200).json(parseHTMLHighlights(fileContent));
+  return res.status(400).json({ error: "Unsupported file type" });
+}
+
+function parseMDHighlights(md) {
+  const highlights = [];
+  let title = md.match(/---\s*title:\s*"(.*?)"\s*---/)?.[1] || 'Unknown Title';
+  md.split('\n').forEach(line => {
+    const m = line.match(/^\s*[-*+]\s+(.*)$/);
+    if (m) {
+      const t = m[1].replace(/\s*\(location.*?\)\s*$/i, '').trim();
+      if (t) highlights.push(t);
+    }
+  });
+  return { title, highlights };
+}
+
+function parseHTMLHighlights(html) {
+  const title = html.match(/<div class="bookTitle">([^<]+)<\/div>/)?.[1]?.trim() || 'Unknown Title';
+  const highlights = [];
+  const regex = /<div class="noteText">([^<]+)<\/div>/g;
+  let m;
+  while ((m = regex.exec(html)) !== null) highlights.push(m[1].trim());
+  return { title, highlights };
+}
+
 async function handleAdd(data, res) {
   const { olid, shelf = 'watchlist' } = data;
+  if (!olid) return res.status(400).json({ error: 'OLID is required' });
 
-  if (!olid) {
-    return res.status(400).json({ error: 'OLID is required' });
-  }
-
-  const openLibraryUrl = `https://openlibrary.org/works/${olid}.json`;
-  const response = await fetch(openLibraryUrl);
-
-  if (!response.ok) {
-    return res.status(404).json({ error: 'Book not found on OpenLibrary' });
-  }
-
-  const bookData = await response.json();
+  const bookData = await (await fetch(`https://openlibrary.org/works/${olid}.json`)).json();
 
   let coverUrl = null;
-  if (bookData.covers && bookData.covers.length > 0) {
-    const originalCoverUrl = `https://covers.openlibrary.org/b/id/${bookData.covers[0]}-L.jpg`;
-    const coverResponse = await fetch(originalCoverUrl);
-
-    if (coverResponse.ok) {
-      const arrayBuffer = await coverResponse.arrayBuffer();
-      const webpBuffer = await sharp(Buffer.from(arrayBuffer))
-        .resize(400, 600, { fit: 'inside' })
-        .webp({ quality: 85 })
-        .toBuffer();
-
-      const blob = await put(`book-covers/${olid}.webp`, webpBuffer, {
-        access: 'public',
-        contentType: 'image/webp',
-      });
-
-      coverUrl = blob.url;
-    }
+  if (bookData.covers?.length > 0) {
+    const ab = await (await fetch(`https://covers.openlibrary.org/b/id/${bookData.covers[0]}-L.jpg`)).arrayBuffer();
+    const webp = await sharp(Buffer.from(ab)).resize(400, 600, { fit: 'inside' }).webp({ quality: 85 }).toBuffer();
+    const blob = await put(`book-covers/${olid}.webp`, webp, { access: 'public', contentType: 'image/webp' });
+    coverUrl = blob.url;
   }
 
-  const authors = bookData.authors ? await Promise.all(
-    bookData.authors.map(async (author) => {
-      const authorKey = author.author?.key || author.key;
-      if (!authorKey) return 'Unknown Author';
-      const authorUrl = `https://openlibrary.org${authorKey}.json`;
-      const authorResponse = await fetch(authorUrl);
-      if (authorResponse.ok) {
-        const authorData = await authorResponse.json();
-        return authorData.name || 'Unknown Author';
-      }
-      return 'Unknown Author';
-    })
-  ) : ['Unknown Author'];
+  const authors = bookData.authors ? await Promise.all(bookData.authors.map(async (a) => {
+    const key = a.author?.key || a.key;
+    const res = await fetch(`https://openlibrary.org${key}.json`);
+    return res.ok ? (await res.json()).name : 'Unknown Author';
+  })) : ['Unknown Author'];
 
   const book = {
-    id: olid,
-    title: bookData.title || 'Untitled',
-    authors: JSON.stringify(authors),
-    imageLinks: JSON.stringify({ thumbnail: coverUrl }),
-    pageCount: bookData.number_of_pages || null,
-    publishedDate: bookData.first_publish_date || null,
-    fullPublishDate: bookData.first_publish_date || null,
+    id: olid, title: bookData.title || 'Untitled', authors: JSON.stringify(authors),
+    imageLinks: JSON.stringify({ thumbnail: coverUrl }), pageCount: bookData.number_of_pages || null,
+    publishedDate: bookData.first_publish_date || null, fullPublishDate: bookData.first_publish_date || null,
     publisher: bookData.publishers ? bookData.publishers[0] : null,
-    industryIdentifiers: JSON.stringify([]),
-    highlights: JSON.stringify([]),
-    startedOn: null,
-    finishedOn: null,
-    readingMedium: 'Not set',
-    shelf: shelf,
-    hasHighlights: 0,
-    readingProgress: 0,
+    industryIdentifiers: '[]', highlights: '[]', startedOn: null, finishedOn: null,
+    readingMedium: 'Not set', shelf, hasHighlights: 0, readingProgress: 0,
     bookDescription: bookData.description?.value || bookData.description || null,
-    subjects: JSON.stringify(bookData.subjects || []),
-    tags: JSON.stringify([])
+    subjects: JSON.stringify(bookData.subjects || []), tags: '[]'
   };
 
   await client.execute({
-    sql: `INSERT OR REPLACE INTO books VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    args: [
-      book.id, book.title, book.authors, book.imageLinks, book.pageCount,
-      book.publishedDate, book.industryIdentifiers, book.highlights,
-      book.startedOn, book.finishedOn, book.readingMedium, book.shelf,
-      book.hasHighlights, book.readingProgress, book.publisher,
-      book.fullPublishDate, book.bookDescription, book.subjects, book.tags
-    ]
+    sql: `INSERT OR REPLACE INTO books VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    args: Object.values(book)
   });
-
-  return res.status(200).json({ message: 'Book added successfully', book });
+  return res.status(200).json({ message: 'Book added', book });
 }
 
 async function handleUpdate(data, res) {
   const { id, originalId, ...updates } = data;
-
-  if (!id) {
-    return res.status(400).json({ error: 'Book ID is required' });
-  }
-
   const targetId = originalId || id;
-  if (id !== targetId) {
-    updates.id = id;
-  }
+  if (!targetId) return res.status(400).json({ error: 'ID required' });
 
-  const fields = [];
-  const values = [];
+  if (id && id !== targetId) updates.id = id;
+  const fields = Object.keys(updates).map(k => `${k} = ?`);
+  const values = Object.values(updates).map(v => (typeof v === 'object' && v !== null ? JSON.stringify(v) : v));
 
-  for (const [key, value] of Object.entries(updates)) {
-    fields.push(`${key} = ?`);
-
-    if (typeof value === 'object' && value !== null) {
-      values.push(JSON.stringify(value));
-    } else {
-      values.push(value);
-    }
-  }
-
-  if (fields.length === 0) {
-    return res.status(400).json({ error: 'No fields to update' });
-  }
-
-  values.push(targetId);
-
-  console.log(`[BACKEND DEBUG] handleUpdate: updating book ${targetId}`, updates);
+  if (fields.length === 0) return res.status(400).json({ error: 'No updates' });
 
   const result = await client.execute({
     sql: `UPDATE books SET ${fields.join(', ')} WHERE id = ?`,
-    args: values
+    args: [...values, targetId]
   });
-
-  console.log(`[BACKEND DEBUG] handleUpdate: update completed for ${targetId}. Rows affected: ${result.rowsAffected}`);
-
-  return res.status(200).json({
-    message: 'Book updated successfully',
-    rowsAffected: result.rowsAffected
-  });
+  return res.status(200).json({ message: 'Updated', rowsAffected: result.rowsAffected });
 }
 
 async function handleDelete(data, res) {
-  const { id } = data;
-
-  if (!id) {
-    return res.status(400).json({ error: 'Book ID is required' });
-  }
-
-  await client.execute({
-    sql: 'DELETE FROM books WHERE id = ?',
-    args: [id]
-  });
-
-  return res.status(200).json({ message: 'Book deleted successfully' });
+  if (!data.id) return res.status(400).json({ error: 'ID required' });
+  await client.execute({ sql: 'DELETE FROM books WHERE id = ?', args: [data.id] });
+  return res.status(200).json({ message: 'Deleted' });
 }
 
-async function handleExport(res) {
-  const result = await client.execute('SELECT * FROM books');
-  return res.status(200).json(result.rows);
+async function handleTagCreate(data, res) {
+  const { name, color } = data;
+  const id = `tag_${Date.now()}`;
+  await client.execute({
+    sql: 'INSERT INTO tags (id, name, color, createdAt) VALUES (?, ?, ?, ?)',
+    args: [id, name, color, new Date().toISOString()]
+  });
+  return res.status(200).json({ message: 'Tag created', id });
+}
+
+async function handleTagUpdate(data, res) {
+  await client.execute({
+    sql: 'UPDATE tags SET name = ?, color = ? WHERE id = ?',
+    args: [data.name, data.color, data.id]
+  });
+  return res.status(200).json({ message: 'Tag updated' });
+}
+
+async function handleTagDelete(data, res) {
+  await client.execute({ sql: 'DELETE FROM tags WHERE id = ?', args: [data.id] });
+  return res.status(200).json({ message: 'Tag deleted' });
+}
+
+async function handleTagBulkAdd(data, res) {
+  const { tagId, bookIds } = data;
+  for (const bookId of bookIds) {
+    const result = await client.execute({ sql: 'SELECT tags FROM books WHERE id = ?', args: [bookId] });
+    if (result.rows.length > 0) {
+      const tags = parseJson(result.rows[0].tags, []);
+      if (!tags.includes(tagId)) {
+        tags.push(tagId);
+        await client.execute({ sql: 'UPDATE books SET tags = ? WHERE id = ?', args: [JSON.stringify(tags), bookId] });
+      }
+    }
+  }
+  return res.status(200).json({ message: 'Tags added' });
 }

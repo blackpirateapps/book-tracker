@@ -56,7 +56,7 @@ const Stats = ({ onBack }) => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await fetch('/api/stats');
+                const res = await fetch('/api/public?action=stats');
                 if (res.ok) setStats(await res.json());
             } catch (e) { console.error(e); }
             finally { setLoading(false); }

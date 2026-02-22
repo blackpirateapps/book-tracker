@@ -71,7 +71,7 @@ const EditBookPage = () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`/api/highlights?id=${id}`);
+        const res = await fetch(`/api/books?id=${id}`);
         if (!res.ok) throw new Error('Book not found.');
         const data = await res.json();
         setForm(normalizeBook(data));
@@ -135,14 +135,12 @@ const EditBookPage = () => {
         body: JSON.stringify({ password, action: 'update', data: updated })
       });
 
-      const payload = await res.json().catch(() => ({}));
-      console.log('[DEBUG] handleSave response:', payload);
-
       if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
         throw new Error(payload.error || 'Failed to save changes.');
       }
 
-      setSuccessMsg(`Saved changes. (Rows affected: ${payload.rowsAffected ?? '?'})`);
+      setSuccessMsg('Saved changes.');
     } catch (e) {
       setError(e.message);
     } finally {

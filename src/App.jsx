@@ -17,10 +17,10 @@ function App() {
             try {
                 let tags = [];
                 try {
-                    const tagsRes = await fetch('/api/tags');
+                    const tagsRes = await fetch('/api/public?action=tags');
                     if (tagsRes.ok) tags = await tagsRes.json();
                 } catch (e) { console.warn(e); }
-                
+
                 if (tags.length === 0) tags = [];
 
                 const tMap = new Map();
@@ -39,7 +39,7 @@ function App() {
 
     return (
         <div className="dense-container py-2">
-            <Header 
+            <Header
                 onHomeClick={handleHomeClick}
                 onStatsClick={handleStatsClick}
                 onDashboardClick={handleDashboardClick}

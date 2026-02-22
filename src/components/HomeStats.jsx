@@ -7,7 +7,7 @@ const HomeStats = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await fetch('/api/stats');
+                const res = await fetch('/api/public?action=stats');
                 if (res.ok) {
                     const stats = await res.json();
                     // Transform for chart: Last 5 years
