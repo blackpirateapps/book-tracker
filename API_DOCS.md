@@ -134,6 +134,34 @@ GET /api/public?action=randomHighlight
 
 Returns `null` if no highlights exist.
 
+### Export All Data (JSON)
+
+Returns a comprehensive list of all books with detailed fields for external app integration.
+
+```
+GET /api/public?action=export
+```
+
+**Response:**
+
+```json
+[
+  {
+    "bookName": "Atomic Habits",
+    "authors": ["James Clear"],
+    "pagesCount": 320,
+    "startingDate": "2025-01-01",
+    "endDate": "2025-01-15",
+    "highlights": ["Every action you take is a vote...", "..."],
+    "description": "A supremely practical and useful framework...",
+    "thumbnailUrl": "https://...",
+    "shelf": "read",
+    "readingProgress": 100,
+    "readingMedium": "Paperback"
+  }
+]
+```
+
 ### Get All Tags
 
 ```

@@ -5,6 +5,11 @@ const client = createClient({
   authToken: process.env.TURSO_AUTH_TOKEN,
 });
 
+function parseJson(val, fallback) {
+  if (!val) return fallback;
+  try { return JSON.parse(val); } catch (e) { return fallback; }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -20,6 +25,25 @@ export default async function handler(req, res) {
 
   try {
     res.setHeader('Cache-Control', 's-maxage=10, stale-while-revalidate=60');
+
+    if (action === 'export') {
+      const result = await client.execute("SELECT * FROM books ORDER BY finishedOn DESC, title ASC");
+      const books = result.rows.map(row => ({
+        bookName: row.title,
+        authors: parseJson(row.authors, []),
+        pagesCount: row.pageCount,
+        startingDate: row.startedOn,
+        endDate: row.finishedOn,
+        highlights: parseJson(row.highlights, []),
+        description: row.bookDescription,
+        thumbnailUrl: parseJson(row.imageLinks, {}).thumbnail || null,
+        shelf: row.shelf,
+        readingProgress: row.readingProgress,
+        readingMedium: row.readingMedium
+      }));
+      res.setHeader('Content-Disposition', 'attachment; filename="books_export.json"');
+      return res.status(200).json(books);
+    }
 
     if (action === 'stats') {
       const result = await client.execute("SELECT id, title, authors, imageLinks, pageCount, finishedOn, readingMedium FROM books WHERE shelf = 'read'");
